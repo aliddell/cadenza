@@ -1,0 +1,28 @@
+Working Title: Blue Harvest
+
+INPUT
+a system f(x), v so that H(x, t) = f(x) + t*v
+a collection of points (w_1, t_1), (w_2, t_2), ..., (w_k, t_k) where:
+  0 < t_1 < t_2 < ... < t_k
+
+Everything needs a real and imaginary part
+Everything needs to be able to talk to alphaCertified
+
+ALGORITHM
+input system and points
+
+test that w_i in the quadratic convergence basin
+  use alphaCertified
+
+show that for each segment [t_i, t_{i+1}], a continuous path exists between w_i and w_{i+1}
+  returns: 0 for yes, 1 for no
+  (don't worry about this just yet; just construct a pseudorandom number generating module)
+
+if yes:
+  move on
+if no:
+  bisect and repeat
+
+CONSIDERATIONS
+needs to handle rational and arbitrary-precision floating point
+needs to work in parallel
