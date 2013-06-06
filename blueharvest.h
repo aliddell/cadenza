@@ -11,9 +11,14 @@
 #ifndef _BLUE_HARVEST_H
 #define _BLUE_HARVEST_H
 
-/*
- * data structures from alphaCertified
- */
+/**************************************
+* data structures from alphaCertified *
+**************************************/
 #include "alphaCertified.h"
+
+/*********************************
+* function declarations for io.c *
+*********************************/
+void getargs(int argc, char* argv[]);
 
 #endif
