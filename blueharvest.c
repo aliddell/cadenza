@@ -39,14 +39,52 @@ int main(int argc, char *argv[]) {
     if (verbose_flag == 1)
         display_config();
 
+    polynomial_system ps = read_system_file(sysfile);
+
+    printf("system ps has %d variables and %d polynomials\n", ps.numVariables, ps.numPolynomials);
+
+    free_system(ps);
+
     exit(0);
 }
 
+/*********************************************************************
+ * free all dynamically-allocated variables in the polynomial system *
+ *********************************************************************/
+void free_system(polynomial_system ps) {
+    int i, j;
+
+    for (i = 0; i < ps.numPolynomials; i++) {
+        polynomial p = ps.polynomials[i];
+        int num_vars = p.numVariables;
+        int num_terms = p.numTerms;
+        for (j = 0; j < num_terms; j++)
+            free(p.exponents[j]);
+
+        free(p.exponents);
+
+        if (arithmetic_type == BH_USE_FLOAT)
+            for (j = 0; j < num_terms; j++)
+                mpf_clear(p.coeff[j]);
+        else
+            for (j = 0; j < num_terms; j++)
+                mpq_clear(p.coeff[j]);
+
+        free(p.coeff);
+    }
+
+    free(ps.polynomials);
+}
+
+/*******************************************************
+ * parse command-line args and set flags and filenames *
+ *******************************************************/
 void getargs(int argc, char *argv[]) {
     /* define default values */
     help_flag = 0;
     verbose_flag = 0;
     arithmetic_type = BH_USE_RATIONAL;
+    default_precision = MPFR_PREC_MIN;
     sysfile = NULL;
     pointsfile = NULL;
 
@@ -59,12 +97,13 @@ void getargs(int argc, char *argv[]) {
             {"help",   no_argument,       &help_flag, 1},
             {"float",     no_argument,    &arithmetic_type, BH_USE_FLOAT},
             {"rational",  no_argument,    &arithmetic_type, BH_USE_RATIONAL},
-            /* These options don't set a flag.
-            *  We distinguish them by their indices. */
+            /* These options don't set a flag. */
             {"points",    required_argument, 0, 'p'},
             {"system",    required_argument, 0, 's'},
+            {"precision", required_argument, 0, 'm'},
             {0, 0, 0, 0}
         };
+
         /* getopt_long stores the option index here. */
         int option_index = 0;
 
@@ -87,12 +126,20 @@ void getargs(int argc, char *argv[]) {
                 arithmetic_type = BH_USE_FLOAT;
                 break;
 
-            case 'q':
-                arithmetic_type = BH_USE_RATIONAL;
+            case 'h':
+                help_flag = 1;
+                break;
+
+            case 'm':
+                default_precision = atoi(optarg);
                 break;
 
             case 'p':
                 pointsfile = optarg;
+                break;
+
+            case 'q':
+                arithmetic_type = BH_USE_RATIONAL;
                 break;
 
             case 's':
@@ -101,10 +148,6 @@ void getargs(int argc, char *argv[]) {
 
             case 'v':
                 verbose_flag = 1;
-                break;
-
-            case 'h':
-                help_flag = 1;
                 break;
         }
     }

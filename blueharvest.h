@@ -11,6 +11,7 @@
 #ifndef _BLUE_HARVEST_H
 #define _BLUE_HARVEST_H
 
+#include <errno.h>
 #include <getopt.h>
 
 /***************************************
@@ -47,11 +48,17 @@
 #ifndef BH_EXIT_BADFILE
 #define BH_EXIT_BADFILE 1
 #endif
+#ifndef BH_EXIT_READERR
+#define BH_EXIT_READERR 2
+#endif
+#ifndef BH_EXIT_BADPARSE
+#define BH_EXIT_BADPARSE 3
+#endif
 
 /**************************************
  * global variables for blueharvest.c *
  **************************************/
-int verbose_flag, help_flag, arithmetic_type;
+int verbose_flag, help_flag, default_precision, arithmetic_type;
 char *pointsfile, *sysfile;
 
 /*******************************************
@@ -66,6 +73,9 @@ void print_error(char *msg);
 void prog_info();
 void usage();
 void display_config();
-polynomial parse_polynomial(char *input);
+polynomial_system read_system_file(char *filename);
+polynomial parse_polynomial(FILE *sysfile, char *filename, int num_vars);
+void parse_coeff_rational(char *str_coeff_real, char *str_coeff_rational, rational_complex_number *c);
+void parse_coeff_float(char *str_coeff_real, char *str_coeff_rational, complex_number *c);
 
 #endif
