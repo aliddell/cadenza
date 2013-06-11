@@ -46,11 +46,11 @@ void prog_info(FILE *OUT) {
 }
 
 void display_config() {
-    char *str_arithmetic_type = malloc(15 * sizeof(char));
+    char str_arithmetic_type[15];
     if (arithmetic_type == BH_USE_FLOAT)
-        str_arithmetic_type = "floating point";
+        strcpy(str_arithmetic_type, "floating point");
     else
-        str_arithmetic_type = "rational";
+        strcpy(str_arithmetic_type, "rational");
 
     printf("\tComputing using %s arithmetic\n", str_arithmetic_type);
     printf("\tPolynomial system file is %s\n", sysfile);
