@@ -9,17 +9,103 @@
  */
 #include "blueharvest.h"
 
-int
-main(int argc, char* argv[])
-{
-    short verbose_flag, help_flag, arithmetic_type;
+int main(int argc, char *argv[]) {
+    prog_info(stderr);
 
-    getargs(argc, argv, &verbose_flag, &help_flag);
+    /***********************************************************
+     * get command-line arguments before anything else happens *
+     ***********************************************************/
 
-    if (argc > 1) {
-        return 0;
+    getargs(argc, argv);
+
+    /*****************************************
+     * ensure filenames are properly defined *
+     *****************************************/
+    if (sysfile == NULL) {
+        print_error("You need to define a system file.");
+        usage();
+        exit(BH_EXIT_BADFILE);
+    } else if (pointsfile == NULL) {
+        print_error("You need to define a points file.");
+        usage();
+        exit(BH_EXIT_BADFILE);
     }
 
-    return 0;
+    if (help_flag) {
+        usage();
+        exit(0);
+    }
+
+    if (verbose_flag == 1)
+        display_config();
+
+    exit(0);
 }
 
+void getargs(int argc, char *argv[]) {
+    /* define default values */
+    help_flag = 0;
+    verbose_flag = 0;
+    arithmetic_type = BH_USE_RATIONAL;
+    sysfile = NULL;
+    pointsfile = NULL;
+
+    int c = 0;
+
+    while (c != -1) {
+        static struct option long_options[] = {
+            /* These options set a flag. */
+            {"verbose", no_argument,      &verbose_flag, 1},
+            {"help",   no_argument,       &help_flag, 1},
+            {"float",     no_argument,    &arithmetic_type, BH_USE_FLOAT},
+            {"rational",  no_argument,    &arithmetic_type, BH_USE_RATIONAL},
+            /* These options don't set a flag.
+            *  We distinguish them by their indices. */
+            {"points",    required_argument, 0, 'p'},
+            {"system",    required_argument, 0, 's'},
+            {0, 0, 0, 0}
+        };
+        /* getopt_long stores the option index here. */
+        int option_index = 0;
+
+        c = getopt_long (argc, argv, "hvfqp:s:", long_options, &option_index);
+        if (c == -1) break;
+
+        switch (c) {
+            case 0:
+                /* If this option set a flag, do nothing else now. */
+                if (long_options[option_index].flag != 0) break;
+
+                printf ("option %s", long_options[option_index].name);
+
+                if (optarg) printf (" with arg %s", optarg);
+
+                printf ("\n");
+                break;
+
+            case 'f':
+                arithmetic_type = BH_USE_FLOAT;
+                break;
+
+            case 'q':
+                arithmetic_type = BH_USE_RATIONAL;
+                break;
+
+            case 'p':
+                pointsfile = optarg;
+                break;
+
+            case 's':
+                sysfile = optarg;
+                break;
+
+            case 'v':
+                verbose_flag = 1;
+                break;
+
+            case 'h':
+                help_flag = 1;
+                break;
+        }
+    }
+}

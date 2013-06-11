@@ -7,63 +7,68 @@
  *
  * io.c: Input/output functions for Blue Harvest
  */
-#include "alphaCertified.h"
+#include "blueharvest.h"
 
-void getargs(int argc, char* argv[], short* verbose_flag, short* help_flag, short* arithmetic_type) {
-    int c = 0;
-
-    while (c != -1) {
-        static struct option long_options[] = {
-            /* These options set a flag. */
-            {"verbose", no_argument,      verbose_flag, 1},
-            {"brief",   no_argument,      verbose_flag, 0},
-            {"help",   no_argument,       help_flag, 1},
-            {"float",     no_argument,    0, 'f'},
-            {"rational",  no_argument,    0, 'q'},
-            /* These options don't set a flag.
-            *  We distinguish them by their indices. */
-            {"points",    required_argument, 0, 'p'},
-            {"system",    required_argument, 0, 's'},
-            {0, 0, 0, 0}
-        };
-        /* getopt_long stores the option index here. */
-        int option_index = 0;
-
-        c = getopt_long (argc, argv, "hf:m:p:i:n:s:", long_options, &option_index);
-        if (c == -1) break;
-
-        switch (c) {
-            case 0:
-                /* If this option set a flag, do nothing else now. */
-                if (long_options[option_index].flag != 0)
-                    break;
-
-                printf ("option %s", long_options[option_index].name);
-
-                if (optarg)
-                    printf (" with arg %s", optarg);
-                printf ("\n");
-                break;
-
-            case 'f':
-                filename = optarg;
-                break;
-
-            case 'n':
-                noise = atof(optarg);
-                break;
-
-            case 'm':
-                mut_rate = atof(optarg);
-                break;
-        }
-    }
+/********************************************************
+ * print a helpful message about command-line arguments *
+ ********************************************************/
+void usage() {
+    fprintf(stderr, "usage: blueharvest [-h|--help] [-v|--verbose] [-f|--float] [-q|--rational] --system FILENAME --points FILENAME\n");
 }
 
+/********************************************
+ * uniformly print error messages to stderr *
+ ********************************************/
+void print_error(char *msg) {
+    fprintf(stderr, "\nERROR: %s\n\n", msg);
+}
+
+/**********************************************
+ * print a helpful message about this program *
+ **********************************************/
+void prog_info(FILE *OUT) {
+    char *compile_date = malloc((BH_MAX_DATECHAR+1) * sizeof(char));
+    time_t rawtime;
+    struct tm* timeinfo;
+    time(&rawtime);
+    timeinfo = localtime(&rawtime);
+
+    size_t res = strftime(compile_date, (size_t) BH_MAX_DATECHAR, "%b %d, %Y", timeinfo);
+    if (res == 0)
+        compile_date = "Jan 1, 1970";
+
+    fprintf(OUT, "\n");
+    fprintf(OUT, "\t%s v%s (built %s) (compiled %s)\n", BH_PROGRAM_NAME, BH_VERSION, BH_BUILD_DATE, compile_date);
+    fprintf(OUT, "\t%s\n", BH_AUTHORS);
+    fprintf(OUT, "\tGMP v%d.%d.%d & MPFR v%s\n\n", __GNU_MP_VERSION, __GNU_MP_VERSION_MINOR, __GNU_MP_VERSION_PATCHLEVEL, mpfr_get_version());
+
+    free(compile_date);
+}
+
+void display_config() {
+    char *str_arithmetic_type = malloc(15 * sizeof(char));
+    if (arithmetic_type == BH_USE_FLOAT)
+        str_arithmetic_type = "floating point";
+    else
+        str_arithmetic_type = "rational";
+
+    printf("\tComputing using %s arithmetic\n", str_arithmetic_type);
+    printf("\tPolynomial system file is %s\n", sysfile);
+    printf("\tPoint set file is %s\n", pointsfile);
+}
+
+/***********************************
+ * read the polynomial system file *
+ ***********************************/
+void read_poly_file(FILE *fp) {
+
+}
 
 /******************************
 * parse polynomial from input *
 ******************************/
-polynomial parse_polynomial(char* input) {
-    input
+polynomial parse_polynomial(char *input) {
+    polynomial p;
+
+    return p;
 }
