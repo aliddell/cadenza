@@ -80,7 +80,7 @@ polynomial_system read_system_file(char *filename) {
     errno = 0;
     res = fscanf(sysfile, "%d %d", &num_var, &num_poly);
     if (res == EOF) {
-        char *error_String = malloc(80 * sizeof(char));
+        char *error_string = malloc(80 * sizeof(char));
         snprintf(error_string, (size_t) 80, "Error reading %s: EOF", filename);
 
         print_error(error_string);
@@ -96,13 +96,13 @@ polynomial_system read_system_file(char *filename) {
     }
 
     system.numVariables = num_var;
-    system.numPolynomials = nom_poly;
+    system.numPolynomials = num_poly;
     system.polynomials = malloc(num_poly * sizeof(polynomial));
 
     /* read in each polynomial piece by piece */
 
     for (i = 0; i < num_poly; i++) {
-        system.polynomials[i] = parse_polynomial(sysfile, num_vars);
+        system.polynomials[i] = parse_polynomial(sysfile, filename, num_var);
     }
 
     return system;
@@ -111,21 +111,21 @@ polynomial_system read_system_file(char *filename) {
 /***********************************
 * parse polynomial from input file *
 ************************************/
-polynomial parse_polynomial(FILE *sysfile, char *filename, int num_vars) {
+polynomial parse_polynomial(FILE *sysfile, char *filename, int num_var) {
     int num_terms, res, i, j;
     polynomial p;
 
-    p.numVariables = num_vars;
+    p.numVariables = num_var;
     p.exponents = malloc(num_terms * sizeof(int*));
     for (i = 0; i < num_terms; i++)
-        p.exponents[i] = malloc(num_vars * sizeof(int));
+        p.exponents[i] = malloc(num_var * sizeof(int));
     p.coeff = malloc(num_terms * sizeof(rational_complex_number));
 
     /* first get the number of terms */
     res = fscanf(sysfile, "%d", &num_terms);
 
     if (res == EOF) {
-        char *error_String = malloc(80 * sizeof(char));
+        char *error_string = malloc(80 * sizeof(char));
         snprintf(error_string, (size_t) 80, "Error reading %s: EOF", filename);
 
         print_error(error_string);
@@ -145,10 +145,10 @@ polynomial parse_polynomial(FILE *sysfile, char *filename, int num_vars) {
     /* get the exponents and coefficients for each term */
     for (i = 0; i < num_terms; i++) {
         /* get exponent for each variable in the term */
-        for (j = 0; j < num_vars; j++) {
-            res = fscanf(sysfile, "%d", p.exponents[i][j]);
+        for (j = 0; j < num_var; j++) {
+            res = fscanf(sysfile, "%d", &p.exponents[i][j]);
             if (res == EOF) {
-                char *error_String = malloc(80 * sizeof(char));
+                char *error_string = malloc(80 * sizeof(char));
                 snprintf(error_string, (size_t) 80, "Error reading %s: EOF", filename);
 
                 print_error(error_string);
@@ -171,7 +171,7 @@ polynomial parse_polynomial(FILE *sysfile, char *filename, int num_vars) {
         res = fscanf(sysfile, "%s %s", str_coeff_real, str_coeff_imag);
 
         if (res == EOF) {
-            char *error_String = malloc(80 * sizeof(char));
+            char *error_string = malloc(80 * sizeof(char));
             snprintf(error_string, (size_t) 80, "Error reading %s: EOF", filename);
 
             print_error(error_string);
@@ -189,11 +189,11 @@ polynomial parse_polynomial(FILE *sysfile, char *filename, int num_vars) {
         if (arithmetic_type == BH_USE_FLOAT) {
             /* get mpf_t coefficients for real + imag */
             initialize_number(p.coeff[i]);
-            parse_coeff_float(str_coeff_real, str_coeff_imag, p.coeff[i]);
+            parse_coeff_float(str_coeff_real, str_coeff_imag, &p.coeff[i]);
         } else {
             /* get mpq_t coefficients for real + imag */
-            initialize_number(p.coeff[i]);
-            parse_coeff_float(str_coeff_real, str_coeff_imag, p.coeff[i]);
+            initialize_rational_number(p.coeff[i]);
+            parse_coeff_rational(str_coeff_real, str_coeff_imag, &p.coeff[i]);
         }
 
     }
@@ -215,10 +215,10 @@ void parse_coeff_rational(char *str_coeff_real, char *str_coeff_imag, rational_c
     tok = strtok(str_coeff_real, "/");
     num = strtol(tok, NULL, 0);
     if (num == 0) {
-        mpq_set_ui(c.re, 0, 1);
+        mpq_set_ui(c[0]->re, 0, 1);
     } else if (errno == ERANGE) {
         char *error_string = malloc(80 * sizeof(char));
-        snprintf(error_string, (size_t) 80, "Invalid coefficient: %s", str_coeff);
+        snprintf(error_string, (size_t) 80, "Invalid coefficient: %s", str_coeff_real);
 
         print_error(error_string);
         free(error_string);
@@ -232,25 +232,25 @@ void parse_coeff_rational(char *str_coeff_real, char *str_coeff_imag, rational_c
             if (denom == 0) {
                 print_error("Division by zero in system file.");
                 exit(BH_EXIT_BADPARSE);
-            } else if (errno = ERANGE) {
+            } else if (errno == ERANGE) {
                 char *error_string = malloc(80 * sizeof(char));
-                snprintf(error_string, (size_t) 80, "Invalid coefficient: %s", str_coeff);
+                snprintf(error_string, (size_t) 80, "Invalid coefficient: %s", str_coeff_real);
 
                 print_error(error_string);
                 free(error_string);
                 exit(BH_EXIT_BADPARSE);
             }
         }
-        mpq_set_si(c.re, num, denom);
+        mpq_set_si(c[0]->re, num, denom);
     }
 
     tok = strtok(str_coeff_imag, "/");
     num = strtol(tok, NULL, 0);
     if (num == 0) {
-        mpq_set_ui(c.im, 0, 1);
+        mpq_set_ui(c[0]->im, 0, 1);
     } else if (errno == ERANGE) {
         char *error_string = malloc(80 * sizeof(char));
-        snprintf(error_string, (size_t) 80, "Invalid coefficient: %s", str_coeff);
+        snprintf(error_string, (size_t) 80, "Invalid coefficient: %s", str_coeff_imag);
 
         print_error(error_string);
         free(error_string);
@@ -264,16 +264,16 @@ void parse_coeff_rational(char *str_coeff_real, char *str_coeff_imag, rational_c
             if (denom == 0) {
                 print_error("Division by zero in system file.");
                 exit(BH_EXIT_BADPARSE);
-            } else if (errno = ERANGE) {
+            } else if (errno == ERANGE) {
                 char *error_string = malloc(80 * sizeof(char));
-                snprintf(error_string, (size_t) 80, "Invalid coefficient: %s", str_coeff);
+                snprintf(error_string, (size_t) 80, "Invalid coefficient: %s", str_coeff_imag);
 
                 print_error(error_string);
                 free(error_string);
                 exit(BH_EXIT_BADPARSE);
             }
         }
-        mpq_set_si(c.im, num, denom);
+        mpq_set_si(c[0]->im, num, denom);
     }
 }
 
@@ -282,22 +282,30 @@ void parse_coeff_rational(char *str_coeff_real, char *str_coeff_imag, rational_c
  *************************************************************/
 void parse_coeff_float(char *str_coeff_real, char *str_coeff_imag, complex_number *c) {
     int res;
-    mpf_t coeff;
 
     errno = 0;
-    mpf_init(coeff);
 
-    res = mpf_set_str(coeff, str_coeff, 0);
+    res = mpf_set_str(c[0]->re, str_coeff_real, 0);
 
     /* error! */
     if (res == -1) {
         char *error_string = malloc(80 * sizeof(char));
-        snprintf(error_string, (size_t) 80, "Invalid coefficient: %s", str_coeff);
+        snprintf(error_string, (size_t) 80, "Invalid coefficient: %s", str_coeff_real);
 
         print_error(error_string);
         free(error_string);
         exit(BH_EXIT_BADPARSE);
     }
 
-    return coeff;
+    res = mpf_set_str(c[0]->im, str_coeff_imag, 0);
+
+    /* error! */
+    if (res == -1) {
+        char *error_string = malloc(80 * sizeof(char));
+        snprintf(error_string, (size_t) 80, "Invalid coefficient: %s", str_coeff_imag);
+
+        print_error(error_string);
+        free(error_string);
+        exit(BH_EXIT_BADPARSE);
+    }
 }

@@ -75,7 +75,7 @@ void usage();
 void display_config();
 polynomial_system read_system_file(char *filename);
 polynomial parse_polynomial(FILE *sysfile, char *filename, int num_vars);
-void parse_coeff_rational(char *str_coeff_real, char *str_coeff_rational, rational_complex_number *c);
-void parse_coeff_float(char *str_coeff_real, char *str_coeff_rational, complex_number *c);
+void parse_coeff_rational(char *str_coeff_real, char *str_coeff_imag, rational_complex_number *c);
+void parse_coeff_float(char *str_coeff_real, char *str_coeff_imag, complex_number *c);
 
 #endif
