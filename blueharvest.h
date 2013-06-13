@@ -45,12 +45,18 @@
 #define BH_MAX_DATECHAR 25
 #endif
 
+#ifndef BH_EXIT_SUCCESS
+#define BH_EXIT_SUCCESS 0
+#endif
+/* can't open file for reading or writing */
 #ifndef BH_EXIT_BADFILE
 #define BH_EXIT_BADFILE 1
 #endif
-#ifndef BH_EXIT_READERR
-#define BH_EXIT_READERR 2
+/* unexpected EOF in file read */
+#ifndef BH_EXIT_BADREAD
+#define BH_EXIT_BADREAD 2
 #endif
+/* general parse error */
 #ifndef BH_EXIT_BADPARSE
 #define BH_EXIT_BADPARSE 3
 #endif
@@ -65,6 +71,7 @@ char *pointsfile, *sysfile;
  * function declarations for blueharvest.c *
  *******************************************/
 void getargs(int argc, char *argv[]);
+void free_system(polynomial_system ps);
 
 /**********************************
  * function declarations for io.c *
@@ -75,7 +82,7 @@ void usage();
 void display_config();
 polynomial_system read_system_file(char *filename);
 polynomial parse_polynomial(FILE *sysfile, char *filename, int num_vars);
-void parse_coeff_rational(char *str_coeff_real, char *str_coeff_imag, rational_complex_number *c);
-void parse_coeff_float(char *str_coeff_real, char *str_coeff_imag, complex_number *c);
+void parse_coeff_rational(char *str_coeff_real, char *str_coeff_imag, rational_complex_number c);
+void parse_coeff_float(char *str_coeff_real, char *str_coeff_imag, complex_number c);
 
 #endif

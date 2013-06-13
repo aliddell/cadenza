@@ -10,6 +10,8 @@
 #include "blueharvest.h"
 
 int main(int argc, char *argv[]) {
+    int i, j, k;
+
     prog_info(stderr);
 
     /***********************************************************
@@ -42,6 +44,22 @@ int main(int argc, char *argv[]) {
     polynomial_system ps = read_system_file(sysfile);
 
     printf("system ps has %d variables and %d polynomials\n", ps.numVariables, ps.numPolynomials);
+
+    /* test system entered correctly */
+    char variables[] = "xyzwuvabcdjkmnpqrs";
+    for (i = 0; i < ps.numPolynomials; i++) {
+        polynomial p = ps.polynomials[i];
+        for (j = 0; j < p.numTerms - 1; j++) {
+            gmp_printf("(%Q + %Qi)", p.coeff[j]->re, p.coeff[j]->im);
+            for (k = 0; k < p.numVariables; k++)
+                printf("%c^%d", variables[j], p.exponents[j][k]);
+            printf(" + ");
+        }
+        gmp_printf("(%Q + %Qi)", p.coeff[j]->re, p.coeff[j]->im);
+        for (k = 0; k < ps.numVariables; k++)
+            printf("%c^%d", variables[j], p.exponents[j][k]);
+        printf("\n");
+    }
 
     free_system(ps);
 
