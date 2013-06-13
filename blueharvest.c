@@ -14,15 +14,17 @@ int main(int argc, char *argv[]) {
 
     prog_info(stderr);
 
-    /***********************************************************
-     * get command-line arguments before anything else happens *
-     ***********************************************************/
+    /* get command-line arguments before anything else happens */
 
     getargs(argc, argv);
 
-    /*****************************************
-     * ensure filenames are properly defined *
-     *****************************************/
+    /* do this before checking filenames, duh */
+    if (help_flag) {
+        usage();
+        exit(0);
+    }
+
+    /* ensure filenames are properly defined */
     if (sysfile == NULL) {
         print_error("You need to define a system file.");
         usage();
@@ -31,11 +33,6 @@ int main(int argc, char *argv[]) {
         print_error("You need to define a points file.");
         usage();
         exit(BH_EXIT_BADFILE);
-    }
-
-    if (help_flag) {
-        usage();
-        exit(0);
     }
 
     if (verbose_flag == 1)
