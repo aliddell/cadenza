@@ -67,11 +67,19 @@
 int verbose_flag, help_flag, default_precision, arithmetic_type;
 char *pointsfile, *sysfile;
 
+/*********************
+ * function pointers *
+ *********************/
+polynomial_system (*read_system_file)(char *filename);
+void (*free_system)(void *ps);
+
 /*******************************************
  * function declarations for blueharvest.c *
  *******************************************/
+void free_system_rational(void *ps);
+void free_system_float(void *ps);
 void getargs(int argc, char *argv[]);
-void free_system(polynomial_system ps);
+void set_function_pointers();
 
 /**********************************
  * function declarations for io.c *
@@ -80,9 +88,19 @@ void print_error(char *msg);
 void prog_info();
 void usage();
 void display_config();
-polynomial_system read_system_file(char *filename);
-polynomial parse_polynomial(FILE *sysfile, char *filename, int num_vars);
+
+/*******************************************
+ * function declarations for io_rational.c *
+ *******************************************/
+polynomial_system read_system_file_rational(char *filename);
+polynomial parse_polynomial_rational(FILE *sysfile, char *filename, int num_vars);
 void parse_coeff_rational(char *str_coeff_real, char *str_coeff_imag, rational_complex_number c);
+
+/****************************************
+ * function declarations for io_float.c *
+ ****************************************/
+polynomial_system read_system_file_float(char *filename);
+polynomial parse_polynomial_float(FILE *sysfile, char *filename, int num_vars);
 void parse_coeff_float(char *str_coeff_real, char *str_coeff_imag, complex_number c);
 
 #endif

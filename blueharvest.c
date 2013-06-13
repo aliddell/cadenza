@@ -38,6 +38,8 @@ int main(int argc, char *argv[]) {
     if (verbose_flag == 1)
         display_config();
 
+    set_function_pointers();
+
     polynomial_system ps = read_system_file(sysfile);
 
     printf("system ps has %d variables and %d polynomials\n", ps.numVariables, ps.numPolynomials);
@@ -58,7 +60,9 @@ int main(int argc, char *argv[]) {
         printf("\n");
     }
 
-    free_system(ps);
+    void *system = &ps;
+
+    free_system(system);
 
     exit(0);
 }
@@ -66,30 +70,49 @@ int main(int argc, char *argv[]) {
 /*********************************************************************
  * free all dynamically-allocated variables in the polynomial system *
  *********************************************************************/
-void free_system(polynomial_system ps) {
+void free_system_rational(void *system) {
     int i, j;
+    polynomial_system *ps = (polynomial_system *) system;
 
-    for (i = 0; i < ps.numPolynomials; i++) {
-        polynomial p = ps.polynomials[i];
+    for (i = 0; i < (*ps).numPolynomials; i++) {
+        polynomial p = (*ps).polynomials[i];
         int num_terms = p.numTerms;
         for (j = 0; j < num_terms; j++)
             free(p.exponents[j]);
 
         free(p.exponents);
 
-        if (arithmetic_type == BH_USE_FLOAT) {
-            for (j = 0; j < num_terms; j++)
-                clear_number(p.coeff[j]);
-        }
-        else {
-            for (j = 0; j < num_terms; j++)
-                clear_rational_number(p.coeff[j]);
-        }
+        for (j = 0; j < num_terms; j++)
+            clear_rational_number(p.coeff[j]);
 
         free(p.coeff);
     }
 
-    free(ps.polynomials);
+    free((*ps).polynomials);
+}
+
+/*********************************************************************
+ * free all dynamically-allocated variables in the polynomial system *
+ *********************************************************************/
+void free_system_float(void *system) {
+    int i, j;
+    polynomial_system *ps = (polynomial_system *) system;
+
+    for (i = 0; i < (*ps).numPolynomials; i++) {
+        polynomial p = (*ps).polynomials[i];
+        int num_terms = p.numTerms;
+        for (j = 0; j < num_terms; j++)
+            free(p.exponents[j]);
+
+        free(p.exponents);
+
+        for (j = 0; j < num_terms; j++)
+            clear_number(p.coeff[j]);
+
+        free(p.coeff);
+    }
+
+    free((*ps).polynomials);
 }
 
 /*******************************************************
@@ -166,5 +189,23 @@ void getargs(int argc, char *argv[]) {
                 verbose_flag = 1;
                 break;
         }
+    }
+}
+
+/**********************************************************************************
+ * set function pointers to use the proper arithmetic type with a minimum of fuss *
+ **********************************************************************************/
+void set_function_pointers() {
+
+    /* floating point functions */
+    if (arithmetic_type == BH_USE_FLOAT) {
+        read_system_file = &read_system_file_float;
+        free_system = &free_system_float;
+    }
+
+    /* rational functions */
+    else {
+        read_system_file = &read_system_file_rational;
+        free_system = &free_system_rational;
     }
 }
