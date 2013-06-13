@@ -47,14 +47,14 @@ int main(int argc, char *argv[]) {
     for (i = 0; i < ps.numPolynomials; i++) {
         polynomial p = ps.polynomials[i];
         for (j = 0; j < p.numTerms - 1; j++) {
-            gmp_printf("(%Q + %Qi)", p.coeff[j]->re, p.coeff[j]->im);
+            gmp_printf("(%Qd + %Qdi)", p.coeff[j]->re, p.coeff[j]->im);
             for (k = 0; k < p.numVariables; k++)
-                printf("%c^%d", variables[j], p.exponents[j][k]);
+                printf("%c^%d", variables[k], p.exponents[j][k]);
             printf(" + ");
         }
-        gmp_printf("(%Q + %Qi)", p.coeff[j]->re, p.coeff[j]->im);
+        gmp_printf("(%Qd + %Qdi)", p.coeff[j]->re, p.coeff[j]->im);
         for (k = 0; k < ps.numVariables; k++)
-            printf("%c^%d", variables[j], p.exponents[j][k]);
+            printf("%c^%d", variables[k], p.exponents[j][k]);
         printf("\n");
     }
 
@@ -78,12 +78,14 @@ void free_system(polynomial_system ps) {
 
         free(p.exponents);
 
-        if (arithmetic_type == BH_USE_FLOAT)
+        if (arithmetic_type == BH_USE_FLOAT) {
             for (j = 0; j < num_terms; j++)
-                mpf_clear(p.coeff[j]);
-        else
+                clear_number(p.coeff[j]);
+        }
+        else {
             for (j = 0; j < num_terms; j++)
-                mpq_clear(p.coeff[j]);
+                clear_rational_number(p.coeff[j]);
+        }
 
         free(p.coeff);
     }
