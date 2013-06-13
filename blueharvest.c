@@ -71,7 +71,6 @@ void free_system(polynomial_system ps) {
 
     for (i = 0; i < ps.numPolynomials; i++) {
         polynomial p = ps.polynomials[i];
-        int num_vars = p.numVariables;
         int num_terms = p.numTerms;
         for (j = 0; j < num_terms; j++)
             free(p.exponents[j]);
