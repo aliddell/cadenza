@@ -39,10 +39,13 @@
 #define BH_VERSION "0.0.1"
 #endif
 #ifndef BH_BUILD_DATE
-#define BH_BUILD_DATE "Aug 01, 2013"
+#define BH_BUILD_DATE "Jul 26, 2013"
 #endif
 #ifndef BH_MAX_DATECHAR
 #define BH_MAX_DATECHAR 25
+#endif
+#ifndef BH_TERMWIDTH
+#define BH_TERMWIDTH 80
 #endif
 
 #ifndef BH_EXIT_SUCCESS

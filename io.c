@@ -27,22 +27,20 @@ void print_error(char *msg) {
  * print a helpful message about this program *
  **********************************************/
 void prog_info(FILE *OUT) {
-    char *compile_date = malloc((BH_MAX_DATECHAR+1) * sizeof(char));
+    char compile_date[BH_MAX_DATECHAR];
     time_t rawtime;
     struct tm* timeinfo;
     time(&rawtime);
     timeinfo = localtime(&rawtime);
 
-    size_t res = strftime(compile_date, (size_t) BH_MAX_DATECHAR, "%b %d, %Y", timeinfo);
+    size_t res = strftime(compile_date, (size_t) BH_MAX_DATECHAR + 1, "%b %d, %Y", timeinfo);
     if (res == 0)
-        compile_date = "Jan 1, 1970";
+        strcpy(compile_date, "Jan 1, 1970");
 
     fprintf(OUT, "\n");
     fprintf(OUT, "\t%s v%s (built %s) (compiled %s)\n", BH_PROGRAM_NAME, BH_VERSION, BH_BUILD_DATE, compile_date);
     fprintf(OUT, "\t%s\n", BH_AUTHORS);
     fprintf(OUT, "\tGMP v%d.%d.%d & MPFR v%s\n\n", __GNU_MP_VERSION, __GNU_MP_VERSION_MINOR, __GNU_MP_VERSION_PATCHLEVEL, mpfr_get_version());
-
-    free(compile_date);
 }
 
 void display_config() {
