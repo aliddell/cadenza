@@ -67,7 +67,7 @@
 /**************************************
  * global variables for blueharvest.c *
  **************************************/
-int verbose_flag, help_flag, default_precision, arithmetic_type;
+int verbosity, help_flag, default_precision, arithmetic_type;
 char *pointsfile, *sysfile;
 
 /*********************

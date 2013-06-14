@@ -12,11 +12,11 @@
 int main(int argc, char *argv[]) {
     int i, j, k;
 
-    prog_info(stderr);
-
     /* get command-line arguments before anything else happens */
 
     getargs(argc, argv);
+    if (verbosity > 0)
+        prog_info(stderr);
 
     /* do this before checking filenames, duh */
     if (help_flag) {
@@ -35,7 +35,7 @@ int main(int argc, char *argv[]) {
         exit(BH_EXIT_BADFILE);
     }
 
-    if (verbose_flag == 1)
+    if (verbosity == 1)
         display_config();
 
     set_function_pointers();
@@ -121,7 +121,7 @@ void free_system_float(void *system) {
 void getargs(int argc, char *argv[]) {
     /* define default values */
     help_flag = 0;
-    verbose_flag = 0;
+    verbosity = 0;
     arithmetic_type = BH_USE_RATIONAL;
     default_precision = MPFR_PREC_MIN;
     sysfile = NULL;
@@ -132,14 +132,16 @@ void getargs(int argc, char *argv[]) {
     while (c != -1) {
         static struct option long_options[] = {
             /* These options set a flag. */
-            {"verbose", no_argument,      &verbose_flag, 1},
-            {"help",   no_argument,       &help_flag, 1},
-            {"float",     no_argument,    &arithmetic_type, BH_USE_FLOAT},
-            {"rational",  no_argument,    &arithmetic_type, BH_USE_RATIONAL},
+            {"verbose",    no_argument, &verbosity, 1},
+            {"chatty",     no_argument, &verbosity, 2},
+            {"loquacious", no_argument, &verbosity, 3},
+            {"help",       no_argument, &help_flag, 1},
+            {"float",      no_argument, &arithmetic_type, BH_USE_FLOAT},
+            {"rational",   no_argument, &arithmetic_type, BH_USE_RATIONAL},
             /* These options don't set a flag. */
-            {"points",    required_argument, 0, 'p'},
-            {"system",    required_argument, 0, 's'},
-            {"precision", required_argument, 0, 'm'},
+            {"points",     required_argument, 0, 'p'},
+            {"system",     required_argument, 0, 's'},
+            {"precision",  required_argument, 0, 'm'},
             {0, 0, 0, 0}
         };
 
@@ -186,7 +188,9 @@ void getargs(int argc, char *argv[]) {
                 break;
 
             case 'v':
-                verbose_flag = 1;
+                verbosity++;
+                if (verbosity > 3)
+                    verbosity = 3;
                 break;
         }
     }
