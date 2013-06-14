@@ -15,7 +15,7 @@ int main(int argc, char *argv[]) {
     /* get command-line arguments before anything else happens */
 
     getargs(argc, argv);
-    if (verbosity > 0)
+    if (verbosity > BH_TACITURN)
         prog_info(stderr);
 
     /* do this before checking filenames, duh */
@@ -35,7 +35,7 @@ int main(int argc, char *argv[]) {
         exit(BH_EXIT_BADFILE);
     }
 
-    if (verbosity == 1)
+    if (verbosity > BH_CHATTY)
         display_config();
 
     set_function_pointers();
@@ -121,7 +121,7 @@ void free_system_float(void *system) {
 void getargs(int argc, char *argv[]) {
     /* define default values */
     help_flag = 0;
-    verbosity = 0;
+    verbosity = BH_TACITURN;
     arithmetic_type = BH_USE_RATIONAL;
     default_precision = MPFR_PREC_MIN;
     sysfile = NULL;
@@ -132,9 +132,9 @@ void getargs(int argc, char *argv[]) {
     while (c != -1) {
         static struct option long_options[] = {
             /* These options set a flag. */
-            {"verbose",    no_argument, &verbosity, 1},
-            {"chatty",     no_argument, &verbosity, 2},
-            {"loquacious", no_argument, &verbosity, 3},
+            {"chatty",     no_argument, &verbosity, BH_CHATTY},
+            {"verbose",    no_argument, &verbosity, BH_VERBOSE},
+            {"loquacious", no_argument, &verbosity, BH_LOQUACIOUS},
             {"help",       no_argument, &help_flag, 1},
             {"float",      no_argument, &arithmetic_type, BH_USE_FLOAT},
             {"rational",   no_argument, &arithmetic_type, BH_USE_RATIONAL},
@@ -189,8 +189,8 @@ void getargs(int argc, char *argv[]) {
 
             case 'v':
                 verbosity++;
-                if (verbosity > 3)
-                    verbosity = 3;
+                if (verbosity > BH_LOQUACIOUS)
+                    verbosity = BH_LOQUACIOUS;
                 break;
         }
     }

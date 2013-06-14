@@ -29,6 +29,21 @@
 #define BH_USE_FLOAT 1
 #endif
 
+/* verbosity flags */
+#ifndef BH_TACITURN
+#define BH_TACITURN 0
+#endif
+#ifndef BH_CHATTY
+#define BH_CHATTY 1
+#endif
+#ifndef BH_VERBOSE
+#define BH_VERBOSE 2
+#endif
+#ifndef BH_LOQUACIOUS
+#define BH_LOQUACIOUS 3
+#endif
+
+/* meta constants */
 #ifndef BH_PROGRAM_NAME
 #define BH_PROGRAM_NAME "Blue Harvest"
 #endif
@@ -41,6 +56,8 @@
 #ifndef BH_BUILD_DATE
 #define BH_BUILD_DATE "Jul 26, 2013"
 #endif
+
+/* string width and other memory-related constants */
 #ifndef BH_MAX_DATECHAR
 #define BH_MAX_DATECHAR 25
 #endif
@@ -48,6 +65,7 @@
 #define BH_TERMWIDTH 80
 #endif
 
+/* exit codes */
 #ifndef BH_EXIT_SUCCESS
 #define BH_EXIT_SUCCESS 0
 #endif
