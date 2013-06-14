@@ -16,7 +16,7 @@ int main(int argc, char *argv[]) {
 
     getargs(argc, argv);
     if (verbosity > BH_TACITURN)
-        prog_info(stderr);
+        prog_info();
 
     /* do this before checking filenames, duh */
     if (help_flag) {
