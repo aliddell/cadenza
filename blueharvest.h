@@ -30,8 +30,8 @@
 #endif
 
 /* verbosity flags */
-#ifndef BH_TACITURN
-#define BH_TACITURN 0
+#ifndef BH_LACONIC
+#define BH_LACONIC 0
 #endif
 #ifndef BH_CHATTY
 #define BH_CHATTY 1
@@ -91,16 +91,20 @@ char *pointsfile, *sysfile;
 /*********************
  * function pointers *
  *********************/
-polynomial_system (*read_system_file)(char *filename);
-void (*free_system)(void *ps);
+void (*read_system_file)(char *filename, polynomial_system *system);
+int (*read_points_file)(char *filename, void **vector, int num_vars);
+void (*free_system)(void *system);
+void (*free_vector)(void *vec, int num_points);
 
 /*******************************************
  * function declarations for blueharvest.c *
  *******************************************/
-void free_system_rational(void *ps);
-void free_system_float(void *ps);
+void free_system_rational(void *system);
+void free_system_float(void *system);
+void free_vector_rational(void *vec, int num_points);
+void free_vector_float(void *vec, int num_points);
 void getargs(int argc, char *argv[]);
-void set_function_pointers();
+void set_arithmetic_type(rational_complex_vector *rational_vec, complex_vector *float_vec, void *generic_vec);
 
 /**********************************
  * function declarations for io.c *
@@ -113,15 +117,16 @@ void display_config();
 /*******************************************
  * function declarations for io_rational.c *
  *******************************************/
-polynomial_system read_system_file_rational(char *filename);
+void read_system_file_rational(char *filename, polynomial_system *system);
 polynomial parse_polynomial_rational(FILE *sysfile, char *filename, int num_vars);
 void parse_coeff_rational(char *str_coeff_real, char *str_coeff_imag, rational_complex_number c);
+int read_points_file_rational(char *filename, void **vector, int num_vars);
 
 /****************************************
  * function declarations for io_float.c *
  ****************************************/
-polynomial_system read_system_file_float(char *filename);
+void read_system_file_float(char *filename, polynomial_system *system);
 polynomial parse_polynomial_float(FILE *sysfile, char *filename, int num_vars);
-void parse_coeff_float(char *str_coeff_real, char *str_coeff_imag, complex_number c);
+int read_points_file_float(char *filename, void **vector, int num_vars);
 
 #endif

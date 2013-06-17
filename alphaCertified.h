@@ -161,21 +161,21 @@ typedef struct
 
 #define initialize_rational_number(_num) { mpq_init((_num)->re); mpq_init((_num)->im); }
 
-#define initialize_vector2(_vec,_size,_prec) { int _i; (_vec)->coord = (complex_number *)errMalloc((_size) * sizeof(complex_number)); \
+#define initialize_vector2(_vec,_size,_prec) { int _i; (_vec)->coord = (complex_number *)malloc((_size) * sizeof(complex_number)); \
   for (_i = 0; _i < _size; _i++) initialize_number2((_vec)->coord[_i],_prec); (_vec)->curr_prec = _prec; (_vec)->alloc_size = (_vec)->size = _size; }
 #define initialize_vector(_vec,_size) { int _p = mpf_get_default_prec(); initialize_vector2(_vec,_size,_p); }
 
-#define initialize_rational_vector(_vec,_size) { int _i; (_vec)->coord = (rational_complex_number *)errMalloc((_size) * sizeof(rational_complex_number)); \
+#define initialize_rational_vector(_vec,_size) { int _i; (_vec)->coord = (rational_complex_number *)malloc((_size) * sizeof(rational_complex_number)); \
   for (_i = 0; _i < _size; _i++) initialize_rational_number((_vec)->coord[_i]); (_vec)->alloc_size = (_vec)->size = _size; }
 
-#define initialize_matrix2(_mat,_rows,_cols,_prec) { int _i,_j; (_mat)->entry = (complex_number **)errMalloc((_rows) * sizeof(complex_number *)); \
-  for (_i = 0; _i < _rows; _i++) { (_mat)->entry[_i] = (complex_number *)errMalloc((_cols) * sizeof(complex_number)); \
+#define initialize_matrix2(_mat,_rows,_cols,_prec) { int _i,_j; (_mat)->entry = (complex_number **)malloc((_rows) * sizeof(complex_number *)); \
+  for (_i = 0; _i < _rows; _i++) { (_mat)->entry[_i] = (complex_number *)malloc((_cols) * sizeof(complex_number)); \
     for (_j = 0; _j < _cols; _j++) initialize_number2((_mat)->entry[_i][_j], _prec); } (_mat)->curr_prec = _prec; \
   (_mat)->alloc_rows = (_mat)->rows = _rows; (_mat)->alloc_cols = (_mat)->cols = _cols; }
 #define initialize_matrix(_mat,_rows,_cols) { int _p = mpf_get_default_prec(); initialize_matrix2(_mat,_rows,_cols,_p); }
 
-#define initialize_rational_matrix(_mat,_rows,_cols) { int _i,_j; (_mat)->entry = (rational_complex_number **)errMalloc((_rows) * sizeof(rational_complex_number)); \
-  for (_i = 0; _i < _rows; _i++) { (_mat)->entry[_i] = (rational_complex_number *)errMalloc((_cols) * sizeof(rational_complex_number)); \
+#define initialize_rational_matrix(_mat,_rows,_cols) { int _i,_j; (_mat)->entry = (rational_complex_number **)malloc((_rows) * sizeof(rational_complex_number)); \
+  for (_i = 0; _i < _rows; _i++) { (_mat)->entry[_i] = (rational_complex_number *)malloc((_cols) * sizeof(rational_complex_number)); \
     for (_j = 0; _j < _cols; _j++) initialize_rational_number((_mat)->entry[_i][_j]); } \
   (_mat)->alloc_rows = (_mat)->rows = _rows; (_mat)->alloc_cols = (_mat)->cols = _cols; }
 
@@ -209,12 +209,12 @@ typedef struct
 // increase rows & columns of a matrix
 #define increase_rows_matrix(_mat,_new_rows) { if ((_mat)->alloc_rows < _new_rows) { int _i,_j; \
   (_mat)->entry = (complex_number **)errRealloc((_mat)->entry, (_new_rows) * sizeof(complex_number *)); \
-  for (_i = (_mat)->alloc_rows; _i < _new_rows; _i++) { (_mat)->entry[_i] = (complex_number *)errMalloc((_mat)->alloc_cols * sizeof(complex_number)); \
+  for (_i = (_mat)->alloc_rows; _i < _new_rows; _i++) { (_mat)->entry[_i] = (complex_number *)malloc((_mat)->alloc_cols * sizeof(complex_number)); \
     for (_j = 0; _j < (_mat)->alloc_cols; _j++) initialize_number2((_mat)->entry[_i][_j],(_mat)->curr_prec); } (_mat)->alloc_rows = (_mat)->rows = _new_rows; }}
 
 #define increase_rows_rational_matrix(_mat,_new_rows) { if ((_mat)->alloc_rows < _new_rows) { int _i,_j; \
   (_mat)->entry = (rational_complex_number **)errRealloc((_mat)->entry, (_new_rows) * sizeof(rational_complex_number *)); \
-  for (_i = (_mat)->alloc_rows; _i < _new_rows; _i++) { (_mat)->entry[_i] = (rational_complex_number *)errMalloc((_mat)->alloc_cols * sizeof(rational_complex_number)); \
+  for (_i = (_mat)->alloc_rows; _i < _new_rows; _i++) { (_mat)->entry[_i] = (rational_complex_number *)malloc((_mat)->alloc_cols * sizeof(rational_complex_number)); \
     for (_j = 0; _j < (_mat)->alloc_cols; _j++) initialize_rational_number((_mat)->entry[_i][_j]); } (_mat)->alloc_rows = (_mat)->rows = _new_rows; }}
 
 #define increase_cols_matrix(_mat,_new_cols) { if ((_mat)->alloc_cols < _new_cols) { int _i,_j; \
@@ -511,113 +511,6 @@ typedef struct
   for (_i = 0; _i < _size; _i++) { mpq_mul(_n1, (_v)->coord[_i]->im, (_v)->coord[_i]->im); mpq_add(_n, _n, _n1); } mpq_clear(_n1); }
 
 #define norm_imag_vector(_n,_v) { norm_sqr_imag_vector(_n,_v); mpf_sqrt(_n,_n); }
-
-// alphaCertified.c function declarations
-int compute_beta(complex_number beta, polynomial_system *F, complex_vector x, int eval_prec);
-int compute_beta_sqr_rational(rational_complex_number beta_sqr, polynomial_system *F, rational_complex_vector x);
-void compute_gamma_from_LU(complex_number gamma, complex_matrix LU, int *rowswaps, polynomial_system *F, complex_vector x, int eval_prec);
-int compute_gamma(complex_number gamma, polynomial_system *F, complex_vector x, int eval_prec);
-void compute_gamma_sqr_from_LU_rational(rational_complex_number gamma_sqr, rational_complex_matrix LU, int *rowswaps, polynomial_system *F, rational_complex_vector x);
-int compute_gamma_sqr(rational_complex_number gamma_sqr, polynomial_system *F, rational_complex_vector x);
-int compute_alpha_beta_gamma(complex_vector newX, complex_number alpha, complex_number beta, complex_number gamma, polynomial_system *F, complex_vector x, int eval_prec);
-int compute_alpha_beta_gamma_sqr_rational(rational_complex_vector newX, rational_complex_number alpha_sqr, rational_complex_number beta_sqr, rational_complex_number gamma_sqr, polynomial_system *F, rational_complex_vector x);
-
-// classify.c function declarations
-void classify_points(int numPoints, complex_vector *Points, polynomial_system *F, configurations *S);
-void classify_points_rational(int numPoints, rational_complex_vector *Points, polynomial_system *F, configurations *S);
-int classify_real_points(int numPoints, point_struct *Pts, polynomial_system *F, int eval_prec);
-int classify_real_points_global(int numPoints, point_struct *Pts, polynomial_system *F, int eval_prec);
-int classify_real_points_rational(int numPoints, rational_point_struct *Pts, polynomial_system *F);
-int classify_real_points_global_rational(int numPoints, rational_point_struct *Pts, polynomial_system *F);
-int isolate_approximate_solutions(int numPoints, point_struct *Pts, polynomial_system *F, int eval_prec);
-int isolate_approximate_solutions_rational(int numPoints, rational_point_struct *Pts, polynomial_system *F);
-int determine_approximate_solution(complex_number alpha);
-int determine_approximate_solution_rational(rational_complex_number alpha);
-int determine_real_solution(complex_vector x, complex_number alpha, complex_number beta, complex_number gamma);
-int determine_real_solution_rational(rational_complex_vector x, rational_complex_number alpha_sqr, rational_complex_number beta_sqr, rational_complex_number gamma_sqr);
-int is_same_solution(point_struct *Pt1, point_struct *Pt2, polynomial_system *F, int eval_prec);
-int is_same_solution_rational(rational_point_struct *Pt1, rational_point_struct *Pt2, polynomial_system *F);
-
-// classify_over.c function declarations
-void classify_points_over(int numPoints, complex_vector *Points, polynomial_system *F, configurations *S);
-void classify_points_over_rational(int numPoints, rational_complex_vector *Points, polynomial_system *F, configurations *S);
-void determine_over_solution(int *isApproxSoln, point_struct *Pt, polynomial_system *F_rand, int numRandomSystems, int randomDigits, int eval_prec);
-void determine_over_solution_rational(int *isApproxSoln, rational_point_struct *Pt, polynomial_system *F_rand, int numRandomSystems, int randomDigits);
-void sort_polynomials(polynomial_system *F, int **perm);
-void randomize_polynomials(polynomial *randPoly, polynomial_system *F, int *perm, rational_complex_matrix A);
-
-// eval.c function declarations
-void eval_polynomial_system(complex_vector func, complex_matrix jac, polynomial_system *F, complex_vector vars, int eval_prec);
-void eval_polynomial_system_rational(rational_complex_vector func, rational_complex_matrix jac, polynomial_system *F, rational_complex_vector vars);
-void eval_polynomial_system_only_rational(rational_complex_vector func, polynomial_system *F, rational_complex_vector vars);
-
-// loadSettings.c function declarations
-void load_default_settings(configurations *S);
-void load_settings(configurations *S, char *fileName);
-
-// LUdecomp.c function declarations
-int LUdecomp(complex_matrix LU, int **rowswaps, complex_matrix A, mpf_t pivot_tol, mpf_t pivot_drop_tol, int LU_prec);
-int LUdecomp_rational(rational_complex_matrix LU, int **rowswaps, rational_complex_matrix A);
-void LUsolve(complex_matrix X, complex_matrix LU, int *rownum, complex_matrix B, int LU_prec);
-void LUsolve_rational(rational_complex_matrix X, rational_complex_matrix LU, int *rownum, rational_complex_matrix B);
-void LUsolve_vector(complex_vector X, complex_matrix LU, int *rownum, complex_vector B, int LU_prec);
-void LUsolve_rational_vector(rational_complex_vector X, rational_complex_matrix LU, int *rownum, rational_complex_vector B);
-
-// misc.c function declarations
-void print_welcome_message(FILE *OUT);
-void setPrec(int prec);
-void errExit(int errorCode);
-void *errMalloc(size_t size);
-void *errRealloc(void *ptr, size_t size);
-void setup_polynomial_system(polynomial_system *F, char *fileName, int realityCheck, int arithmeticType);
-void initialize_polynomial_system(polynomial_system *F);
-void clear_polynomial(polynomial *F);
-void clear_exponential(exponential *F);
-void clear_polynomial_system(polynomial_system *F);
-void print_number(FILE *OUT, int digits, complex_number z);
-void print_rational_number(FILE *OUT, rational_complex_number z);
-void print_vector_coordinate(FILE *OUT, int digits, complex_vector z);
-void print_vector(FILE *OUT, int digits, complex_vector z);
-void print_rational_vector_coordinate(FILE *OUT, rational_complex_vector z);
-void print_rational_vector(FILE *OUT, rational_complex_vector z);
-void print_matrix(FILE *OUT, int digits, complex_matrix z);
-void print_rational_matrix(FILE *OUT, rational_complex_matrix z);
-void determine_pivot_tolerances(mpf_t pivot_tol, mpf_t pivot_drop_tol, int prec);
-void load_floating_points(int *numPoints, complex_vector **points, int numVars, char *PtsFile);
-void load_rational_points(int *numPoints, rational_complex_vector **points, int numVars, char *PtsFile);
-void initialize_point_struct(point_struct *Pt, int numVariables);
-void initialize_rational_point_struct(rational_point_struct *Pt, int numVariables);
-void clear_point_struct(point_struct *Pt);
-void clear_rational_point_struct(rational_point_struct *Pt);
-void random_rational_matrix(rational_complex_matrix A, int rows, int cols);
-void random_real_rational_matrix(rational_complex_matrix A, int rows, int cols);
-void transpose_rational_matrix(rational_complex_matrix A, rational_complex_matrix B);
-int square_conj_map_test(polynomial_system *F);
-int square_newton_real_map_test(polynomial_system *F);
-void print_polynomial_system(FILE *OUT, polynomial_system *F);
-
-// newton.c function declarations
-int newton_iteration(complex_vector Nx, complex_number newtonRes_sqr, complex_matrix LU, int **rowswaps, polynomial_system *F, complex_vector x, mpf_t pivot_tol, mpf_t pivot_drop_tol, int eval_prec);
-int newton_iteration_rational(rational_complex_vector Nx, rational_complex_number newtonRes_sqr, rational_complex_matrix LU, int **rowswaps, polynomial_system *F, rational_complex_vector x);
-
-// newtonOnly.c function declarations
-void newton_only(int numPoints, complex_vector *Points, polynomial_system *F, configurations *S);
-void newton_only_rational(int numPoints, rational_complex_vector *Points, polynomial_system *F, configurations *S);
-
-// norm.c function declarations
-void norm_sqr_polynomial(mpq_t norm_sqr, polynomial *F);
-void norm_polynomial_system(complex_number norm, polynomial_system *F, int eval_prec);
-void norm_frobenius(complex_number norm, complex_matrix A, int eval_prec);
-void norm_sqr_frobenius_rational(rational_complex_number norm, rational_complex_matrix A);
-
-// output.c function declarations
-void configuration_summary(FILE *OUT, configurations *S, polynomial_system *F);
-void classify_output(int numPoints, point_struct *Pts, int numApproxSolns, int numDistinctSolns, int numRealSolns, int isReal, configurations *S, int overDet, polynomial_system *F);
-void classify_rational_output(int numPoints, rational_point_struct *Pts, int numApproxSolns, int numDistinctSolns, int numRealSolns, int isReal, configurations *S, int overDet, polynomial_system *F);
-
-// refine.c function declarations
-void refine_points(int numPoints, point_struct *Points, polynomial_system *F, int eval_prec, int digits);
-void refine_points_rational(int numPoints, rational_point_struct *Points, polynomial_system *F, int digits);
 
 #endif
 

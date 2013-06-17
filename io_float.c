@@ -12,9 +12,8 @@
 /***********************************************
  * read the polynomial/exponential system file *
  ***********************************************/
-polynomial_system read_system_file_float(char *filename) {
+void read_system_file_float(char *filename, polynomial_system *system) {
     int i, res, num_var, num_poly;
-    polynomial_system system;
 
     /* sanity-check the system file */
     errno = 0;
@@ -29,7 +28,9 @@ polynomial_system read_system_file_float(char *filename) {
 
     /* gather number of variables and polynomials */
     errno = 0;
+
     res = fscanf(sysfile, "%d %d", &num_var, &num_poly);
+
     if (res == EOF || res == 0) {
         char error_string[BH_TERMWIDTH];
         snprintf(error_string, (size_t) BH_TERMWIDTH + 1, "Error reading %s: unexpected EOF", filename);
@@ -44,15 +45,14 @@ polynomial_system read_system_file_float(char *filename) {
         exit(BH_EXIT_BADPARSE);
     }
 
-    system.numVariables = num_var;
-    system.numPolynomials = num_poly;
-    system.polynomials = malloc(num_poly * sizeof(polynomial));
+    (*system).numVariables = num_var;
+    (*system).numPolynomials = num_poly;
+    (*system).polynomials = malloc(num_poly * sizeof(polynomial));
 
     /* read in each polynomial piece by piece */
 
-    for (i = 0; i < num_poly; i++) {
-        system.polynomials[i] = parse_polynomial_float(sysfile, filename, num_var);
-    }
+    for (i = 0; i < num_poly; i++)
+        (*system).polynomials[i] = parse_polynomial_float(sysfile, filename, num_var);
 
     /* clean up the file */
     errno = 0;
@@ -65,8 +65,6 @@ polynomial_system read_system_file_float(char *filename) {
         print_error(error_string);
         exit(BH_EXIT_BADREAD);
     }
-
-    return system;
 }
 
 /***********************************
@@ -81,12 +79,6 @@ polynomial parse_polynomial_float(FILE *sysfile, char *filename, int num_var) {
     /* first get the number of terms */
     res = fscanf(sysfile, "%d", &num_terms);
 
-    p.exponents = malloc(num_terms * sizeof(int*));
-
-    for (i = 0; i < num_terms; i++)
-        p.exponents[i] = malloc(num_var * sizeof(int));
-    p.coeff = malloc(num_terms * sizeof(rational_complex_number));
-
     if (res == EOF || res == 0) {
         char error_string[BH_TERMWIDTH];
         snprintf(error_string, (size_t) BH_TERMWIDTH + 1, "Error reading %s: unexpected EOF", filename);
@@ -100,6 +92,12 @@ polynomial parse_polynomial_float(FILE *sysfile, char *filename, int num_var) {
         print_error(error_string);
         exit(BH_EXIT_BADPARSE);
     }
+
+    p.exponents = malloc(num_terms * sizeof(int*));
+
+    for (i = 0; i < num_terms; i++)
+        p.exponents[i] = malloc(num_var * sizeof(int));
+    p.coeff = malloc(num_terms * sizeof(rational_complex_number));
 
     p.numTerms = num_terms;
 
@@ -181,4 +179,84 @@ void parse_coeff_float(char *str_coeff_real, char *str_coeff_imag, complex_numbe
         print_error(error_string);
         exit(BH_EXIT_BADPARSE);
     }
+}
+
+int read_points_file_float(char *filename, void **vector, int num_var) {
+    if (verbosity > BH_LACONIC)
+        fprintf(stderr, "reading points file %s\n", filename);
+
+    complex_vector *vec;
+    int i, j, num_points, res;
+
+    /* sanity-check the points file */
+    errno = 0;
+    FILE *pfile = fopen(filename, "r");
+    if (pfile == NULL) {
+        char error_string[BH_TERMWIDTH];
+        snprintf(error_string, (size_t) BH_TERMWIDTH + 1, "Couldn't open points file %s: %s.", filename, strerror(errno));
+
+        print_error(error_string);
+        exit(BH_EXIT_BADFILE);
+    }
+
+    /* get number of points */
+    errno = 0;
+
+    res = fscanf(pfile, "%d", &num_points);
+
+    if (res == EOF || res == 0) {
+        char error_string[BH_TERMWIDTH];
+        snprintf(error_string, (size_t) BH_TERMWIDTH + 1, "Error reading %s: unexpected EOF", filename);
+
+        print_error(error_string);
+        exit(BH_EXIT_BADREAD);
+    } else if (errno == EILSEQ) {
+        char error_string[BH_TERMWIDTH];
+        snprintf(error_string, (size_t) BH_TERMWIDTH + 1, "Error reading %s: %s.", filename, strerror(errno));
+
+        print_error(error_string);
+        exit(BH_EXIT_BADPARSE);
+    }
+
+    vec = malloc(num_points * sizeof(complex_vector));
+    for (i = 0; i < num_points; i++) {
+        initialize_vector(vec[i], num_var);
+
+        errno = 0;
+
+        for (j = 0; j < num_var; j++) {
+            /* get real and imag points */
+            char str_point_real[50], str_point_imag[50];
+            res = fscanf(pfile, "%s %s", str_point_real, str_point_imag);
+
+            if (res == EOF || res == 0) {
+                char error_string[BH_TERMWIDTH];
+                snprintf(error_string, (size_t) BH_TERMWIDTH + 1, "Error reading %s: unexpected EOF.", filename);
+
+                print_error(error_string);
+                exit(BH_EXIT_BADREAD);
+            } else if (errno == EILSEQ) {
+                char error_string[BH_TERMWIDTH];
+                snprintf(error_string, (size_t) BH_TERMWIDTH + 1, "Error reading %s: %s.", filename, strerror(errno));
+
+                print_error(error_string);
+                exit(BH_EXIT_BADPARSE);
+            }
+
+            parse_coeff_float(str_point_real, str_point_imag, vec[i]->coord[j]);
+        }
+    }
+
+    /* clean up the file */
+    errno = 0;
+    res = fclose(pfile);
+
+    if (res == EOF) {
+        char error_string[BH_TERMWIDTH];
+        snprintf(error_string, (size_t) BH_TERMWIDTH + 1, "Couldn't close %s: %s.", filename, strerror(errno));
+        exit(BH_EXIT_BADREAD);
+    }
+
+    *vector = (void *) vec;
+    return num_points;
 }
