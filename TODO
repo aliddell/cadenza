@@ -1,0 +1,9 @@
+= TO-DO =
+
+* write a dummy function to simulate continuity certification (0 or 1)
+
+* actually do the continuity certification
+
+* plug in to alphaCertified to do convergence certification
+
+* replace parsing functions with gmp_fscanf
