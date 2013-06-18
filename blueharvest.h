@@ -81,6 +81,10 @@
 #ifndef BH_EXIT_BADPARSE
 #define BH_EXIT_BADPARSE 3
 #endif
+/* system is not square */
+#ifndef BH_EXIT_NONSQUARE
+#define BH_EXIT_NONSQUARE 4
+#endif
 
 /**************************************
  * global variables for blueharvest.c *
@@ -91,42 +95,43 @@ char *pointsfile, *sysfile;
 /*********************
  * function pointers *
  *********************/
-void (*read_system_file)(char *filename, polynomial_system *system);
-int (*read_points_file)(char *filename, void **vector, int num_vars);
-void (*free_system)(void *system);
-void (*free_vector)(void *vec, int num_points);
+void (*read_system_file)(char *filename, polynomial_system *system, void *v); /* reads in a polynomial system file, sets data */
+int (*read_points_file)(char *filename, void **t, void **w, int num_var); /* reads in a points file, sets data, returns number of points */
+void (*free_system)(void *system, void *v); /* frees dynamically-allocated memory for polynomial system */
+void (*free_vector)(void *w, void *t, int num_points); /* frees dynamically-allocated memory for array of points vectors */
 
 /*******************************************
  * function declarations for blueharvest.c *
  *******************************************/
-void free_system_rational(void *system);
-void free_system_float(void *system);
-void free_vector_rational(void *vec, int num_points);
-void free_vector_float(void *vec, int num_points);
-void getargs(int argc, char *argv[]);
-void set_arithmetic_type(rational_complex_vector *rational_vec, complex_vector *float_vec, void *generic_vec);
+void free_system_rational(void *system, void *v); /* see free_system(void *) */
+void free_system_float(void *system, void *v); /* see free_system(void *) */
+void free_vector_rational(void *w, void *t, int num_points); /* see free_vector(void *, int) */
+void free_vector_float(void *w, void *t, int num_points); /* see free_vector(void *, int) */
+void getargs(int argc, char *argv[]); /* get command-line arguments, set flags and filenames */
+void set_function_pointers(); /* set function pointers depending on arithmetic */
 
 /**********************************
  * function declarations for io.c *
  **********************************/
-void print_error(char *msg);
-void prog_info();
-void usage();
-void display_config();
+void print_error(char *msg); /* prints msg to stderr */
+void prog_info(); /* displays information about program, authors, libraries, &c on stderr */
+void usage(); /* displays a helpful message about invocation on stderr */
+void display_config(); /* displays the configuration (arithmetic type, precision, &c) on stderr */
 
 /*******************************************
  * function declarations for io_rational.c *
  *******************************************/
-void read_system_file_rational(char *filename, polynomial_system *system);
-polynomial parse_polynomial_rational(FILE *sysfile, char *filename, int num_vars);
-void parse_coeff_rational(char *str_coeff_real, char *str_coeff_imag, rational_complex_number c);
-int read_points_file_rational(char *filename, void **vector, int num_vars);
+void read_system_file_rational(char *filename, polynomial_system *system, void *v); /* see read_system_file(char *, void *) */
+polynomial parse_polynomial_rational(FILE *sysfile, char *filename, int num_var); /* parses exponents of one polynomial, calls parse_complex */
+void parse_complex_rational(char *str_real, char *str_imag, rational_complex_number c); /* parses coefficients of one polynomial */
+int read_points_file_rational(char *filename, void **t, void **w, int num_var); /* see read_points_file(char *, void **, int) */
 
 /****************************************
  * function declarations for io_float.c *
  ****************************************/
-void read_system_file_float(char *filename, polynomial_system *system);
-polynomial parse_polynomial_float(FILE *sysfile, char *filename, int num_vars);
-int read_points_file_float(char *filename, void **vector, int num_vars);
+void read_system_file_float(char *filename, polynomial_system *system, void *v); /* see read_system_file(char *, void *) */
+polynomial parse_polynomial_float(FILE *sysfile, char *filename, int num_var); /* parses exponents of one polynomial, calls parse_complex */
+void parse_complex_float(char *str_real, char *str_imag, complex_number c); /* parses coefficients of one polynomial */
+int read_points_file_float(char *filename, void **t, void **w, int num_var); /* see read_points_file(char *, void **, int) */
 
 #endif

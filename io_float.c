@@ -5,15 +5,16 @@
  * Alan Liddell <acliddel@ncsu.edu>
  * Ian Haywood <ithaywoo@ncsu.edu>
  *
- * io_rational.c: Process system and points file using rational arithmetic
+ * io_float.c: Process system and points file using floating-point arithmetic
  */
 #include "blueharvest.h"
 
 /***********************************************
  * read the polynomial/exponential system file *
  ***********************************************/
-void read_system_file_float(char *filename, polynomial_system *system) {
-    int i, res, num_var, num_poly;
+void read_system_file_float(char *filename, polynomial_system *system, void *void_v) {
+    int i, res, num_var;
+    complex_vector *v = (complex_vector *) void_v;
 
     /* sanity-check the system file */
     errno = 0;
@@ -29,7 +30,7 @@ void read_system_file_float(char *filename, polynomial_system *system) {
     /* gather number of variables and polynomials */
     errno = 0;
 
-    res = fscanf(sysfile, "%d %d", &num_var, &num_poly);
+    res = fscanf(sysfile, "%d", &num_var);
 
     if (res == EOF || res == 0) {
         char error_string[BH_TERMWIDTH];
@@ -46,13 +47,39 @@ void read_system_file_float(char *filename, polynomial_system *system) {
     }
 
     (*system).numVariables = num_var;
-    (*system).numPolynomials = num_poly;
-    (*system).polynomials = malloc(num_poly * sizeof(polynomial));
+    (*system).numPolynomials = num_var; /* square system */
+    (*system).polynomials = malloc(num_var * sizeof(polynomial));
 
     /* read in each polynomial piece by piece */
 
-    for (i = 0; i < num_poly; i++)
+    for (i = 0; i < num_var; i++)
         (*system).polynomials[i] = parse_polynomial_float(sysfile, filename, num_var);
+
+    /* read in v */
+    initialize_vector(*v, num_var);
+    for (i = 0; i < num_var; i++) {
+        /* get (real & imag) coefficients for the term */
+        errno = 0;
+        char str_real[50], str_imag[50];
+        res = fscanf(sysfile, "%s %s", str_real, str_imag);
+
+        if (res == EOF || res == 0) {
+            char error_string[BH_TERMWIDTH];
+            snprintf(error_string, (size_t) BH_TERMWIDTH + 1, "Error reading %s: unexpected EOF", filename);
+
+            print_error(error_string);
+            exit(BH_EXIT_BADREAD);
+        } else if (errno == EILSEQ) {
+            char error_string[BH_TERMWIDTH];
+            snprintf(error_string, (size_t) BH_TERMWIDTH + 1, "Error reading %s: %s.", filename, strerror(errno));
+
+            print_error(error_string);
+            exit(BH_EXIT_BADPARSE);
+        }
+
+        /* get mpf_t coefficients for real + imag */
+        parse_complex_float(str_real, str_imag, (*v)->coord[i]);
+    }
 
     /* clean up the file */
     errno = 0;
@@ -65,6 +92,8 @@ void read_system_file_float(char *filename, polynomial_system *system) {
         print_error(error_string);
         exit(BH_EXIT_BADREAD);
     }
+
+    void_v = (void *) v;
 }
 
 /***********************************
@@ -122,8 +151,7 @@ polynomial parse_polynomial_float(FILE *sysfile, char *filename, int num_var) {
 
         }
 
-        /* get (real & imag) coefficients for the term
-         * takes extra parsing since these will be fractions */
+        /* get (real & imag) coefficients for the term */
         char str_coeff_real[50], str_coeff_imag[50];
         res = fscanf(sysfile, "%s %s", str_coeff_real, str_coeff_imag);
 
@@ -141,10 +169,9 @@ polynomial parse_polynomial_float(FILE *sysfile, char *filename, int num_var) {
             exit(BH_EXIT_BADPARSE);
         }
 
-        /* get mpq_t coefficients for real + imag */
+        /* get mpf_t coefficients for real + imag */
         initialize_number(p.coeff[i]);
-        parse_coeff_float(str_coeff_real, str_coeff_imag, p.coeff[i]);
-
+        parse_complex_float(str_coeff_real, str_coeff_imag, p.coeff[i]);
     }
 
     return p;
@@ -153,40 +180,41 @@ polynomial parse_polynomial_float(FILE *sysfile, char *filename, int num_var) {
 /*************************************************************
  * parse string into numerator and denominator, return mpf_t *
  *************************************************************/
-void parse_coeff_float(char *str_coeff_real, char *str_coeff_imag, complex_number c) {
+void parse_complex_float(char *str_real, char *str_imag, complex_number c) {
     int res;
 
     errno = 0;
 
-    res = mpf_set_str(c->re, str_coeff_real, 0);
+    res = mpf_set_str(c->re, str_real, 0);
 
     /* error! */
     if (res == -1) {
         char error_string[BH_TERMWIDTH];
-        snprintf(error_string, (size_t) BH_TERMWIDTH + 1, "Invalid coefficient: %s", str_coeff_real);
+        snprintf(error_string, (size_t) BH_TERMWIDTH + 1, "Invalid coefficient: %s", str_real);
 
         print_error(error_string);
         exit(BH_EXIT_BADPARSE);
     }
 
-    res = mpf_set_str(c->im, str_coeff_imag, 0);
+    res = mpf_set_str(c->im, str_imag, 0);
 
     /* error! */
     if (res == -1) {
         char error_string[BH_TERMWIDTH];
-        snprintf(error_string, (size_t) BH_TERMWIDTH + 1, "Invalid coefficient: %s", str_coeff_imag);
+        snprintf(error_string, (size_t) BH_TERMWIDTH + 1, "Invalid coefficient: %s", str_imag);
 
         print_error(error_string);
         exit(BH_EXIT_BADPARSE);
     }
 }
 
-int read_points_file_float(char *filename, void **vector, int num_var) {
+int read_points_file_float(char *filename, void **t, void **w, int num_var) {
     if (verbosity > BH_VERBOSE)
         fprintf(stderr, "reading points file %s\n", filename);
 
-    complex_vector *vec;
     int i, j, num_points, res;
+    mpf_t *t_float;
+    complex_vector *w_float;
 
     /* sanity-check the points file */
     errno = 0;
@@ -218,9 +246,12 @@ int read_points_file_float(char *filename, void **vector, int num_var) {
         exit(BH_EXIT_BADPARSE);
     }
 
-    vec = malloc(num_points * sizeof(complex_vector));
+    t_float = malloc(num_points * sizeof(mpf_t));
+    w_float = malloc(num_points * sizeof(complex_vector));
+
     for (i = 0; i < num_points; i++) {
-        initialize_vector(vec[i], num_var);
+        mpf_init(t_float[i]);
+        initialize_vector(w_float[i], num_var);
 
         errno = 0;
 
@@ -243,7 +274,7 @@ int read_points_file_float(char *filename, void **vector, int num_var) {
                 exit(BH_EXIT_BADPARSE);
             }
 
-            parse_coeff_float(str_point_real, str_point_imag, vec[i]->coord[j]);
+            parse_complex_float(str_point_real, str_point_imag, w_float[i]->coord[j]);
         }
     }
 
@@ -257,6 +288,7 @@ int read_points_file_float(char *filename, void **vector, int num_var) {
         exit(BH_EXIT_BADREAD);
     }
 
-    *vector = (void *) vec;
+    *w = (void *) w_float;
+    *t = (void *) t_float;
     return num_points;
 }

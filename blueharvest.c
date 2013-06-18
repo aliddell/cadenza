@@ -10,11 +10,25 @@
 #include "blueharvest.h"
 
 int main(int argc, char *argv[]) {
-    int i, j, k, num_vars, num_poly;
-    polynomial_system ps;
-    rational_complex_vector *rational_vec = NULL;
-    complex_vector *float_vec = NULL;
-    void *generic_vec = NULL;
+    int i, j, k, num_var, num_poly;
+
+    /* polynomial system */
+    polynomial_system F;
+
+    /* constant vector v_i */
+    rational_complex_vector v_rational;
+    complex_vector v_float;
+    void *v = NULL;
+
+    /* vector t_i */
+    mpq_t *t_rational = NULL;
+    mpf_t *t_float = NULL;
+    void *t = NULL;
+
+    /* vector w_i */
+    rational_complex_vector *w_rational = NULL;
+    complex_vector *w_float = NULL;
+    void *w = NULL;
 
     /* get command-line arguments before anything else happens */
     getargs(argc, argv);
@@ -41,83 +55,82 @@ int main(int argc, char *argv[]) {
     if (verbosity > BH_CHATTY)
         display_config();
 
-    set_arithmetic_type(rational_vec, float_vec, generic_vec);
+    /* set void and function pointers */
+    set_function_pointers();
+    if (arithmetic_type == BH_USE_FLOAT) {
+        v = (void *) &v_float;
+    } else {
+        v = (void *) &v_rational;
+    }
 
-    read_system_file(sysfile, &ps);
-    num_vars = ps.numVariables;
-    num_poly = ps.numPolynomials;
+    read_system_file(sysfile, &F, v);
+    num_var = F.numVariables;
+    num_poly = F.numPolynomials;
 
-    int num_points = read_points_file(pointsfile, &generic_vec, num_vars);
-    rational_vec = (rational_complex_vector *) generic_vec;
+    int num_points = read_points_file(pointsfile, &t, &w, num_var);
+    w_rational = (rational_complex_vector *) w;
+    t_rational = (mpq_t *) t;
 
-    printf("system ps has %d variables and %d polynomials\n", num_vars, num_poly);
+    /* check that F is a square system *
+     * this is a relic now; delete     */
+    if (num_var != num_poly) {
+        char error_string[BH_TERMWIDTH] = "system must be square";
+
+        print_error(error_string);
+        exit(BH_EXIT_NONSQUARE);
+    }
+
 
     /* test system entered correctly; temporary */
     char variables[] = "xyzwuvabcdjkmnpqrs";
-    for (i = 0; i < ps.numPolynomials; i++) {
-        polynomial p = ps.polynomials[i];
+    for (i = 0; i < F.numPolynomials; i++) {
+        polynomial p = F.polynomials[i];
         for (j = 0; j < p.numTerms - 1; j++) {
             gmp_printf("(%Qd + %Qdi)", p.coeff[j]->re, p.coeff[j]->im);
             for (k = 0; k < p.numVariables; k++)
                 printf("%c^%d", variables[k], p.exponents[j][k]);
-            puts(" + ");
+            printf(" + ");
         }
         gmp_printf("(%Qd + %Qdi)", p.coeff[j]->re, p.coeff[j]->im);
-        for (k = 0; k < ps.numVariables; k++)
+        for (k = 0; k < F.numVariables; k++)
             printf("%c^%d", variables[k], p.exponents[j][k]);
-        puts("\n");
+        puts("");
     }
 
+    /* test vector entered correctly; temporary */
+    puts("");
+    printf("[");
+    for (i = 0; i < num_var - 1; i++) {
+        gmp_printf("%Qd + %Qdi, ", v_rational->coord[i]->re, v_rational->coord[i]->im);
+    }
+    gmp_printf("%Qd + %Qdi]", v_rational->coord[i]->re, v_rational->coord[i]->im);
+
     /* test points entered correctly; temporary */
-    printf("ps has %d test points\n", num_points);
+    puts("");
     for (i = 0; i < num_points; i++) {
-        for (j = 0; j < num_vars; j++) {
-            gmp_printf("%Qd + %Qdi\n", rational_vec[i]->coord[j]->re, rational_vec[i]->coord[j]->im);
+        gmp_printf("t = %Qd\n", t_rational[i]);
+        for (j = 0; j < num_var; j++) {
+            gmp_printf("%Qd + %Qdi\n", w_rational[i]->coord[j]->re, w_rational[i]->coord[j]->im);
         }
     }
 
     /* clean up */
-    void *system = &ps;
-    free_system(system);
-    free_vector(generic_vec, num_points);
+    free_system((void *) &F, v);
+    free_vector(w, t, num_points);
 
     exit(0);
 }
 
-/*********************************************************************
- * free all dynamically-allocated variables in the polynomial system *
- *********************************************************************/
-void free_system_float(void *system) {
-    int i, j;
-    polynomial_system *ps = (polynomial_system *) system;
-
-    for (i = 0; i < (*ps).numPolynomials; i++) {
-        polynomial p = (*ps).polynomials[i];
-        int num_terms = p.numTerms;
-        for (j = 0; j < num_terms; j++)
-            free(p.exponents[j]);
-
-        free(p.exponents);
-
-        for (j = 0; j < num_terms; j++)
-            clear_number(p.coeff[j]);
-
-        free(p.coeff);
-    }
-
-    free((*ps).polynomials);
-}
-
-
 /******************************************************************************
  * free all dynamically-allocated variables in the rational polynomial system *
  ******************************************************************************/
-void free_system_rational(void *system) {
+void free_system_rational(void *system, void *v) {
     int i, j;
-    polynomial_system *ps = (polynomial_system *) system;
+    polynomial_system *F = (polynomial_system *) system;
+    rational_complex_vector *v_rational = (rational_complex_vector *) v;
 
-    for (i = 0; i < (*ps).numPolynomials; i++) {
-        polynomial p = (*ps).polynomials[i];
+    for (i = 0; i < (*F).numPolynomials; i++) {
+        polynomial p = (*F).polynomials[i];
         int num_terms = p.numTerms;
         for (j = 0; j < num_terms; j++)
             free(p.exponents[j]);
@@ -130,33 +143,69 @@ void free_system_rational(void *system) {
         free(p.coeff);
     }
 
-    free((*ps).polynomials);
+    free((*F).polynomials);
+    clear_rational_vector(*v_rational);
+}
+
+/*********************************************************************
+ * free all dynamically-allocated variables in the polynomial system *
+ *********************************************************************/
+void free_system_float(void *system, void *v) {
+    int i, j;
+    polynomial_system *F = (polynomial_system *) system;
+    complex_vector *v_float = (complex_vector *) v;
+
+    for (i = 0; i < (*F).numPolynomials; i++) {
+        polynomial p = (*F).polynomials[i];
+        int num_terms = p.numTerms;
+        for (j = 0; j < num_terms; j++)
+            free(p.exponents[j]);
+
+        free(p.exponents);
+
+        for (j = 0; j < num_terms; j++)
+            clear_number(p.coeff[j]);
+
+        free(p.coeff);
+    }
+
+    free((*F).polynomials);
+    clear_vector(*v_float);
 }
 
 /**************************************************************************
  * free all dynamically-allocated variables in the rational points vector *
  **************************************************************************/
-void free_vector_rational(void *vec, int num_points) {
-    rational_complex_vector *vector = (rational_complex_vector *) vec;
+void free_vector_rational(void *w, void *t, int num_points) {
     int i;
+    rational_complex_vector *w_rational = (rational_complex_vector *) w;
+    mpq_t *t_rational = (mpq_t *) t;
 
     for (i = 0; i < num_points; i++)
-        clear_rational_vector(vector[i]);
+        mpq_clear(t_rational[i]);
+    for (i = 0; i < num_points; i++)
+        clear_rational_vector(w_rational[i]);
 
-    free(vector);
+    free(t_rational);
+    free(w_rational);
 }
 
 /***********************************************************************
  * free all dynamically-allocated variables in the float points vector *
  ***********************************************************************/
-void free_vector_float(void *vec, int num_points) {
-    complex_vector *vector = (complex_vector *) vec;
+void free_vector_float(void *w, void *t, int num_points) {
     int i;
 
-    for (i = 0; i < num_points; i++)
-        clear_vector(vector[i]);
+    complex_vector *w_float = (complex_vector *) w;
+    mpf_t *t_float = (mpf_t *) t;
 
-    free(vector);
+    for (i = 0; i < num_points; i++)
+        mpf_clear(t_float[i]);
+    for (i = 0; i < num_points; i++)
+        clear_vector(w_float[i]);
+
+    free(t_float);
+    free(w_float);
 }
 
 /*******************************************************
@@ -243,13 +292,12 @@ void getargs(int argc, char *argv[]) {
 /**********************************************************************************
  * set function pointers to use the proper arithmetic type with a minimum of fuss *
  **********************************************************************************/
-void set_arithmetic_type(rational_complex_vector *rational_vec, complex_vector *float_vec, void *generic_vec) {
+void set_function_pointers() {
 
     /* floating point functions and data types */
     if (arithmetic_type == BH_USE_FLOAT) {
         read_system_file = &read_system_file_float;
         read_points_file = &read_points_file_float;
-        generic_vec = (void *) float_vec;
         free_system = &free_system_float;
         free_vector = &free_vector_float;
     }
@@ -258,7 +306,6 @@ void set_arithmetic_type(rational_complex_vector *rational_vec, complex_vector *
     else {
         read_system_file = &read_system_file_rational;
         read_points_file = &read_points_file_rational;
-        generic_vec = (void *) rational_vec;
         free_system = &free_system_rational;
         free_vector = &free_vector_rational;
     }

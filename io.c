@@ -50,7 +50,7 @@ void display_config() {
     else
         strcpy(str_arithmetic_type, "rational");
 
-    fprintf(stderr, "\tComputing using %s arithmetic\n", str_arithmetic_type);
+    fprintf(stderr, "\tComputing using %d-bit precision %s arithmetic\n", default_precision, str_arithmetic_type);
     fprintf(stderr, "\tPolynomial system file is %s\n", sysfile);
     fprintf(stderr, "\tPoint set file is %s\n", pointsfile);
 }
