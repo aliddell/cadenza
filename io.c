@@ -13,7 +13,7 @@
  * print a helpful message about command-line arguments *
  ********************************************************/
 void usage() {
-    fprintf(stderr, "usage: blueharvest [-h|--help] [-v|--verbose] [-f|--float] [-q|--rational] --precision INT --system FILENAME --points FILENAME\n");
+    fputs("usage: blueharvest [-h|--help] [-v|--verbose] [-f|--float] [-q|--rational] --precision INT --system FILENAME --points FILENAME\n", stderr);
 }
 
 /********************************************
@@ -37,7 +37,7 @@ void prog_info() {
     if (res == 0)
         strcpy(compile_date, "Jan 1, 1970");
 
-    fprintf(stderr, "\n");
+    fputs("\n", stderr);
     fprintf(stderr, "\t%s v%s (built %s) (compiled %s)\n", BH_PROGRAM_NAME, BH_VERSION, BH_BUILD_DATE, compile_date);
     fprintf(stderr, "\t%s\n", BH_AUTHORS);
     fprintf(stderr, "\tGMP v%d.%d.%d & MPFR v%s\n\n", __GNU_MP_VERSION, __GNU_MP_VERSION_MINOR, __GNU_MP_VERSION_PATCHLEVEL, mpfr_get_version());

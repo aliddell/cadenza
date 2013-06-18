@@ -219,7 +219,7 @@ void parse_coeff_rational(char *str_coeff_real, char *str_coeff_imag, rational_c
 }
 
 int read_points_file_rational(char *filename, void **vector, int num_var) {
-    if (verbosity > BH_LACONIC)
+    if (verbosity > BH_VERBOSE)
         fprintf(stderr, "reading points file %s\n", filename);
 
     rational_complex_vector *vec;

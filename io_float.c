@@ -182,7 +182,7 @@ void parse_coeff_float(char *str_coeff_real, char *str_coeff_imag, complex_numbe
 }
 
 int read_points_file_float(char *filename, void **vector, int num_var) {
-    if (verbosity > BH_LACONIC)
+    if (verbosity > BH_VERBOSE)
         fprintf(stderr, "reading points file %s\n", filename);
 
     complex_vector *vec;

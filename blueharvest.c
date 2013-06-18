@@ -60,12 +60,12 @@ int main(int argc, char *argv[]) {
             gmp_printf("(%Qd + %Qdi)", p.coeff[j]->re, p.coeff[j]->im);
             for (k = 0; k < p.numVariables; k++)
                 printf("%c^%d", variables[k], p.exponents[j][k]);
-            printf(" + ");
+            puts(" + ");
         }
         gmp_printf("(%Qd + %Qdi)", p.coeff[j]->re, p.coeff[j]->im);
         for (k = 0; k < ps.numVariables; k++)
             printf("%c^%d", variables[k], p.exponents[j][k]);
-        printf("\n");
+        puts("\n");
     }
 
     /* test points entered correctly; temporary */
@@ -204,7 +204,7 @@ void getargs(int argc, char *argv[]) {
 
                 if (optarg) printf (" with arg %s", optarg);
 
-                printf ("\n");
+                puts("\n");
                 break;
 
             case 'f':
