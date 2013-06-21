@@ -61,6 +61,9 @@
 #ifndef BH_MAX_DATECHAR
 #define BH_MAX_DATECHAR 25
 #endif
+#ifndef BH_MAX_FILENAME
+#define BH_MAX_FILENAME 52
+#endif
 #ifndef BH_TERMWIDTH
 #define BH_TERMWIDTH 80
 #endif

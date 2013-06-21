@@ -103,18 +103,17 @@ int main(int argc, char *argv[]) {
     for (i = 0; i < num_var - 1; i++) {
         gmp_printf("%Qd + %Qdi, ", v_rational->coord[i]->re, v_rational->coord[i]->im);
     }
-    gmp_printf("%Qd + %Qdi]", v_rational->coord[i]->re, v_rational->coord[i]->im);
+    gmp_printf("%Qd + %Qdi]\n", v_rational->coord[i]->re, v_rational->coord[i]->im);
 
     /* test points entered correctly; temporary */
     puts("");
     for (i = 0; i < num_points; i++) {
-        gmp_printf("t = %Qd\n", t_rational[i]);
+        gmp_printf("%Qd", t_rational[i]);
         for (j = 0; j < num_var; j++) {
-            gmp_printf("%Qd + %Qdi\n", w_rational[i]->coord[j]->re, w_rational[i]->coord[j]->im);
+            gmp_printf("\t\t[%Qd + %Qdi]\n", w_rational[i]->coord[j]->re, w_rational[i]->coord[j]->im);
         }
     }
 
-    printf("deforming\n\n\n");
     deform(&F, v, t, w, num_points);
 
     /* clean up */

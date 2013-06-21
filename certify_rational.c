@@ -9,14 +9,47 @@
  */
 #include "blueharvest.h"
 
+/***************************************
+ * print a polynomial system to a file *
+ ***************************************/
+void print_system_file_rational(polynomial_system *F, int counter) {
+    int i, j, k;
+    char filename[BH_MAX_FILENAME];
+    snprintf(filename, (size_t) BH_MAX_FILENAME + 1, "system%d", counter);
+
+    /* check for errors here later */
+    FILE *OUT = fopen(filename, "w");
+
+    /* print number of variables, polynomials */
+    fprintf(OUT, "%d\t%d\n\n", F->numVariables, F->numPolynomials);
+    
+    /* print each monomial degree and coefficient */
+    for (i = 0; i < F->numPolynomials; i++) {
+        polynomial p = F->polynomials[i];
+        fprintf(OUT, "%d\n", p.numTerms);
+        for (j = 0; j < p.numTerms; j++) {
+            for (k = 0; k < p.numVariables; k++) {
+                gmp_fprintf(OUT, "%d\t", p.exponents[j][k]);
+            }
+
+            gmp_fprintf(OUT, "%Qd\t%Qd\n", p.coeff[j]->re, p.coeff[j]->im);
+        }
+    }
+
+    fclose(OUT);
+}
+
+/**************************
+ * apply f + tv for all t *
+ **************************/
 void deform_rational(polynomial_system *system, void *v, void *t, void *w, int num_points) {
     int i, j, k, h, num_var, num_terms;
     rational_complex_vector *v_rational = (rational_complex_vector *) v;
     mpq_t *t_rational = (mpq_t *) t;
-    rational_complex_number *w_rational = (rational_complex_number *) w;
+    rational_complex_vector *w_rational = (rational_complex_vector *) w;
 
     num_var = (*system).numVariables;
-    char variables[] = "xyzwuvabcdjkmnpqrs";
+
     /* for each t */
     for (i = 0; i < num_points; i++) {
         polynomial_system Fn;
@@ -24,7 +57,7 @@ void deform_rational(polynomial_system *system, void *v, void *t, void *w, int n
         Fn.numPolynomials = num_var;
         Fn.polynomials = malloc(num_var * sizeof(polynomial));
 
-        printf("i: %d\n", i);
+        /* for each polynomial in F */
         for (j = 0; j < num_var; j++) {
             /* copy system->p[j] */
             polynomial p;
@@ -41,8 +74,8 @@ void deform_rational(polynomial_system *system, void *v, void *t, void *w, int n
             }
             
             /* add 0's for exponents in last (constant) term */
+            p.exponents[k] = malloc(num_var * sizeof(int));
             for (h = 0; h < num_var; h++) {
-                p.exponents[k] = malloc(num_var * sizeof(int));
                 p.exponents[k][h] = 0;
             }
 
@@ -56,19 +89,13 @@ void deform_rational(polynomial_system *system, void *v, void *t, void *w, int n
 
             /* now add tv */
             initialize_rational_number(p.coeff[k]);
-            mpq_mul(p.coeff[k], t_rational[i], (*v_rational[i]).coord[j]->re);
-            mpq_mul(p.coeff[k], t_rational[i], (*v_rational[i]).coord[j]->im);
+            mpq_mul(p.coeff[k]->re, t_rational[i], (*v_rational)->coord[i]->re);
+            mpq_mul(p.coeff[k]->im, t_rational[i], (*v_rational)->coord[i]->im);
 
-            for (k = 0; k < p.numTerms - 1; k++) {
-                gmp_printf("(%Qd + %Qdi)", p.coeff[j]->re, p.coeff[j]->im);
-                for (h = 0; h < p.numVariables - 1; h++)
-                    printf("%c^%d", variables[h], p.exponents[k][h]);
-                printf(" + ");
-            }
-            gmp_printf("(%Qd + %Qdi)", p.coeff[k]->re, p.coeff[k]->im);
-            for (h = 0; h < (*system).numVariables; h++)
-                printf("%c^%d", variables[h], p.exponents[k][h]);
-            puts("");
+            Fn.polynomials[j] = p;
         }
+
+        print_system_file_rational(&Fn, i + 1);
+        /* print_points_file_rational */
     }
 }
