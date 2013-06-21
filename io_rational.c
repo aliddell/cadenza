@@ -12,9 +12,9 @@
 /***********************************************
  * read the polynomial/exponential system file *
  ***********************************************/
-void read_system_file_rational(char *filename, polynomial_system *system, void *void_v) {
+void read_system_file_rational(char *filename, polynomial_system *system, void *v) {
     int i, res, num_var;
-    rational_complex_vector *v = (rational_complex_vector *) void_v;
+    rational_complex_vector *rational_v = (rational_complex_vector *) v;
 
     /* sanity-check the system file */
     errno = 0;
@@ -53,7 +53,7 @@ void read_system_file_rational(char *filename, polynomial_system *system, void *
         (*system).polynomials[i] = parse_polynomial_rational(sysfile, filename, num_var);
 
     /* read in v */
-    initialize_rational_vector(*v, num_var);
+    initialize_rational_vector(*rational_v, num_var);
 
     for (i = 0; i < num_var; i++) {
         /* get (real & imag) parts for each v_i */
@@ -76,7 +76,7 @@ void read_system_file_rational(char *filename, polynomial_system *system, void *
         }
 
         /* get mpq_t values for real + imag */
-        parse_complex_rational(str_real, str_imag, (*v)->coord[i]);
+        parse_complex_rational(str_real, str_imag, (*rational_v)->coord[i]);
     }
 
     /* clean up the file */
@@ -91,7 +91,7 @@ void read_system_file_rational(char *filename, polynomial_system *system, void *
         exit(BH_EXIT_BADREAD);
     }
 
-    void_v = (void *) v;
+    v = (void *) rational_v;
 }
 
 /***********************************

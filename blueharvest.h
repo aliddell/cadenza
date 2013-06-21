@@ -85,6 +85,9 @@
 #ifndef BH_EXIT_NONSQUARE
 #define BH_EXIT_NONSQUARE 4
 #endif
+#ifndef BH_EXIT_MEMORY
+#define BH_EXIT_MEMORY 5
+#endif
 
 /**************************************
  * global variables for blueharvest.c *
@@ -99,6 +102,7 @@ void (*read_system_file)(char *filename, polynomial_system *system, void *v); /*
 int (*read_points_file)(char *filename, void **t, void **w, int num_var); /* reads in a points file, sets data, returns number of points */
 void (*free_system)(void *system, void *v); /* frees dynamically-allocated memory for polynomial system */
 void (*free_vector)(void *w, void *t, int num_points); /* frees dynamically-allocated memory for array of points vectors */
+void (*deform)(polynomial_system *system, void *v, void *t, void *w, int num_points); /* applies f(x) + tv for all t */
 
 /*******************************************
  * function declarations for blueharvest.c *
@@ -133,5 +137,15 @@ void read_system_file_float(char *filename, polynomial_system *system, void *v);
 polynomial parse_polynomial_float(FILE *sysfile, char *filename, int num_var); /* parses exponents of one polynomial, calls parse_complex */
 void parse_complex_float(char *str_real, char *str_imag, complex_number c); /* parses coefficients of one polynomial */
 int read_points_file_float(char *filename, void **t, void **w, int num_var); /* see read_points_file(char *, void **, int) */
+
+/************************************************
+ * function declarations for certify_rational.c *
+ ************************************************/
+void deform_rational(polynomial_system *system, void *v, void *t, void *w, int num_points); /* see deform(polynomial_system*, ...) */
+
+/*********************************************
+ * function declarations for certify_float.c *
+ *********************************************/
+void deform_float(polynomial_system *system, void *v, void *t, void *w, int num_points); /* see deform(polynomial_system*, ...) */
 
 #endif

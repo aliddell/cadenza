@@ -3,7 +3,7 @@ MPI=`which mpicc`
 LIB= -lm -lmpfr -lgmp
 OPT= -g -O3 -funroll-loops -fexpensive-optimizations -Wall 
 ARGS=$(OPT) 
-OBJFILES=io.o io_rational.o io_float.o
+OBJFILES=io.o io_rational.o io_float.o certify_rational.o certify_float.o
 
 all : $(OBJFILES) $(POBJFILES) blueharvest ;
 

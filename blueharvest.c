@@ -20,7 +20,7 @@ int main(int argc, char *argv[]) {
     complex_vector v_float;
     void *v = NULL;
 
-    /* vector t_i */
+    /* t_i */
     mpq_t *t_rational = NULL;
     mpf_t *t_float = NULL;
     void *t = NULL;
@@ -68,6 +68,7 @@ int main(int argc, char *argv[]) {
     num_poly = F.numPolynomials;
 
     int num_points = read_points_file(pointsfile, &t, &w, num_var);
+    printf("num_points: %d\n", num_points);
     w_rational = (rational_complex_vector *) w;
     t_rational = (mpq_t *) t;
 
@@ -79,7 +80,6 @@ int main(int argc, char *argv[]) {
         print_error(error_string);
         exit(BH_EXIT_NONSQUARE);
     }
-
 
     /* test system entered correctly; temporary */
     char variables[] = "xyzwuvabcdjkmnpqrs";
@@ -114,11 +114,14 @@ int main(int argc, char *argv[]) {
         }
     }
 
+    printf("deforming\n\n\n");
+    deform(&F, v, t, w, num_points);
+
     /* clean up */
     free_system((void *) &F, v);
     free_vector(w, t, num_points);
 
-    exit(0);
+    exit(BH_EXIT_SUCCESS);
 }
 
 /******************************************************************************
@@ -298,6 +301,7 @@ void set_function_pointers() {
     if (arithmetic_type == BH_USE_FLOAT) {
         read_system_file = &read_system_file_float;
         read_points_file = &read_points_file_float;
+        deform = &deform_float;
         free_system = &free_system_float;
         free_vector = &free_vector_float;
     }
@@ -306,6 +310,7 @@ void set_function_pointers() {
     else {
         read_system_file = &read_system_file_rational;
         read_points_file = &read_points_file_rational;
+        deform = &deform_rational;
         free_system = &free_system_rational;
         free_vector = &free_vector_rational;
     }
