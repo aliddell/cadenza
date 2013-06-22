@@ -39,6 +39,26 @@ void print_system_file_rational(polynomial_system *F, int counter) {
     fclose(OUT);
 }
 
+/***********************************
+ * print a set of points to a file *
+ ***********************************/
+void print_points_file_rational(rational_complex_vector w, int num_var, int counter) {
+    int i;
+    char filename[BH_MAX_FILENAME];
+    snprintf(filename, (size_t) BH_MAX_FILENAME + 1, "points%d", counter);
+
+    /* check for errors here later */
+    FILE *OUT = fopen(filename, "w");
+
+    /* print number of points */
+    fprintf(OUT, "1\n");
+    
+    /* print each monomial degree and coefficient */
+    for (i = 0; i < num_var; i++)
+        gmp_fprintf(OUT, "%Qd\t%Qd\n", w->coord[i]->re, w->coord[i]->im);
+
+    fclose(OUT);
+}
 /**************************
  * apply f + tv for all t *
  **************************/
@@ -96,6 +116,7 @@ void deform_rational(polynomial_system *system, void *v, void *t, void *w, int n
         }
 
         print_system_file_rational(&Fn, i + 1);
+        print_points_file_rational(w_rational[i], num_var, i + 1);
         /* print_points_file_rational */
     }
 }

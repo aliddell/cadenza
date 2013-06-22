@@ -1,5 +1,9 @@
 = TO-DO =
 
+* clean up after polynomial systems in certify_*
+
+* check for fopen/fclose errors in certify_*
+
 * write a dummy function to simulate continuity certification (0 or 1)
 
 * actually do the continuity certification
