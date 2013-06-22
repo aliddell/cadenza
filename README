@@ -1,1 +1,58 @@
-nothing to see here just yet
+BUILD REQUIREMENTS
+You need the GMP and MPFR headers to build this program. You will need to have
+the gmp-devel and mpfr-devel (or equivalent) packages installed. Use apt-get
+or yum or whatever accordingly.
+
+BUILDING
+Just type `make'.
+
+INVOCATION
+blueharvest requires certain command-line arguments. Either -s or --system and
+then the path to the polynomial system file, and -p or --points plus the path
+to the points file. You may also specify the default precision using the -m or
+--precision flags. There are three levels of verbosity, although as of this
+moment they don't mean much. They are --chatty (or -v), --verbose (-vv), or
+--loquacious (-vvv) in ascending order. Choose -r or --rational or -f or
+--float for rational or floating-point arithmetic respectively. (Don't
+choose float just yet, we're working bugs out from that.)
+
+FILE FORMATS
+You must specify the polynomial system in a file formatted as follows:
+
+The number of variables/polynomials on a line all its own. Since the
+systems we're working with are square, this will be the same number and only
+needs to be read in once. Each polynomial needs to be represented in a block
+of its own. At the top of this block will be the number of terms. For example,
+(3 + 1/2i)(x^2)y is a single term. Then each line following will be the degree
+of each variable in the given term, followed by the real and imaginary
+coefficients. So to use our (2 + 3i)(x^2)y example, assuming that x and y are
+the only variables, it would look something like this:
+
+2       1       3       1/2
+
+Every variable must be represented, so if z were a variable in this system,
+our same example would look like this:
+
+2       1       0       3       1/2
+
+After each polynomial has been represented, the vector v will be represented
+as each of its real and imaginary parts. So [1, 1 + i, i] would be written:
+
+1       0
+1       1
+0       1
+
+See system.example for a complete picture.
+
+You must specify the points in a file formatted as follows:
+
+The number of points on a line all its own. Each point is an ordered pair (t, w),
+where w is a vector of the same length as the number of polynomials. Thus, w
+represents a potential solution to f + (t_i)v.
+
+Each t comes before each w. t is understood to be real-valued, i.e., not complex,
+so do not specify 0 for the imaginary part. Each w vector comes after its
+corresponding t, and *is* complex-valued, so each entry in w must specify a real
+and imaginary component, just like v.
+
+See points.example for a complete picture.

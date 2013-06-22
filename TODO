@@ -1,13 +1,21 @@
 = TO-DO =
 
+* write a dummy function to simulate continuity certification (0 or 1)
+
+* write certify_float
+
+* convert floating point stuff to rational to do the calculations
+
 * clean up after polynomial systems in certify_*
 
 * check for fopen/fclose errors in certify_*
 
-* write a dummy function to simulate continuity certification (0 or 1)
-
-* actually do the continuity certification
+* check that each t_i is between 0 and 1
 
 * plug in to alphaCertified to do convergence certification
 
+* actually do the continuity certification
+
 * replace parsing functions with gmp_fscanf
+
+* edit the parsing functions to throw away lines beginning with # (comments)
