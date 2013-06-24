@@ -9,5 +9,5 @@
  */
 #include "blueharvest.h"
 
-void deform_float(polynomial_system *system, void *v, void *t, void *w, int num_points) {
+void deform_float(polynomial_system *system, configurations *config, void *v, void *t, void *w, int num_points) {
 }

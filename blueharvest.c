@@ -14,6 +14,9 @@ int main(int argc, char *argv[]) {
 
     /* polynomial system */
     polynomial_system F;
+    
+    /* settings */
+    configurations S;
 
     /* constant vector v_i */
     rational_complex_vector v_rational;
@@ -62,6 +65,11 @@ int main(int argc, char *argv[]) {
     } else {
         v = (void *) &v_rational;
     }
+
+    /* set configurations */
+    S.arithmeticType = arithmetic_type;
+    S.startingPrecision = default_precision;
+    S.algorithm = 2; /* real distinct certify */
 
     read_system_file(sysfile, &F, v);
     num_var = F.numVariables;
@@ -114,7 +122,7 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    deform(&F, v, t, w, num_points);
+    deform(&F, &S, v, t, w, num_points);
 
     /* clean up */
     free_system((void *) &F, v);
@@ -131,8 +139,8 @@ void free_system_rational(void *system, void *v) {
     polynomial_system *F = (polynomial_system *) system;
     rational_complex_vector *v_rational = (rational_complex_vector *) v;
 
-    for (i = 0; i < (*F).numPolynomials; i++) {
-        polynomial p = (*F).polynomials[i];
+    for (i = 0; i < F->numPolynomials; i++) {
+        polynomial p = F->polynomials[i];
         int num_terms = p.numTerms;
         for (j = 0; j < num_terms; j++)
             free(p.exponents[j]);
@@ -143,9 +151,11 @@ void free_system_rational(void *system, void *v) {
             clear_rational_number(p.coeff[j]);
 
         free(p.coeff);
+        mpq_clear(p.norm_sqr);
     }
 
-    free((*F).polynomials);
+    mpq_clear(F->norm_sqr);
+    free(F->polynomials);
     clear_rational_vector(*v_rational);
 }
 
@@ -157,8 +167,8 @@ void free_system_float(void *system, void *v) {
     polynomial_system *F = (polynomial_system *) system;
     complex_vector *v_float = (complex_vector *) v;
 
-    for (i = 0; i < (*F).numPolynomials; i++) {
-        polynomial p = (*F).polynomials[i];
+    for (i = 0; i < F->numPolynomials; i++) {
+        polynomial p = F->polynomials[i];
         int num_terms = p.numTerms;
         for (j = 0; j < num_terms; j++)
             free(p.exponents[j]);
@@ -168,10 +178,12 @@ void free_system_float(void *system, void *v) {
         for (j = 0; j < num_terms; j++)
             clear_number(p.coeff[j]);
 
+        mpq_clear(p.norm_sqr);
         free(p.coeff);
     }
 
-    free((*F).polynomials);
+    mpq_clear(F->norm_sqr);
+    free(F->polynomials);
     clear_vector(*v_float);
 }
 

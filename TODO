@@ -12,8 +12,6 @@
 
 * check that each t_i is between 0 and 1
 
-* plug in to alphaCertified to do convergence certification
-
 * actually do the continuity certification
 
 * replace parsing functions with gmp_fscanf

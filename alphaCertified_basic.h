@@ -56,7 +56,7 @@
     mpz_t _pow_int; mpz_init_set_ui(_pow_int, _dexp); char *_base2 = mpz_get_str(NULL, 2, _pow_int); _size = strlen(_base2); \
     for (_i = _size - 1; _i >= 0; _i--) { if (_base2[_i] == '1') { mpq_mul(_zexp,_zexp,_cexp); } mpq_mul(_cexp,_cexp,_cexp); } \
     mpq_clear(_cexp); mpz_clear(_pow_int); free(_base2); } \
-  else { printf("\nERROR: Invalid power (%d).\n",_dexp); errExit(ERROR_CONFIGURATION); }}
+  else { printf("59\n"); printf("\nERROR: Invalid power (%d).\n",_dexp); errExit(ERROR_CONFIGURATION); }}
 
 // declaration for errExit
 void errExit(int errorCode);

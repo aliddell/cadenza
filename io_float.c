@@ -46,14 +46,21 @@ void read_system_file_float(char *filename, polynomial_system *system, void *voi
         exit(BH_EXIT_BADPARSE);
     }
 
-    (*system).numVariables = num_var;
-    (*system).numPolynomials = num_var; /* square system */
-    (*system).polynomials = malloc(num_var * sizeof(polynomial));
+    system->numVariables = num_var;
+    system->numPolynomials = num_var; /* square system */
+    system->maximumDegree = 0;
+    system->isReal = 1;
+    mpq_init(system->norm_sqr);
+    system->numExponentials = 0;
+    system->polynomials = malloc(num_var * sizeof(polynomial));
 
     /* read in each polynomial piece by piece */
 
-    for (i = 0; i < num_var; i++)
-        (*system).polynomials[i] = parse_polynomial_float(sysfile, filename, num_var);
+    for (i = 0; i < num_var; i++) {
+        system->polynomials[i] = parse_polynomial_float(sysfile, filename, num_var);
+        if (system->polynomials[i].degree > system->maximumDegree)
+            system->maximumDegree = system->polynomials[i].degree;
+    }
 
     /* read in v */
     initialize_vector(*v, num_var);
@@ -100,7 +107,7 @@ void read_system_file_float(char *filename, polynomial_system *system, void *voi
 * parse polynomial from input file *
 ************************************/
 polynomial parse_polynomial_float(FILE *sysfile, char *filename, int num_var) {
-    int num_terms, res, i, j;
+    int num_terms, res, i, j, max_degree;
     polynomial p;
 
     p.numVariables = num_var;
@@ -127,11 +134,13 @@ polynomial parse_polynomial_float(FILE *sysfile, char *filename, int num_var) {
     for (i = 0; i < num_terms; i++)
         p.exponents[i] = malloc(num_var * sizeof(int));
     p.coeff = malloc(num_terms * sizeof(rational_complex_number));
-
     p.numTerms = num_terms;
+    p.degree = 0;
+    p.isReal = 1;
 
     /* get the exponents and coefficients for each term */
     for (i = 0; i < num_terms; i++) {
+        max_degree = 0;
         /* get exponent for each variable in the term */
         for (j = 0; j < num_var; j++) {
             res = fscanf(sysfile, "%d", &p.exponents[i][j]);
@@ -149,7 +158,12 @@ polynomial parse_polynomial_float(FILE *sysfile, char *filename, int num_var) {
                 exit(BH_EXIT_BADPARSE);
             }
 
+            max_degree += p.exponents[i][j];
         }
+
+        /* check if degree is greater than p.degree */
+        if (max_degree > p.degree)
+            p.degree = max_degree;
 
         /* get (real & imag) coefficients for the term */
         char str_coeff_real[50], str_coeff_imag[50];
@@ -174,6 +188,8 @@ polynomial parse_polynomial_float(FILE *sysfile, char *filename, int num_var) {
         parse_complex_float(str_coeff_real, str_coeff_imag, p.coeff[i]);
     }
 
+    mpq_init(p.norm_sqr);
+    norm_sqr_polynomial(p.norm_sqr, &p);
     return p;
 }
 
