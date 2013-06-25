@@ -72,24 +72,20 @@
 #ifndef BH_EXIT_SUCCESS
 #define BH_EXIT_SUCCESS 0
 #endif
-/* can't open file for reading or writing */
 #ifndef BH_EXIT_BADFILE
-#define BH_EXIT_BADFILE 1
+#define BH_EXIT_BADFILE 1 /* can't open file for reading or writing */
 #endif
-/* unexpected EOF in file read */
 #ifndef BH_EXIT_BADREAD
-#define BH_EXIT_BADREAD 2
+#define BH_EXIT_BADREAD 2 /* unexpected EOF in file read */
 #endif
-/* general parse error */
 #ifndef BH_EXIT_BADPARSE
-#define BH_EXIT_BADPARSE 3
+#define BH_EXIT_BADPARSE 3 /* general parse error */
 #endif
-/* system is not square */
-#ifndef BH_EXIT_NONSQUARE
-#define BH_EXIT_NONSQUARE 4
+#ifndef BH_EXIT_BADDEF
+#define BH_EXIT_BADDEF 4 /* system is not square, not enough points */
 #endif
 #ifndef BH_EXIT_MEMORY
-#define BH_EXIT_MEMORY 5
+#define BH_EXIT_MEMORY 5 /* out of memory */
 #endif
 
 /**************************************
@@ -105,7 +101,7 @@ void (*read_system_file)(char *filename, polynomial_system *system, void *v); /*
 int (*read_points_file)(char *filename, void **t, void **w, int num_var); /* reads in a points file, sets data, returns number of points */
 void (*free_system)(void *system, void *v); /* frees dynamically-allocated memory for polynomial system */
 void (*free_vector)(void *w, void *t, int num_points); /* frees dynamically-allocated memory for array of points vectors */
-void (*deform)(polynomial_system *system, configurations *config, void *v, void *t, void *w, int num_points); /* applies f(x) + tv for all t */
+void (*test_pairwise)(polynomial_system *system, configurations *config, void *v, void *t, void *w, int num_points); /* applies f(x) + tv for all t */
 
 /*******************************************
  * function declarations for blueharvest.c *
@@ -144,11 +140,13 @@ int read_points_file_float(char *filename, void **t, void **w, int num_var); /* 
 /************************************************
  * function declarations for certify_rational.c *
  ************************************************/
-void deform_rational(polynomial_system *system, configurations *config, void *v, void *t, void *w, int num_points); /* see deform(polynomial_system*, ...) */
+void apply_tv_rational(polynomial_system *base, polynomial_system *F, mpq_t t, rational_complex_vector v); /* add (t_i)(v_i) to F */
+void test_pairwise_rational(polynomial_system *system, configurations *config, void *v, void *t, void *w, int num_points); /* see test_pairwise(polynomial_system*, ...) */
 
 /*********************************************
  * function declarations for certify_float.c *
  *********************************************/
-void deform_float(polynomial_system *system, configurations *config, void *v, void *t, void *w, int num_points); /* see deform(polynomial_system*, ...) */
+void apply_tv_float(polynomial_system *base, polynomial_system *F, mpf_t t, complex_vector v); /* add (t_i)(v_i) to F */
+void test_pairwise_float(polynomial_system *system, configurations *config, void *v, void *t, void *w, int num_points); /* see test_pairwise(polynomial_system*, ...) */
 
 #endif

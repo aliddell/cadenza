@@ -10,12 +10,12 @@
 #include "blueharvest.h"
 
 int main(int argc, char *argv[]) {
-    int i, j, k, num_var, num_poly;
+    int i, j, k, num_var, num_poly, num_points;
 
     /* polynomial system */
     polynomial_system F;
     
-    /* settings */
+    /* settings (for aC functions) */
     configurations S;
 
     /* constant vector v_i */
@@ -69,25 +69,16 @@ int main(int argc, char *argv[]) {
     /* set configurations */
     S.arithmeticType = arithmetic_type;
     S.startingPrecision = default_precision;
-    S.algorithm = 2; /* real distinct certify */
+    S.algorithm = 1; /* real distinct certify */
 
     read_system_file(sysfile, &F, v);
     num_var = F.numVariables;
     num_poly = F.numPolynomials;
 
-    int num_points = read_points_file(pointsfile, &t, &w, num_var);
-    printf("num_points: %d\n", num_points);
+    num_points = read_points_file(pointsfile, &t, &w, num_var);
+
     w_rational = (rational_complex_vector *) w;
     t_rational = (mpq_t *) t;
-
-    /* check that F is a square system *
-     * this is a relic now; delete     */
-    if (num_var != num_poly) {
-        char error_string[BH_TERMWIDTH] = "system must be square";
-
-        print_error(error_string);
-        exit(BH_EXIT_NONSQUARE);
-    }
 
     /* test system entered correctly; temporary */
     char variables[] = "xyzwuvabcdjkmnpqrs";
@@ -122,7 +113,7 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    deform(&F, &S, v, t, w, num_points);
+    test_pairwise(&F, &S, v, t, w, num_points);
 
     /* clean up */
     free_system((void *) &F, v);
@@ -312,7 +303,7 @@ void set_function_pointers() {
     if (arithmetic_type == BH_USE_FLOAT) {
         read_system_file = &read_system_file_float;
         read_points_file = &read_points_file_float;
-        deform = &deform_float;
+        test_pairwise = &test_pairwise_float;
         free_system = &free_system_float;
         free_vector = &free_vector_float;
     }
@@ -321,7 +312,7 @@ void set_function_pointers() {
     else {
         read_system_file = &read_system_file_rational;
         read_points_file = &read_points_file_rational;
-        deform = &deform_rational;
+        test_pairwise = &test_pairwise_rational;
         free_system = &free_system_rational;
         free_vector = &free_vector_rational;
     }

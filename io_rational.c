@@ -13,7 +13,7 @@
  * read the polynomial/exponential system file *
  ***********************************************/
 void read_system_file_rational(char *filename, polynomial_system *system, void *v) {
-    int i, res, num_var;
+    int i, res, num_var, num_poly;
     rational_complex_vector *rational_v = (rational_complex_vector *) v;
 
     /* sanity-check the system file */
@@ -44,16 +44,18 @@ void read_system_file_rational(char *filename, polynomial_system *system, void *
         exit(BH_EXIT_BADPARSE);
     }
 
+    num_poly = num_var; /* square system */
+
     system->numVariables = num_var;
-    system->numPolynomials = num_var; /* square system */
+    system->numPolynomials = num_poly;
     system->maximumDegree = 0;
     system->isReal = 0;
     mpq_init(system->norm_sqr);
     system->numExponentials = 0;
-    system->polynomials = malloc(num_var * sizeof(polynomial));
+    system->polynomials = malloc(num_poly * sizeof(polynomial));
 
     /* read in each polynomial piece by piece */
-    for (i = 0; i < num_var; i++) {
+    for (i = 0; i < num_poly; i++) {
         system->polynomials[i] = parse_polynomial_rational(sysfile, filename, num_var);
         if (system->polynomials[i].degree > system->maximumDegree)
             system->maximumDegree = system->polynomials[i].degree;
@@ -301,15 +303,25 @@ int read_points_file_rational(char *filename, void **t, void **w, int num_var) {
         exit(BH_EXIT_BADPARSE);
     }
 
+    /* check that we have enought points to test */
+    if (num_points < 2) {
+        char error_string[] = "You must define 2 or more points to test";
+
+        print_error(error_string);
+        exit(BH_EXIT_BADDEF);
+    }
+
     t_rational = malloc(num_points * sizeof(mpq_t));
     w_rational = malloc(num_points * sizeof(rational_complex_vector));
 
     for (i = 0; i < num_points; i++) {
+        /* read in each t */
         mpq_init(t_rational[i]);
         initialize_rational_vector(w_rational[i], num_var);
 
         errno = 0;
         res = gmp_fscanf(pfile, "%Qd", t_rational[i]);
+
         if (res == EOF || res == 0) {
             char error_string[BH_TERMWIDTH];
             snprintf(error_string, (size_t) BH_TERMWIDTH + 1, "Error reading %s: unexpected EOF.", filename);
@@ -322,6 +334,11 @@ int read_points_file_rational(char *filename, void **t, void **w, int num_var) {
 
             print_error(error_string);
             exit(BH_EXIT_BADPARSE);
+        }
+
+        /* check if 0 < t < 1 */
+        if (mpq_cmp_ui(t_rational[i], 0, 1) <= 0 || mpq_cmp_ui(t_rational[i], 1, 1) >= 0) {
+            /* error here */
         }
 
         for (j = 0; j < num_var; j++) {

@@ -13,5 +13,7 @@ blueharvest : blueharvest.c $(OBJFILES) ;
 .c.o : 
 	$(MPI) $(ARGS) -c $*.c 
 
-clean : ;
+clean : 
 	rm -f blueharvest $(OBJFILES)
+reset :
+	rm -f approxSolns constantValues distinctSolns isApproxSoln isDistinctSoln isRealSoln nonrealDistinctSolns realDistinctSolns redundantSolns refinedPoints unknownPoints summary

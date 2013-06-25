@@ -12,9 +12,9 @@
 /***********************************************
  * read the polynomial/exponential system file *
  ***********************************************/
-void read_system_file_float(char *filename, polynomial_system *system, void *void_v) {
-    int i, res, num_var;
-    complex_vector *v = (complex_vector *) void_v;
+void read_system_file_float(char *filename, polynomial_system *system, void *v) {
+    int i, res, num_var, num_poly;
+    complex_vector *v_rational = (complex_vector *) v;
 
     /* sanity-check the system file */
     errno = 0;
@@ -46,8 +46,10 @@ void read_system_file_float(char *filename, polynomial_system *system, void *voi
         exit(BH_EXIT_BADPARSE);
     }
 
+    num_poly = num_var; /* square system */
+
     system->numVariables = num_var;
-    system->numPolynomials = num_var; /* square system */
+    system->numPolynomials = num_poly;
     system->maximumDegree = 0;
     system->isReal = 1;
     mpq_init(system->norm_sqr);
@@ -56,14 +58,14 @@ void read_system_file_float(char *filename, polynomial_system *system, void *voi
 
     /* read in each polynomial piece by piece */
 
-    for (i = 0; i < num_var; i++) {
+    for (i = 0; i < num_poly; i++) {
         system->polynomials[i] = parse_polynomial_float(sysfile, filename, num_var);
         if (system->polynomials[i].degree > system->maximumDegree)
             system->maximumDegree = system->polynomials[i].degree;
     }
 
     /* read in v */
-    initialize_vector(*v, num_var);
+    initialize_vector(*v_rational, num_var);
     for (i = 0; i < num_var; i++) {
         /* get (real & imag) coefficients for the term */
         errno = 0;
@@ -85,7 +87,7 @@ void read_system_file_float(char *filename, polynomial_system *system, void *voi
         }
 
         /* get mpf_t coefficients for real + imag */
-        parse_complex_float(str_real, str_imag, (*v)->coord[i]);
+        parse_complex_float(str_real, str_imag, (*v_rational)->coord[i]);
     }
 
     /* clean up the file */
@@ -100,7 +102,7 @@ void read_system_file_float(char *filename, polynomial_system *system, void *voi
         exit(BH_EXIT_BADREAD);
     }
 
-    void_v = (void *) v;
+    v = (void *) v_rational;
 }
 
 /***********************************
@@ -136,7 +138,7 @@ polynomial parse_polynomial_float(FILE *sysfile, char *filename, int num_var) {
     p.coeff = malloc(num_terms * sizeof(rational_complex_number));
     p.numTerms = num_terms;
     p.degree = 0;
-    p.isReal = 1;
+    p.isReal = 0;
 
     /* get the exponents and coefficients for each term */
     for (i = 0; i < num_terms; i++) {
@@ -262,14 +264,43 @@ int read_points_file_float(char *filename, void **t, void **w, int num_var) {
         exit(BH_EXIT_BADPARSE);
     }
 
+    /* check that we have enough points to test */
+    if (num_points < 2) {
+        char error_string[] = "You must define 2 or more points to test";
+
+        print_error(error_string);
+        exit(BH_EXIT_BADDEF);
+    }
+
     t_float = malloc(num_points * sizeof(mpf_t));
     w_float = malloc(num_points * sizeof(complex_vector));
 
     for (i = 0; i < num_points; i++) {
+        /* read in each t */
         mpf_init(t_float[i]);
         initialize_vector(w_float[i], num_var);
 
         errno = 0;
+        res = gmp_fscanf(pfile, "%Fd", t_float[i]);
+
+        if (res == EOF || res == 0) {
+            char error_string[BH_TERMWIDTH];
+            snprintf(error_string, (size_t) BH_TERMWIDTH + 1, "Error reading %s: unexpected EOF.", filename);
+
+            print_error(error_string);
+            exit(BH_EXIT_BADREAD);
+        } else if (errno == EILSEQ) {
+            char error_string[BH_TERMWIDTH];
+            snprintf(error_string, (size_t) BH_TERMWIDTH + 1, "Error reading %s: %s.", filename, strerror(errno));
+
+            print_error(error_string);
+            exit(BH_EXIT_BADPARSE);
+        }
+
+        /* check if 0 < t < 1 */
+        if (mpf_cmp_ui(t_float[i], 0) <= 0 || mpf_cmp_ui(t_float[i], 1) >= 0) {
+            /* error here */
+        }
 
         for (j = 0; j < num_var; j++) {
             /* get real and imag points */
