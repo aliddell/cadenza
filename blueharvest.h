@@ -82,7 +82,7 @@
 #define BH_EXIT_BADPARSE 3 /* general parse error */
 #endif
 #ifndef BH_EXIT_BADDEF
-#define BH_EXIT_BADDEF 4 /* system is not square, not enough points */
+#define BH_EXIT_BADDEF 4 /* system is not square, not enough points, bad t-value, &c*/
 #endif
 #ifndef BH_EXIT_MEMORY
 #define BH_EXIT_MEMORY 5 /* out of memory */

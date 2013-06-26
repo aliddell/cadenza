@@ -337,8 +337,12 @@ int read_points_file_rational(char *filename, void **t, void **w, int num_var) {
         }
 
         /* check if 0 < t < 1 */
-        if (mpq_cmp_ui(t_rational[i], 0, 1) <= 0 || mpq_cmp_ui(t_rational[i], 1, 1) >= 0) {
-            /* error here */
+        if (mpq_cmp_ui(t_rational[i], 0, 1) < 0 || mpq_cmp_ui(t_rational[i], 1, 1) > 0) {
+            char error_string[BH_TERMWIDTH];
+            gmp_snprintf(error_string, (size_t) BH_TERMWIDTH + 1, "Value for t not between 0 and 1: %Qd", t_rational[i]);
+
+            print_error(error_string);
+            exit(BH_EXIT_BADDEF);
         }
 
         for (j = 0; j < num_var; j++) {
@@ -380,6 +384,9 @@ int read_points_file_rational(char *filename, void **t, void **w, int num_var) {
     return num_points;
 }
 
+/********************************
+ * print a test point to stdout *
+ ********************************/
 void print_points_rational(rational_complex_vector *points, int num_var) {
     int i;
 
@@ -389,6 +396,9 @@ void print_points_rational(rational_complex_vector *points, int num_var) {
 
 }
 
+/***************************************
+ * print a polynomial system to stdout *
+ ***************************************/
 void print_system_rational(polynomial_system *system) {
     int i, j, k;
     char variables[] = "xyzwuvabcdjkmnpqrs";

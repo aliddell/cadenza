@@ -298,8 +298,12 @@ int read_points_file_float(char *filename, void **t, void **w, int num_var) {
         }
 
         /* check if 0 < t < 1 */
-        if (mpf_cmp_ui(t_float[i], 0) <= 0 || mpf_cmp_ui(t_float[i], 1) >= 0) {
-            /* error here */
+        if (mpf_cmp_ui(t_float[i], 0) < 0 || mpf_cmp_ui(t_float[i], 1) > 0) {
+            char error_string[BH_TERMWIDTH];
+            gmp_snprintf(error_string, (size_t) BH_TERMWIDTH + 1, "Value for t not between 0 and 1: %Fd", t_float[i]);
+
+            print_error(error_string);
+            exit(BH_EXIT_BADDEF);
         }
 
         for (j = 0; j < num_var; j++) {
@@ -338,4 +342,38 @@ int read_points_file_float(char *filename, void **t, void **w, int num_var) {
     *w = (void *) w_float;
     *t = (void *) t_float;
     return num_points;
+}
+
+/********************************
+ * print a test point to stdout *
+ ********************************/
+void print_points_float(complex_vector *points, int num_var) {
+    int i;
+
+    for (i = 0; i < num_var; i++) {
+        gmp_printf("\t\t[%Fd + %Fdi]\n", (*points)->coord[i]->re, (*points)->coord[i]->im);
+    }
+
+}
+
+/***************************************
+ * print a polynomial system to stdout *
+ ***************************************/
+void print_system_float(polynomial_system *system) {
+    int i, j, k;
+    char variables[] = "xyzwuvabcdjkmnpqrs";
+
+    for (i = 0; i < system->numPolynomials; i++) {
+        polynomial p = system->polynomials[i];
+        for (j = 0; j < p.numTerms - 1; j++) {
+            gmp_printf("(%Fd + %Fdi)", p.coeff[j]->re, p.coeff[j]->im);
+            for (k = 0; k < p.numVariables; k++)
+                printf("%c^%d", variables[k], p.exponents[j][k]);
+            printf(" + ");
+        }
+        gmp_printf("(%Fd + %Fdi)", p.coeff[j]->re, p.coeff[j]->im);
+        for (k = 0; k < system->numVariables; k++)
+            printf("%c^%d", variables[k], p.exponents[j][k]);
+        puts("");
+    }
 }

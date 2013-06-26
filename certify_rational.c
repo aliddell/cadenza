@@ -24,6 +24,7 @@ void apply_tv_rational(polynomial_system *base, polynomial_system *F, mpq_t t, r
     F->isReal = 0;
     F->numExponentials = 0;
     F->polynomials = malloc(num_var * sizeof(polynomial));
+    F->exponentials = NULL;
     mpq_init(F->norm_sqr);
 
     /* for each polynomial in F */
@@ -102,24 +103,27 @@ void test_pairwise_rational(polynomial_system *system, configurations *config, v
         w2_is_solution = get_alpha_beta_gamma(w_rational[i+1], &F2, &alpha2, &beta2, &gamma2);
 
         print_system_rational(&F1);
-        print_points_rational(&w_rational[i], num_var);
-        gmp_printf("alpha: %Qd\nbeta: %Qd\ngamma: %Qd\n", alpha1->re, beta1->re, gamma1->re);
 
         if (w1_is_solution)
             printf("P1 is an approximate solution\n\n");
         else 
             printf("P1 is not an approximate solution\n\n");
+        print_points_rational(&w_rational[i], num_var);
+        gmp_printf("alpha: %Qd\nbeta: %Qd\ngamma: %Qd\n", alpha1->re, beta1->re, gamma1->re);
 
         print_system_rational(&F2);
-        print_points_rational(&w_rational[i+1], num_var);
-        gmp_printf("alpha: %Qd\nbeta: %Qd\ngamma: %Qd\n", alpha2->re, beta2->re, gamma2->re);
 
         if (w2_is_solution)
             printf("P2 is an approximate solution\n\n");
         else 
             printf("P2 is not an approximate solution\n\n");
 
-        /* need to free F1/F2 */
+        print_points_rational(&w_rational[i+1], num_var);
+        gmp_printf("alpha: %Qd\nbeta: %Qd\ngamma: %Qd\n", alpha2->re, beta2->re, gamma2->re);
+
+        /* free F1/F2 */
+        clear_polynomial_system(&F1);
+        clear_polynomial_system(&F2);
     }
 }
 
@@ -127,7 +131,7 @@ void test_pairwise_rational(polynomial_system *system, configurations *config, v
  * get alpha, beta, gamma values, &c *
  *************************************/
 int get_alpha_beta_gamma(rational_complex_vector points, polynomial_system *F, rational_complex_number *alpha, rational_complex_number *beta, rational_complex_number *gamma) {
-    int i, rV, numApproxSolns, num_var = F->numVariables;
+    int rV, numApproxSolns, num_var = F->numVariables;
 
     rational_point_struct P;
     /* setup point struct and determine if it is an approximate solution */
@@ -160,6 +164,8 @@ int get_alpha_beta_gamma(rational_complex_vector points, polynomial_system *F, r
       numApproxSolns += P.isApproxSoln = determine_approximate_solution_rational(P.alpha_sqr);
       return numApproxSolns;
     }
+
+    clear_rational_point_struct(&P);
 }
 
 

@@ -19,3 +19,5 @@
 * edit the parsing functions to throw away lines beginning with # (comments)
 
 * check after each malloc for a NULL pointer
+
+* clean up after free with NULL pointers
