@@ -17,3 +17,5 @@
 * replace parsing functions with gmp_fscanf
 
 * edit the parsing functions to throw away lines beginning with # (comments)
+
+* check after each malloc for a NULL pointer

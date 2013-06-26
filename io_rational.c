@@ -379,3 +379,31 @@ int read_points_file_rational(char *filename, void **t, void **w, int num_var) {
     *t = (void *) t_rational;
     return num_points;
 }
+
+void print_points_rational(rational_complex_vector *points, int num_var) {
+    int i;
+
+    for (i = 0; i < num_var; i++) {
+        gmp_printf("\t\t[%Qd + %Qdi]\n", (*points)->coord[i]->re, (*points)->coord[i]->im);
+    }
+
+}
+
+void print_system_rational(polynomial_system *system) {
+    int i, j, k;
+    char variables[] = "xyzwuvabcdjkmnpqrs";
+
+    for (i = 0; i < system->numPolynomials; i++) {
+        polynomial p = system->polynomials[i];
+        for (j = 0; j < p.numTerms - 1; j++) {
+            gmp_printf("(%Qd + %Qdi)", p.coeff[j]->re, p.coeff[j]->im);
+            for (k = 0; k < p.numVariables; k++)
+                printf("%c^%d", variables[k], p.exponents[j][k]);
+            printf(" + ");
+        }
+        gmp_printf("(%Qd + %Qdi)", p.coeff[j]->re, p.coeff[j]->im);
+        for (k = 0; k < system->numVariables; k++)
+            printf("%c^%d", variables[k], p.exponents[j][k]);
+        puts("");
+    }
+}

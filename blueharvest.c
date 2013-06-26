@@ -81,20 +81,7 @@ int main(int argc, char *argv[]) {
     t_rational = (mpq_t *) t;
 
     /* test system entered correctly; temporary */
-    char variables[] = "xyzwuvabcdjkmnpqrs";
-    for (i = 0; i < F.numPolynomials; i++) {
-        polynomial p = F.polynomials[i];
-        for (j = 0; j < p.numTerms - 1; j++) {
-            gmp_printf("(%Qd + %Qdi)", p.coeff[j]->re, p.coeff[j]->im);
-            for (k = 0; k < p.numVariables; k++)
-                printf("%c^%d", variables[k], p.exponents[j][k]);
-            printf(" + ");
-        }
-        gmp_printf("(%Qd + %Qdi)", p.coeff[j]->re, p.coeff[j]->im);
-        for (k = 0; k < F.numVariables; k++)
-            printf("%c^%d", variables[k], p.exponents[j][k]);
-        puts("");
-    }
+    print_system_rational(&F);
 
     /* test vector entered correctly; temporary */
     puts("");
@@ -108,9 +95,7 @@ int main(int argc, char *argv[]) {
     puts("");
     for (i = 0; i < num_points; i++) {
         gmp_printf("%Qd", t_rational[i]);
-        for (j = 0; j < num_var; j++) {
-            gmp_printf("\t\t[%Qd + %Qdi]\n", w_rational[i]->coord[j]->re, w_rational[i]->coord[j]->im);
-        }
+        print_points_rational(&w_rational[i], num_var);
     }
 
     test_pairwise(&F, &S, v, t, w, num_points);
