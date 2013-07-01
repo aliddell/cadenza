@@ -10,7 +10,7 @@
 #include "blueharvest.h"
 
 int main(int argc, char *argv[]) {
-    int i, j, k, num_var, num_poly, num_points;
+    int i, num_var, num_poly, num_points;
 
     /* polynomial system */
     polynomial_system F;
@@ -32,6 +32,9 @@ int main(int argc, char *argv[]) {
     rational_complex_vector *w_rational = NULL;
     complex_vector *w_float = NULL;
     void *w = NULL;
+
+    /* init random seed */
+    srand(time(NULL));
 
     /* get command-line arguments before anything else happens */
     getargs(argc, argv);
@@ -77,10 +80,10 @@ int main(int argc, char *argv[]) {
 
     num_points = read_points_file(pointsfile, &t, &w, num_var);
 
+    /* test system entered correctly; temporary */
     w_rational = (rational_complex_vector *) w;
     t_rational = (mpq_t *) t;
 
-    /* test system entered correctly; temporary */
     print_system_rational(&F);
 
     /* test vector entered correctly; temporary */
@@ -98,7 +101,7 @@ int main(int argc, char *argv[]) {
         print_points_rational(&w_rational[i], num_var);
     }
 
-    test_pairwise(&F, &S, v, t, w, num_points);
+    test_system(&F, &S, v, t, w, num_points);
 
     /* clean up */
     free_system((void *) &F, v);
@@ -288,7 +291,7 @@ void set_function_pointers() {
     if (arithmetic_type == BH_USE_FLOAT) {
         read_system_file = &read_system_file_float;
         read_points_file = &read_points_file_float;
-        test_pairwise = &test_pairwise_float;
+        test_system = &test_system_float;
         free_system = &free_system_float;
         free_vector = &free_vector_float;
     }
@@ -297,7 +300,7 @@ void set_function_pointers() {
     else {
         read_system_file = &read_system_file_rational;
         read_points_file = &read_points_file_rational;
-        test_pairwise = &test_pairwise_rational;
+        test_system = &test_system_rational;
         free_system = &free_system_rational;
         free_vector = &free_vector_rational;
     }

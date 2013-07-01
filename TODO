@@ -10,7 +10,7 @@
 
 * check for fopen/fclose errors in certify_*
 
-* check that each t_i is between 0 and 1
+* sort t_i from smallest to largest
 
 * actually do the continuity certification
 

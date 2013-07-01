@@ -9,6 +9,57 @@
  */
 #include "blueharvest.h"
 
+/**********************************************
+ * test for the continuity of a given segment *
+ **********************************************/
+int segment_is_continuous_rational(mpq_t t_1, mpq_t t_2, rational_complex_vector w_1, rational_complex_vector w_2) {
+    /* this will be a real test eventually */
+    return rand() % 2;
+}
+
+/**************************************************************************************
+ * subdivide a segment (t_1, w_1) <=> (t_2, w_2) for ((t_1 + t_2)/2, (w_1 + w_2) / 2) *
+ **************************************************************************************/
+void subdivide_segment_rational(mpq_t t_left, mpq_t t_right, rational_complex_vector w_left, rational_complex_vector w_right, mpq_t *t_mid, rational_complex_vector *w_mid, int num_var) {
+    if (verbosity > BH_VERBOSE)
+        printf("subdividing...\n");
+    int i;
+    mpq_t one_half_rational;
+    mpq_init(one_half_rational);
+    mpq_set_ui(one_half_rational, 1, 2);
+    rational_complex_number one_half_complex;
+    initialize_rational_number(one_half_complex);
+    mpq_set_ui(one_half_complex->re, 1, 2);
+    mpq_set_ui(one_half_complex->im, 0, 1);
+
+    /* t_mid */
+    mpq_add(*t_mid, t_left, t_right);
+    mpq_mul(*t_mid, *t_mid, one_half_rational);
+
+    /* w_mid */
+    for (i = 0; i < num_var; i++) {
+        add_rational((*w_mid)->coord[i], w_left->coord[i], w_right->coord[i]);
+        multiply_rational((*w_mid)->coord[i], (*w_mid)->coord[i], one_half_complex);
+    }
+
+    mpq_clear(one_half_rational);
+    clear_rational_number(one_half_complex);
+}
+
+long int get_max_num_points(mpq_t *beta_min) {
+    if (mpq_cmp_ui(*beta_min, 0, 1) == 0)
+        return 50; /* arbitrary */
+    else {
+        mpfr_t beta_min_float;
+        mpfr_t log_beta;
+        mpfr_init(log_beta);
+        mpfr_init_set_q(beta_min_float, beta_min, MPFR_RNDU);
+        mpfr_log10(log_beta, beta_min_float, MPFR_RNDU);
+        long int retval = -1 * mpfr_get_si(log_beta, MPFR_RNDU);
+        return retval;
+    }
+}
+
 /*******************************
  * apply f + tv for a single t *
  *******************************/
@@ -70,6 +121,73 @@ void apply_tv_rational(polynomial_system *base, polynomial_system *F, mpq_t t, r
     }
 }
 
+/***********************************************************************************
+ * test that each w is in the quadratic convergence basin and check for continuity *
+ ***********************************************************************************/
+void test_pairwise_rational(polynomial_system *system, rational_complex_vector *v, mpq_t t_left, mpq_t t_right, rational_complex_vector w_left, rational_complex_vector w_right, int num_var, int iter) {
+    /* test if we've been through this 20 times or what */
+    if (iter > BH_TOLERANCE) {
+        char error_string[] = "Number of subdivisions exceeds tolerance";
+        print_error(error_string);
+        exit(BH_EXIT_INTOLERANT);
+    }
+
+    int w1_is_solution, w2_is_solution, seg_continuous;
+    polynomial_system F1, F2;
+    mpq_t alpha_left, beta_left, gamma_left, alpha_right, beta_right, gamma_right, beta_min;
+    mpq_init(alpha_left);
+    mpq_init(beta_left);
+    mpq_init(gamma_left);
+    mpq_init(alpha_right);
+    mpq_init(beta_right);
+    mpq_init(gamma_right);
+
+    apply_tv_rational(system, &F1, t_left, *v);
+    apply_tv_rational(system, &F2, t_right, *v);
+
+    w1_is_solution = get_alpha_beta_gamma_rational(w_left, &F1, &alpha_left, &beta_left, &gamma_left);
+    w2_is_solution = get_alpha_beta_gamma_rational(w_right, &F2, &alpha_right, &beta_right, &gamma_right);
+
+    mpq_set_min(beta_min, beta_left, beta_right);
+    long int retval = get_max_num_points(&beta_min);
+
+    if (w1_is_solution && w2_is_solution) {
+        seg_continuous = segment_is_continuous_rational(t_left, t_right, w_left, w_right);
+        printf("seg_continuous: %d\n", seg_continuous);
+    } else {
+        mpq_t t_mid;
+        mpq_init(t_mid);
+        rational_complex_vector w_mid;
+        initialize_rational_vector(w_mid, num_var);
+        subdivide_segment_rational(t_left, t_right, w_left, w_right, &t_mid, &w_mid, num_var);
+        /*
+        gmp_printf("t_left: %Qd\nt_right: %Qd\nt_mid: %Qd\n", t_left, t_right, t_mid);
+        printf("w_rational[%d]\n", i);
+        print_points_rational(&w_left, num_var);
+        printf("w_rational[%d]\n", i + 1);
+        print_points_rational(&w_right, num_var);
+        printf("w_mid\n");
+        print_points_rational(&w_mid, num_var);
+        */
+
+        /* recurse! */
+        test_pairwise_rational(system, v, t_left, t_mid, w_left, w_mid, num_var, iter + 1);
+        test_pairwise_rational(system, v, t_mid, t_right, w_mid, w_right, num_var, iter + 1);
+        mpq_clear(t_mid);
+        clear_rational_vector(w_mid);
+    }
+
+    /* free up stuff */
+    clear_polynomial_system(&F1);
+    clear_polynomial_system(&F2);
+    mpq_clear(alpha_left);
+    mpq_clear(beta_left);
+    mpq_clear(gamma_left);
+    mpq_clear(alpha_right);
+    mpq_clear(beta_right);
+    mpq_clear(gamma_right);
+    mpq_clear(beta_min);
+}
 
 /* here's what we really want to do:
  * take each t_i, t_{i+1} and get the alpha, beta, gamma values for each
@@ -77,8 +195,9 @@ void apply_tv_rational(polynomial_system *base, polynomial_system *F, mpq_t t, r
  * if so, great, test for continuity btw w_i and w_{i+1}
  * if not, subdivide and retest
  */
-void test_pairwise_rational(polynomial_system *system, configurations *config, void *v, void *t, void *w, int num_points) {
+void test_system_rational(polynomial_system *system, configurations *config, void *v, void *t, void *w, int num_points) {
     int i, num_var = system->numVariables;
+
     rational_complex_vector *v_rational = (rational_complex_vector *) v;
     mpq_t *t_rational = (mpq_t *) t;
     rational_complex_vector *w_rational = (rational_complex_vector *) w;
@@ -86,51 +205,14 @@ void test_pairwise_rational(polynomial_system *system, configurations *config, v
     /* for each t_i, t_{i+1} */
     /* this is the part that needs to get parallelized */
     for (i = 0; i < num_points - 1; i++) {
-        int w1_is_solution, w2_is_solution;
-        polynomial_system F1, F2;
-        rational_complex_number alpha1, beta1, gamma1, alpha2, beta2, gamma2;
-        initialize_rational_number(alpha1);
-        initialize_rational_number(beta1);
-        initialize_rational_number(gamma1);
-        initialize_rational_number(alpha2);
-        initialize_rational_number(beta2);
-        initialize_rational_number(gamma2);
-
-        apply_tv_rational(system, &F1, t_rational[i], w_rational[i]);
-        apply_tv_rational(system, &F2, t_rational[i+1], w_rational[i+1]);
-
-        w1_is_solution = get_alpha_beta_gamma(w_rational[i], &F1, &alpha1, &beta1, &gamma1);
-        w2_is_solution = get_alpha_beta_gamma(w_rational[i+1], &F2, &alpha2, &beta2, &gamma2);
-
-        print_system_rational(&F1);
-
-        if (w1_is_solution)
-            printf("P1 is an approximate solution\n\n");
-        else 
-            printf("P1 is not an approximate solution\n\n");
-        print_points_rational(&w_rational[i], num_var);
-        gmp_printf("alpha: %Qd\nbeta: %Qd\ngamma: %Qd\n", alpha1->re, beta1->re, gamma1->re);
-
-        print_system_rational(&F2);
-
-        if (w2_is_solution)
-            printf("P2 is an approximate solution\n\n");
-        else 
-            printf("P2 is not an approximate solution\n\n");
-
-        print_points_rational(&w_rational[i+1], num_var);
-        gmp_printf("alpha: %Qd\nbeta: %Qd\ngamma: %Qd\n", alpha2->re, beta2->re, gamma2->re);
-
-        /* free F1/F2 */
-        clear_polynomial_system(&F1);
-        clear_polynomial_system(&F2);
+        test_pairwise_rational(system, v_rational, t_rational[i], t_rational[i+1], w_rational[i], w_rational[i+1], num_var, 1);
     }
 }
 
 /*************************************
  * get alpha, beta, gamma values, &c *
  *************************************/
-int get_alpha_beta_gamma(rational_complex_vector points, polynomial_system *F, rational_complex_number *alpha, rational_complex_number *beta, rational_complex_number *gamma) {
+int get_alpha_beta_gamma_rational(rational_complex_vector points, polynomial_system *F, mpq_t *alpha, mpq_t *beta, mpq_t *gamma) {
     int rV, numApproxSolns, num_var = F->numVariables;
 
     rational_point_struct P;
@@ -147,11 +229,17 @@ int get_alpha_beta_gamma(rational_complex_vector points, polynomial_system *F, r
     /* compute ||x||_2^2 */
     norm_sqr_rational_vector(P.norm_sqr_x, P.x);
 
-    /* compute alpha^2, beta^2, & gamma^2 (and save to original values of alpha^2, beta^2, & gamma^2) */
+    /* compute alpha^2, beta^2, & gamma^2 */
     rV = compute_alpha_beta_gamma_sqr_rational(P.Nx, P.alpha_sqr, P.beta_sqr, P.gamma_sqr, F, P.x);
+
+    mpq_set(*alpha, P.alpha_sqr);
+    mpq_set(*beta, P.beta_sqr);
+    mpq_set(*gamma, P.gamma_sqr);
+    /* holdover from when we defined alpha, beta and gamma as complex numbers
     set_rational_number(*alpha, P.alpha_sqr);
     set_rational_number(*beta, P.beta_sqr);
     set_rational_number(*gamma, P.gamma_sqr);
+    */
 
     /* check to see if we have successfully computed alpha_sqr, beta_sqr, & gamma_sqr */
     if (rV == EXACT_SOLUTION_LU_ERROR) { // exact solution
@@ -167,41 +255,3 @@ int get_alpha_beta_gamma(rational_complex_vector points, polynomial_system *F, r
 
     clear_rational_point_struct(&P);
 }
-
-
-/*
-    if (S->algorithm >= 1)
-    { // now that we have approximate solutions, isolate them
-    printf("Isolating %d approximate solution%s.\n\n", numApproxSolns, numApproxSolns == 1 ? "" : "s");
-    numDistinctSolns = isolate_approximate_solutions_rational(numPoints, Points_struct, F);
-
-    // now that we have distinct ones, determine which ones are real
-    if (S->algorithm >= 2 && F->isReal)
-    { // print message and do the analysis
-      printf("Classifying %d distinct approximate solution%s.\n\n", numDistinctSolns, numDistinctSolns == 1 ? "" : "s");
-      if (S->realityTest)
-      { // use global approach
-        numRealSolns = classify_real_points_global_rational(numPoints, Points_struct, F);
-      }
-      else
-      { // use local approach
-        numRealSolns = classify_real_points_rational(numPoints, Points_struct, F);
-      }
-    }
-    }
-
-    // refine the solutions
-    refine_points_rational(numPoints, Points_struct, F, S->refineDigits);
-
-    // print the data out
-    classify_rational_output(numPoints, Points_struct, numApproxSolns, numDistinctSolns, numRealSolns, F->isReal, S, 0, F);
-
-    // clear Points_struct
-    for (i = 0; i < numPoints; i++)
-    clear_rational_point_struct(&Points_struct[i]);
-    free(Points_struct);
-    Points_struct = NULL;
-
-    return;
-}
-*/

@@ -13,6 +13,6 @@ void apply_tv_float(polynomial_system *base, polynomial_system *F, mpf_t t, comp
     ;
 }
 
-void test_pairwise_float(polynomial_system *system, configurations *config, void *v, void *t, void *w, int num_points) {
+void test_system_float(polynomial_system *system, configurations *config, void *v, void *t, void *w, int num_points) {
     ;
 }
