@@ -132,7 +132,7 @@ void test_pairwise_rational(polynomial_system *system, rational_complex_vector *
         exit(BH_EXIT_INTOLERANT);
     }
 
-    int w1_is_solution, w2_is_solution, seg_continuous;
+    int w_left_solution, w_right_solution, seg_continuous;
     polynomial_system F1, F2;
     mpq_t alpha_left, beta_left, gamma_left, alpha_right, beta_right, gamma_right, beta_min;
     mpq_init(alpha_left);
@@ -145,36 +145,33 @@ void test_pairwise_rational(polynomial_system *system, rational_complex_vector *
     apply_tv_rational(system, &F1, t_left, *v);
     apply_tv_rational(system, &F2, t_right, *v);
 
-    w1_is_solution = get_alpha_beta_gamma_rational(w_left, &F1, &alpha_left, &beta_left, &gamma_left);
-    w2_is_solution = get_alpha_beta_gamma_rational(w_right, &F2, &alpha_right, &beta_right, &gamma_right);
+    w_left_solution = get_alpha_beta_gamma_rational(w_left, &F1, &alpha_left, &beta_left, &gamma_left);
+    w_right_solution = get_alpha_beta_gamma_rational(w_right, &F2, &alpha_right, &beta_right, &gamma_right);
 
     mpq_set_min(beta_min, beta_left, beta_right);
     long int retval = get_max_num_points(&beta_min);
 
-    if (w1_is_solution && w2_is_solution) {
+    if (w_left_solution && w_right_solution) {
         seg_continuous = segment_is_continuous_rational(t_left, t_right, w_left, w_right);
-        printf("seg_continuous: %d\n", seg_continuous);
-    } else {
-        mpq_t t_mid;
-        mpq_init(t_mid);
-        rational_complex_vector w_mid;
-        initialize_rational_vector(w_mid, num_var);
-        subdivide_segment_rational(t_left, t_right, w_left, w_right, &t_mid, &w_mid, num_var);
-        /*
-        gmp_printf("t_left: %Qd\nt_right: %Qd\nt_mid: %Qd\n", t_left, t_right, t_mid);
-        printf("w_rational[%d]\n", i);
-        print_points_rational(&w_left, num_var);
-        printf("w_rational[%d]\n", i + 1);
-        print_points_rational(&w_right, num_var);
-        printf("w_mid\n");
-        print_points_rational(&w_mid, num_var);
-        */
 
-        /* recurse! */
-        test_pairwise_rational(system, v, t_left, t_mid, w_left, w_mid, num_var, iter + 1);
-        test_pairwise_rational(system, v, t_mid, t_right, w_mid, w_right, num_var, iter + 1);
-        mpq_clear(t_mid);
-        clear_rational_vector(w_mid);
+        if (!seg_continuous) {
+            mpq_t t_mid;
+            mpq_init(t_mid);
+            rational_complex_vector w_mid;
+            initialize_rational_vector(w_mid, num_var);
+            subdivide_segment_rational(t_left, t_right, w_left, w_right, &t_mid, &w_mid, num_var);
+
+            /* recurse! */
+            test_pairwise_rational(system, v, t_left, t_mid, w_left, w_mid, num_var, iter + 1);
+            test_pairwise_rational(system, v, t_mid, t_right, w_mid, w_right, num_var, iter + 1);
+            mpq_clear(t_mid);
+            clear_rational_vector(w_mid);
+        }
+    } else {
+        char error_string[] = "Points not in convergence basin; aborting";
+        print_error(error_string);
+
+        exit(BH_EXIT_NOCONVERGE);
     }
 
     /* free up stuff */
