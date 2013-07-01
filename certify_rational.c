@@ -132,6 +132,15 @@ void test_pairwise_rational(polynomial_system *system, rational_complex_vector *
         exit(BH_EXIT_INTOLERANT);
     }
 
+    if (verbosity > BH_CHATTY && iter > 1) {
+        gmp_printf("t_left: %Qd\nt_right: %Qd\n", t_left, t_right);
+
+        printf("w_left:\n");
+        print_points_rational(w_left, num_var);
+        printf("w_right:\n");
+        print_points_rational(w_right, num_var);
+    }
+
     int w_left_solution, w_right_solution, seg_continuous;
     polynomial_system F1, F2;
     mpq_t alpha_left, beta_left, gamma_left, alpha_right, beta_right, gamma_right, beta_min;
