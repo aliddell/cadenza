@@ -51,6 +51,7 @@
 #define BH_EXIT_BADDEF 4 /* system is not square, not enough points, bad t-value, &c*/
 #define BH_EXIT_MEMORY 5 /* out of memory */
 #define BH_EXIT_INTOLERANT 6 /* number of iterations exceeds tolerance */
+#define BH_EXIT_NOCONVERGE 7 /* a point is not in the convergence basin */
 
 /**************************************
  * global variables for blueharvest.c *
