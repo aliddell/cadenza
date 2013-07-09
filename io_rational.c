@@ -387,11 +387,11 @@ int read_points_file_rational(char *filename, void **t, void **w, int num_var) {
 /********************************
  * print a test point to stdout *
  ********************************/
-void print_points_rational(rational_complex_vector *points, int num_var) {
+void print_points_rational(rational_complex_vector points, int num_var) {
     int i;
 
     for (i = 0; i < num_var; i++) {
-        gmp_printf("\t\t[%Qd + %Qdi]\n", (*points)->coord[i]->re, (*points)->coord[i]->im);
+        gmp_printf("\t\t[%Qd + %Qdi]\n", points->coord[i]->re, points->coord[i]->im);
     }
 
 }

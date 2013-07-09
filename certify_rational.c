@@ -53,7 +53,7 @@ long int get_max_num_points(mpq_t *beta_min) {
         mpfr_t beta_min_float;
         mpfr_t log_beta;
         mpfr_init(log_beta);
-        mpfr_init_set_q(beta_min_float, beta_min, MPFR_RNDU);
+        mpfr_init_set_q(beta_min_float, *beta_min, MPFR_RNDU);
         mpfr_log10(log_beta, beta_min_float, MPFR_RNDU);
         long int retval = -1 * mpfr_get_si(log_beta, MPFR_RNDU);
         return retval;
@@ -158,7 +158,7 @@ void test_pairwise_rational(polynomial_system *system, rational_complex_vector *
     w_right_solution = get_alpha_beta_gamma_rational(w_right, &F2, &alpha_right, &beta_right, &gamma_right);
 
     mpq_set_min(beta_min, beta_left, beta_right);
-    long int retval = get_max_num_points(&beta_min);
+    //long int retval = get_max_num_points(&beta_min);
 
     if (w_left_solution && w_right_solution) {
         seg_continuous = segment_is_continuous_rational(t_left, t_right, w_left, w_right);
@@ -219,7 +219,7 @@ void test_system_rational(polynomial_system *system, configurations *config, voi
  * get alpha, beta, gamma values, &c *
  *************************************/
 int get_alpha_beta_gamma_rational(rational_complex_vector points, polynomial_system *F, mpq_t *alpha, mpq_t *beta, mpq_t *gamma) {
-    int rV, numApproxSolns, num_var = F->numVariables;
+    int rV, numApproxSolns = 0, num_var = F->numVariables;
 
     rational_point_struct P;
     /* setup point struct and determine if it is an approximate solution */
@@ -238,26 +238,26 @@ int get_alpha_beta_gamma_rational(rational_complex_vector points, polynomial_sys
     /* compute alpha^2, beta^2, & gamma^2 */
     rV = compute_alpha_beta_gamma_sqr_rational(P.Nx, P.alpha_sqr, P.beta_sqr, P.gamma_sqr, F, P.x);
 
-    mpq_set(*alpha, P.alpha_sqr);
-    mpq_set(*beta, P.beta_sqr);
-    mpq_set(*gamma, P.gamma_sqr);
-    /* holdover from when we defined alpha, beta and gamma as complex numbers
-    set_rational_number(*alpha, P.alpha_sqr);
-    set_rational_number(*beta, P.beta_sqr);
-    set_rational_number(*gamma, P.gamma_sqr);
-    */
+    mpq_set(*alpha, P.alpha_sqr->re);
+    mpq_set(*beta, P.beta_sqr->re);
+    mpq_set(*gamma, P.gamma_sqr->re);
 
     /* check to see if we have successfully computed alpha_sqr, beta_sqr, & gamma_sqr */
-    if (rV == EXACT_SOLUTION_LU_ERROR) { // exact solution
-      //numApproxSolns += P.isApproxSoln = 1;
-      return 1;
-    } else if (rV) { // error 
-      P.isApproxSoln = 0; // unknown 
-      return 0;
-    } else { // determine if alpha is small enough to be an approximate solution
-      numApproxSolns += P.isApproxSoln = determine_approximate_solution_rational(P.alpha_sqr);
-      return numApproxSolns;
-    }
+    if (rV == EXACT_SOLUTION_LU_ERROR) {
+        clear_rational_point_struct(&P);
 
-    clear_rational_point_struct(&P);
+        /* exact solution */
+        return 1;
+    } else if (rV) {
+        clear_rational_point_struct(&P);
+
+        /* unknown */
+        return 0;
+    } else {
+        /* determine if alpha is small enough to be an approximate solution */
+        numApproxSolns += P.isApproxSoln = determine_approximate_solution_rational(P.alpha_sqr);
+        clear_rational_point_struct(&P);
+
+        return numApproxSolns;
+    }
 }

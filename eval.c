@@ -68,6 +68,7 @@ void eval_exponents_derivative(complex_number y, complex_vector dy, complex_vect
   clear_number(tempY);
   clear_vector(tempVec);
 
+  free(tempExp);
   return;
 }
 
@@ -301,6 +302,7 @@ void eval_exponents_derivative_rational(rational_complex_number y, rational_comp
   clear_rational_number(tempY);
   clear_rational_vector(tempVec);
 
+  free(tempExp);
   return;
 }
 
