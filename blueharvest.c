@@ -80,25 +80,30 @@ int main(int argc, char *argv[]) {
 
     num_points = read_points_file(pointsfile, &t, &w, num_var);
 
-    /* test system entered correctly; temporary */
-    w_rational = (rational_complex_vector *) w;
-    t_rational = (mpq_t *) t;
+    /* print out the system, vector and points */
+    if (verbosity > BH_CHATTY) {
+        w_rational = (rational_complex_vector *) w;
+        t_rational = (mpq_t *) t;
 
-    print_system_rational(&F);
+        fputs("F:\n", stderr);
+        print_system_rational(&F);
 
-    /* test vector entered correctly; temporary */
-    puts("");
-    printf("[");
-    for (i = 0; i < num_var - 1; i++) {
-        gmp_printf("%Qd + %Qdi, ", v_rational->coord[i]->re, v_rational->coord[i]->im);
-    }
-    gmp_printf("%Qd + %Qdi]\n", v_rational->coord[i]->re, v_rational->coord[i]->im);
+        fputs("\n", stderr);
 
-    /* test points entered correctly; temporary */
-    puts("");
-    for (i = 0; i < num_points; i++) {
-        gmp_printf("%Qd", t_rational[i]);
-        print_points_rational(&w_rational[i], num_var);
+        fputs("v:\n", stderr);
+        fprintf(stderr, "[");
+        for (i = 0; i < num_var - 1; i++) {
+            gmp_fprintf(stderr, "%Qd + %Qdi, ", v_rational->coord[i]->re, v_rational->coord[i]->im);
+        }
+        gmp_fprintf(stderr, "%Qd + %Qdi]\n", v_rational->coord[i]->re, v_rational->coord[i]->im);
+
+        fputs("\n", stderr);
+
+        fputs("(t_i, w_i)\n", stderr);
+        for (i = 0; i < num_points; i++) {
+            gmp_fprintf(stderr, "%Qd", t_rational[i]);
+            print_points_rational(&w_rational[i], num_var);
+        }
     }
 
     test_system(&F, &S, v, t, w, num_points);
@@ -210,8 +215,10 @@ void getargs(int argc, char *argv[]) {
     verbosity = BH_LACONIC;
     arithmetic_type = BH_USE_RATIONAL;
     default_precision = MPFR_PREC_MIN;
+    newton_tolerance = BH_NEWT_TOLERANCE;
     sysfile = NULL;
     pointsfile = NULL;
+    configfile = NULL;
 
     int c = 0;
 
@@ -228,13 +235,15 @@ void getargs(int argc, char *argv[]) {
             {"points",     required_argument, 0, 'p'},
             {"system",     required_argument, 0, 's'},
             {"precision",  required_argument, 0, 'm'},
+            {"config",     required_argument, 0, 'c'},
+            {"tolerance",  required_argument, 0, 't'},
             {0, 0, 0, 0}
         };
 
         /* getopt_long stores the option index here. */
         int option_index = 0;
 
-        c = getopt_long (argc, argv, "hvfqp:s:", long_options, &option_index);
+        c = getopt_long (argc, argv, "hvfqp:s:m:c:t:", long_options, &option_index);
         if (c == -1) break;
 
         switch (c) {
@@ -247,6 +256,10 @@ void getargs(int argc, char *argv[]) {
                 if (optarg) printf (" with arg %s", optarg);
 
                 puts("\n");
+                break;
+
+            case 'c':
+                configfile = optarg;
                 break;
 
             case 'f':
@@ -271,6 +284,10 @@ void getargs(int argc, char *argv[]) {
 
             case 's':
                 sysfile = optarg;
+                break;
+
+            case 't':
+                newton_tolerance = atoi(optarg);
                 break;
 
             case 'v':

@@ -53,4 +53,8 @@ void display_config() {
     fprintf(stderr, "\tComputing using %d-bit precision %s arithmetic\n", default_precision, str_arithmetic_type);
     fprintf(stderr, "\tPolynomial system file is %s\n", sysfile);
     fprintf(stderr, "\tPoint set file is %s\n", pointsfile);
+    if (configfile != NULL)
+        fprintf(stderr, "\tConfiguration file is %s\n\n", configfile);
+    else
+        puts("");
 }

@@ -24,7 +24,11 @@
  *****************************/
 #define BH_USE_RATIONAL 0
 #define BH_USE_FLOAT 1
-#define BH_TOLERANCE 20
+#define BH_SUB_TOLERANCE 100
+#define BH_NEWT_TOLERANCE 20
+#define BH_DISCONTINUOUS -1
+#define BH_CONTUNKNOWN 0
+#define BH_CONTINUOUS
 
 /* verbosity flags */
 #define BH_LACONIC 0
@@ -51,13 +55,13 @@
 #define BH_EXIT_BADDEF 4 /* system is not square, not enough points, bad t-value, &c*/
 #define BH_EXIT_MEMORY 5 /* out of memory */
 #define BH_EXIT_INTOLERANT 6 /* number of iterations exceeds tolerance */
-#define BH_EXIT_NOCONVERGE 7 /* a point is not in the convergence basin */
+#define BH_EXIT_OTHER 7 /* something else */
 
 /**************************************
  * global variables for blueharvest.c *
  **************************************/
-int verbosity, help_flag, default_precision, arithmetic_type;
-char *pointsfile, *sysfile;
+int verbosity, help_flag, default_precision, arithmetic_type, newton_tolerance;
+char *pointsfile, *sysfile, *configfile;
 
 /*********************
  * function pointers *
@@ -122,5 +126,10 @@ int get_alpha_beta_gamma_float(complex_vector points, polynomial_system *F, mpf_
 
 #define mpq_set_min(_setme, _prima, _secunda) { mpq_init(_setme); if (mpq_cmp(_prima, _secunda) <= 0) { mpq_set(_setme, _prima); } \
     else { mpq_set(_setme, _secunda); }}
+#define mpq_set_max(_setme, _prima, _secunda) { mpq_init(_setme); if (mpq_cmp(_prima, _secunda) >= 0) { mpq_set(_setme, _prima); } \
+    else { mpq_set(_setme, _secunda); }}
+
+#define subtract_rational_vector(_diff, _minuend, _subtraend) { int _i; int _size = _minuend->size; for (_i = 0; _i < _size; _i++) \
+    { subtract_rational(_diff->coord[_i], _minuend->coord[_i], _subtraend->coord[_i]); }}
 
 #endif

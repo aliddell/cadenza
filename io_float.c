@@ -227,9 +227,6 @@ void parse_complex_float(char *str_real, char *str_imag, complex_number c) {
 }
 
 int read_points_file_float(char *filename, void **t, void **w, int num_var) {
-    if (verbosity > BH_VERBOSE)
-        fprintf(stderr, "reading points file %s\n", filename);
-
     int i, j, num_points, res;
     mpf_t *t_float;
     complex_vector *w_float;

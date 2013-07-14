@@ -1,12 +1,18 @@
 = TO-DO =
 
-* write a dummy function to simulate continuity certification (0 or 1)
+{* write certify_float
+{
+{--or--
+{
+{* convert floating point stuff to rational to do the calculations
 
-* write certify_float
+* add a flag to specify a config file
 
-* convert floating point stuff to rational to do the calculations
+* write a function to read the config file
 
 * clean up after polynomial systems in certify_*
+
+* clean up stuff on exit
 
 * check for fopen/fclose errors in certify_*
 

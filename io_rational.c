@@ -266,9 +266,6 @@ void parse_complex_rational(char *str_real, char *str_imag, rational_complex_num
 }
 
 int read_points_file_rational(char *filename, void **t, void **w, int num_var) {
-    if (verbosity > BH_VERBOSE)
-        fprintf(stderr, "reading points file %s\n", filename);
-
     int i, j, num_points, res;
     mpq_t *t_rational;
     rational_complex_vector *w_rational;
@@ -391,7 +388,10 @@ void print_points_rational(rational_complex_vector points, int num_var) {
     int i;
 
     for (i = 0; i < num_var; i++) {
-        gmp_printf("\t\t[%Qd + %Qdi]\n", points->coord[i]->re, points->coord[i]->im);
+        if (mpq_cmp_ui(points->coord[i]->im, 0, 1) == 0)
+            gmp_fprintf(stderr, "\t\t[%Qd]\n", points->coord[i]->re);
+        else
+            gmp_fprintf(stderr, "\t\t[%Qd + %Qdi]\n", points->coord[i]->re, points->coord[i]->im);
     }
 
 }
@@ -401,19 +401,85 @@ void print_points_rational(rational_complex_vector points, int num_var) {
  ***************************************/
 void print_system_rational(polynomial_system *system) {
     int i, j, k;
-    char variables[] = "xyzwuvabcdjkmnpqrs";
 
     for (i = 0; i < system->numPolynomials; i++) {
         polynomial p = system->polynomials[i];
         for (j = 0; j < p.numTerms - 1; j++) {
-            gmp_printf("(%Qd + %Qdi)", p.coeff[j]->re, p.coeff[j]->im);
-            for (k = 0; k < p.numVariables; k++)
-                printf("%c^%d", variables[k], p.exponents[j][k]);
-            printf(" + ");
+            /* real part is nonzero */
+            if (mpq_cmp_ui(p.coeff[j]->re, 0, 1) != 0) {
+                /* imaginary part is zero */
+                if (mpq_cmp_ui(p.coeff[j]->im, 0, 1) == 0) {
+                    /* real coefficient is not 1 */
+                    if (mpq_cmp_ui(p.coeff[j]->re, 1, 1) != 0)
+                        gmp_fprintf(stderr, "%Qd", p.coeff[j]->re);
+                } 
+                /* imaginary part is 1 */
+                else if (mpq_cmp_ui(p.coeff[j]->im, 1, 1) == 1) {
+                    gmp_fprintf(stderr, "(%Qd + i)", p.coeff[j]->re);
+                }
+                /* imaginary part is neither 0 nor 1 */
+                else {
+                    gmp_fprintf(stderr, "(%Qd + %Qdi)", p.coeff[j]->re, p.coeff[j]->im);
+                }
+            }
+            /* real part is zero */
+            else {
+                /* imaginary part is zero too */
+                if (mpq_cmp_ui(p.coeff[j]->im, 0, 1) == 0)
+                    continue;
+                /* imaginary part is 1 */
+                else if (mpq_cmp_ui(p.coeff[j]->im, 1, 1) == 0)
+                    fprintf(stderr, "i");
+                /* imaginary part is neither 0 nor 1 */
+                else
+                    gmp_fprintf(stderr, "%Qdi", p.coeff[j]->im);
+            }
+
+            for (k = 0; k < p.numVariables; k++) {
+                if (p.exponents[j][k] == 1)
+                    fprintf(stderr, "(x_%d)", k);
+                else if (p.exponents[j][k] != 0)
+                    fprintf(stderr, "(x_%d)^%d", k, p.exponents[j][k]);
+            }
+            fprintf(stderr, " + ");
         }
-        gmp_printf("(%Qd + %Qdi)", p.coeff[j]->re, p.coeff[j]->im);
-        for (k = 0; k < system->numVariables; k++)
-            printf("%c^%d", variables[k], p.exponents[j][k]);
-        puts("");
+
+        /* last term */
+        if (mpq_cmp_ui(p.coeff[j]->re, 0, 1) != 0) {
+            /* imaginary part is zero */
+            if (mpq_cmp_ui(p.coeff[j]->im, 0, 1) == 0) {
+                /* real coefficient is not 1 */
+                if (mpq_cmp_ui(p.coeff[j]->re, 1, 1) != 0)
+                    gmp_fprintf(stderr, "%Qd", p.coeff[j]->re);
+            } 
+            /* imaginary part is 1 */
+            else if (mpq_cmp_ui(p.coeff[j]->im, 1, 1) == 1) {
+                gmp_fprintf(stderr, "(%Qd + i)", p.coeff[j]->re);
+            }
+            /* imaginary part is neither 0 nor 1 */
+            else {
+                gmp_fprintf(stderr, "(%Qd + %Qdi)", p.coeff[j]->re, p.coeff[j]->im);
+            }
+        }
+        /* real part is zero */
+        else {
+            /* imaginary part is zero too */
+            if (mpq_cmp_ui(p.coeff[j]->im, 0, 1) == 0)
+                continue;
+            /* imaginary part is 1 */
+            else if (mpq_cmp_ui(p.coeff[j]->im, 1, 1) == 0)
+                fprintf(stderr, "i");
+            /* imaginary part is neither 0 nor 1 */
+            else
+                gmp_fprintf(stderr, "%Qdi", p.coeff[j]->im);
+        }
+
+        for (k = 0; k < p.numVariables; k++) {
+            if (p.exponents[j][k] == 1)
+                fprintf(stderr, "(x_%d)", k);
+            else if (p.exponents[j][k] != 0)
+                fprintf(stderr, "(x_%d)^%d", k, p.exponents[j][k]);
+        }
+        fputs("\n", stderr);
     }
 }
