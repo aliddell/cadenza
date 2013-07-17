@@ -15,9 +15,6 @@ int main(int argc, char *argv[]) {
     /* polynomial system */
     polynomial_system F;
     
-    /* settings (for aC functions) */
-    configurations S;
-
     /* constant vector v_i */
     rational_complex_vector v_rational;
     complex_vector v_float;
@@ -49,11 +46,11 @@ int main(int argc, char *argv[]) {
 
     /* ensure filenames are properly defined */
     if (sysfile == NULL) {
-        print_error("You need to define a system file.");
+        print_error("You need to define a system file.", stderr);
         usage();
         exit(BH_EXIT_BADFILE);
     } else if (pointsfile == NULL) {
-        print_error("You need to define a points file.");
+        print_error("You need to define a points file.", stderr);
         usage();
         exit(BH_EXIT_BADFILE);
     }

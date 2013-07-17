@@ -23,7 +23,7 @@ void read_system_file_float(char *filename, polynomial_system *system, void *v) 
         char error_string[BH_TERMWIDTH];
         snprintf(error_string, (size_t) BH_TERMWIDTH+1, "Couldn't open system file %s: %s.", filename, strerror(errno));
 
-        print_error(error_string);
+        print_error(error_string, stderr);
         exit(BH_EXIT_BADFILE);
     }
 
@@ -36,13 +36,13 @@ void read_system_file_float(char *filename, polynomial_system *system, void *v) 
         char error_string[BH_TERMWIDTH];
         snprintf(error_string, (size_t) BH_TERMWIDTH+1, "Error reading %s: unexpected EOF", filename);
 
-        print_error(error_string);
+        print_error(error_string, stderr);
         exit(BH_EXIT_BADREAD);
     } else if (errno == EILSEQ) {
         char error_string[BH_TERMWIDTH];
         snprintf(error_string, (size_t) BH_TERMWIDTH+1, "Error reading %s: %s.", filename, strerror(errno));
 
-        print_error(error_string);
+        print_error(error_string, stderr);
         exit(BH_EXIT_BADPARSE);
     }
 
@@ -76,13 +76,13 @@ void read_system_file_float(char *filename, polynomial_system *system, void *v) 
             char error_string[BH_TERMWIDTH];
             snprintf(error_string, (size_t) BH_TERMWIDTH+1, "Error reading %s: unexpected EOF", filename);
 
-            print_error(error_string);
+            print_error(error_string, stderr);
             exit(BH_EXIT_BADREAD);
         } else if (errno == EILSEQ) {
             char error_string[BH_TERMWIDTH];
             snprintf(error_string, (size_t) BH_TERMWIDTH+1, "Error reading %s: %s.", filename, strerror(errno));
 
-            print_error(error_string);
+            print_error(error_string, stderr);
             exit(BH_EXIT_BADPARSE);
         }
 
@@ -98,7 +98,7 @@ void read_system_file_float(char *filename, polynomial_system *system, void *v) 
         char error_string[BH_TERMWIDTH];
         snprintf(error_string, (size_t) BH_TERMWIDTH+1, "Couldn't close %s: %s.", filename, strerror(errno));
 
-        print_error(error_string);
+        print_error(error_string, stderr);
         exit(BH_EXIT_BADREAD);
     }
 
@@ -121,13 +121,13 @@ polynomial parse_polynomial_float(FILE *sysfile, char *filename, int num_var) {
         char error_string[BH_TERMWIDTH];
         snprintf(error_string, (size_t) BH_TERMWIDTH+1, "Error reading %s: unexpected EOF", filename);
 
-        print_error(error_string);
+        print_error(error_string, stderr);
         exit(BH_EXIT_BADREAD);
     } else if (errno == EILSEQ) {
         char error_string[BH_TERMWIDTH];
         snprintf(error_string, (size_t) BH_TERMWIDTH+1, "Error reading %s: %s.", filename, strerror(errno));
 
-        print_error(error_string);
+        print_error(error_string, stderr);
         exit(BH_EXIT_BADPARSE);
     }
 
@@ -150,13 +150,13 @@ polynomial parse_polynomial_float(FILE *sysfile, char *filename, int num_var) {
                 char error_string[BH_TERMWIDTH];
                 snprintf(error_string, (size_t) BH_TERMWIDTH+1, "Error reading %s: unexpected EOF", filename);
 
-                print_error(error_string);
+                print_error(error_string, stderr);
                 exit(BH_EXIT_BADREAD);
             } else if (errno == EILSEQ) {
                 char error_string[BH_TERMWIDTH];
                 snprintf(error_string, (size_t) BH_TERMWIDTH+1, "Error reading %s: %s.", filename, strerror(errno));
 
-                print_error(error_string);
+                print_error(error_string, stderr);
                 exit(BH_EXIT_BADPARSE);
             }
 
@@ -175,13 +175,13 @@ polynomial parse_polynomial_float(FILE *sysfile, char *filename, int num_var) {
             char error_string[BH_TERMWIDTH];
             snprintf(error_string, (size_t) BH_TERMWIDTH+1, "Error reading %s: unexpected EOF", filename);
 
-            print_error(error_string);
+            print_error(error_string, stderr);
             exit(BH_EXIT_BADREAD);
         } else if (errno == EILSEQ) {
             char error_string[BH_TERMWIDTH];
             snprintf(error_string, (size_t) BH_TERMWIDTH+1, "Error reading %s: %s.", filename, strerror(errno));
 
-            print_error(error_string);
+            print_error(error_string, stderr);
             exit(BH_EXIT_BADPARSE);
         }
 
@@ -210,7 +210,7 @@ void parse_complex_float(char *str_real, char *str_imag, complex_number c) {
         char error_string[BH_TERMWIDTH];
         snprintf(error_string, (size_t) BH_TERMWIDTH+1, "Invalid coefficient: %s", str_real);
 
-        print_error(error_string);
+        print_error(error_string, stderr);
         exit(BH_EXIT_BADPARSE);
     }
 
@@ -221,7 +221,7 @@ void parse_complex_float(char *str_real, char *str_imag, complex_number c) {
         char error_string[BH_TERMWIDTH];
         snprintf(error_string, (size_t) BH_TERMWIDTH+1, "Invalid coefficient: %s", str_imag);
 
-        print_error(error_string);
+        print_error(error_string, stderr);
         exit(BH_EXIT_BADPARSE);
     }
 }
@@ -238,7 +238,7 @@ int read_points_file_float(char *filename, void **t, void **w, int num_var) {
         char error_string[BH_TERMWIDTH];
         snprintf(error_string, (size_t) BH_TERMWIDTH+1, "Couldn't open points file %s: %s.", filename, strerror(errno));
 
-        print_error(error_string);
+        print_error(error_string, stderr);
         exit(BH_EXIT_BADFILE);
     }
 
@@ -251,13 +251,13 @@ int read_points_file_float(char *filename, void **t, void **w, int num_var) {
         char error_string[BH_TERMWIDTH];
         snprintf(error_string, (size_t) BH_TERMWIDTH+1, "Error reading %s: unexpected EOF", filename);
 
-        print_error(error_string);
+        print_error(error_string, stderr);
         exit(BH_EXIT_BADREAD);
     } else if (errno == EILSEQ) {
         char error_string[BH_TERMWIDTH];
         snprintf(error_string, (size_t) BH_TERMWIDTH+1, "Error reading %s: %s.", filename, strerror(errno));
 
-        print_error(error_string);
+        print_error(error_string, stderr);
         exit(BH_EXIT_BADPARSE);
     }
 
@@ -265,7 +265,7 @@ int read_points_file_float(char *filename, void **t, void **w, int num_var) {
     if (num_points < 2) {
         char error_string[] = "You must define 2 or more points to test";
 
-        print_error(error_string);
+        print_error(error_string, stderr);
         exit(BH_EXIT_BADDEF);
     }
 
@@ -284,13 +284,13 @@ int read_points_file_float(char *filename, void **t, void **w, int num_var) {
             char error_string[BH_TERMWIDTH];
             snprintf(error_string, (size_t) BH_TERMWIDTH+1, "Error reading %s: unexpected EOF.", filename);
 
-            print_error(error_string);
+            print_error(error_string, stderr);
             exit(BH_EXIT_BADREAD);
         } else if (errno == EILSEQ) {
             char error_string[BH_TERMWIDTH];
             snprintf(error_string, (size_t) BH_TERMWIDTH+1, "Error reading %s: %s.", filename, strerror(errno));
 
-            print_error(error_string);
+            print_error(error_string, stderr);
             exit(BH_EXIT_BADPARSE);
         }
 
@@ -299,7 +299,7 @@ int read_points_file_float(char *filename, void **t, void **w, int num_var) {
             char error_string[BH_TERMWIDTH];
             gmp_snprintf(error_string, (size_t) BH_TERMWIDTH+1, "Value for t not between 0 and 1: %Fd", t_float[i]);
 
-            print_error(error_string);
+            print_error(error_string, stderr);
             exit(BH_EXIT_BADDEF);
         }
 
@@ -312,13 +312,13 @@ int read_points_file_float(char *filename, void **t, void **w, int num_var) {
                 char error_string[BH_TERMWIDTH];
                 snprintf(error_string, (size_t) BH_TERMWIDTH+1, "Error reading %s: unexpected EOF.", filename);
 
-                print_error(error_string);
+                print_error(error_string, stderr);
                 exit(BH_EXIT_BADREAD);
             } else if (errno == EILSEQ) {
                 char error_string[BH_TERMWIDTH];
                 snprintf(error_string, (size_t) BH_TERMWIDTH+1, "Error reading %s: %s.", filename, strerror(errno));
 
-                print_error(error_string);
+                print_error(error_string, stderr);
                 exit(BH_EXIT_BADPARSE);
             }
 

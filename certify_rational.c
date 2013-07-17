@@ -547,7 +547,7 @@ void test_pairwise_rational(polynomial_system *system, rational_complex_vector *
     /* test if we've been through this 20 times or what */
     if (iter > BH_SUB_TOLERANCE) {
         char error_string[] = "Number of subdivisions exceeds tolerance";
-        print_error(error_string);
+        print_error(error_string, stderr);
         exit(BH_EXIT_INTOLERANT);
     }
 
@@ -575,7 +575,7 @@ void test_pairwise_rational(polynomial_system *system, rational_complex_vector *
     while (!w_left_solution || !w_right_solution) {
         if (newton_counter == newton_tolerance) {
             char error_string[] = "Points not in convergence basin; aborting";
-            print_error(error_string);
+            print_error(error_string, stderr);
 
             exit(BH_EXIT_OTHER);
         }

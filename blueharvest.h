@@ -42,6 +42,11 @@
 #define BH_VERSION "0.0.1"
 #define BH_BUILD_DATE "Jul 26, 2013"
 
+/* filenames */
+#define BH_FDISCONT "discontinuous.out"
+#define BH_FCONT    "continuous.out"
+#define BH_SUMMARY  "summary.out"
+
 /* string width and other memory-related constants */
 #define BH_MAX_DATECHAR 25
 #define BH_MAX_FILENAME 52

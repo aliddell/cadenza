@@ -6,19 +6,15 @@
 {
 {* convert floating point stuff to rational to do the calculations
 
-* add a flag to specify a config file
-
 * write a function to read the config file
 
 * clean up after polynomial systems in certify_*
 
-* clean up stuff on exit
+* clean up stuff on premature exit
 
 * check for fopen/fclose errors in certify_*
 
 * sort t_i from smallest to largest
-
-* actually do the continuity certification
 
 * replace parsing functions with gmp_fscanf
 

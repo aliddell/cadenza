@@ -23,7 +23,7 @@ void read_system_file_rational(char *filename, polynomial_system *system, void *
         char error_string[BH_TERMWIDTH];
         snprintf(error_string, (size_t) BH_TERMWIDTH+1, "Couldn't open system file %s: %s.", filename, strerror(errno));
 
-        print_error(error_string);
+        print_error(error_string, stderr);
         exit(BH_EXIT_BADFILE);
     }
 
@@ -34,13 +34,13 @@ void read_system_file_rational(char *filename, polynomial_system *system, void *
         char error_string[BH_TERMWIDTH];
         snprintf(error_string, (size_t) BH_TERMWIDTH+1, "Error reading %s: unexpected EOF", filename);
 
-        print_error(error_string);
+        print_error(error_string, stderr);
         exit(BH_EXIT_BADREAD);
     } else if (errno == EILSEQ) {
         char error_string[BH_TERMWIDTH];
         snprintf(error_string, (size_t) BH_TERMWIDTH+1, "Error reading %s: %s.", filename, strerror(errno));
 
-        print_error(error_string);
+        print_error(error_string, stderr);
         exit(BH_EXIT_BADPARSE);
     }
 
@@ -74,13 +74,13 @@ void read_system_file_rational(char *filename, polynomial_system *system, void *
             char error_string[BH_TERMWIDTH];
             snprintf(error_string, (size_t) BH_TERMWIDTH+1, "Error reading %s: unexpected EOF", filename);
 
-            print_error(error_string);
+            print_error(error_string, stderr);
             exit(BH_EXIT_BADREAD);
         } else if (errno == EILSEQ) {
             char error_string[BH_TERMWIDTH];
             snprintf(error_string, (size_t) BH_TERMWIDTH+1, "Error reading %s: %s.", filename, strerror(errno));
 
-            print_error(error_string);
+            print_error(error_string, stderr);
             exit(BH_EXIT_BADPARSE);
         }
 
@@ -96,7 +96,7 @@ void read_system_file_rational(char *filename, polynomial_system *system, void *
         char error_string[BH_TERMWIDTH];
         snprintf(error_string, (size_t) BH_TERMWIDTH+1, "Couldn't close %s: %s.", filename, strerror(errno));
 
-        print_error(error_string);
+        print_error(error_string, stderr);
         exit(BH_EXIT_BADREAD);
     }
 
@@ -119,13 +119,13 @@ polynomial parse_polynomial_rational(FILE *sysfile, char *filename, int num_var)
         char error_string[BH_TERMWIDTH];
         snprintf(error_string, (size_t) BH_TERMWIDTH+1, "Error reading %s: unexpected EOF", filename);
 
-        print_error(error_string);
+        print_error(error_string, stderr);
         exit(BH_EXIT_BADREAD);
     } else if (errno == EILSEQ) {
         char error_string[BH_TERMWIDTH];
         snprintf(error_string, (size_t) BH_TERMWIDTH+1, "Error reading %s: %s.", filename, strerror(errno));
 
-        print_error(error_string);
+        print_error(error_string, stderr);
         exit(BH_EXIT_BADPARSE);
     }
 
@@ -148,13 +148,13 @@ polynomial parse_polynomial_rational(FILE *sysfile, char *filename, int num_var)
                 char error_string[BH_TERMWIDTH];
                 snprintf(error_string, (size_t) BH_TERMWIDTH+1, "Error reading %s: unexpected EOF", filename);
 
-                print_error(error_string);
+                print_error(error_string, stderr);
                 exit(BH_EXIT_BADREAD);
             } else if (errno == EILSEQ) {
                 char error_string[BH_TERMWIDTH];
                 snprintf(error_string, (size_t) BH_TERMWIDTH+1, "Error reading %s: %s.", filename, strerror(errno));
 
-                print_error(error_string);
+                print_error(error_string, stderr);
                 exit(BH_EXIT_BADPARSE);
             }
 
@@ -174,13 +174,13 @@ polynomial parse_polynomial_rational(FILE *sysfile, char *filename, int num_var)
             char error_string[BH_TERMWIDTH];
             snprintf(error_string, (size_t) BH_TERMWIDTH+1, "Error reading %s: unexpected EOF", filename);
 
-            print_error(error_string);
+            print_error(error_string, stderr);
             exit(BH_EXIT_BADREAD);
         } else if (errno == EILSEQ) {
             char error_string[BH_TERMWIDTH];
             snprintf(error_string, (size_t) BH_TERMWIDTH+1, "Error reading %s: %s.", filename, strerror(errno));
 
-            print_error(error_string);
+            print_error(error_string, stderr);
             exit(BH_EXIT_BADPARSE);
         }
 
@@ -212,7 +212,7 @@ void parse_complex_rational(char *str_real, char *str_imag, rational_complex_num
         char error_string[BH_TERMWIDTH];
         snprintf(error_string, (size_t) BH_TERMWIDTH+1, "Invalid coefficient: %s", str_real);
 
-        print_error(error_string);
+        print_error(error_string, stderr);
         exit(BH_EXIT_BADPARSE);
     } else {
         tok = strtok(NULL, "/");
@@ -221,13 +221,13 @@ void parse_complex_rational(char *str_real, char *str_imag, rational_complex_num
         else {
             denom = strtoul(tok, NULL, 0);
             if (denom == 0) {
-                print_error("Division by zero in system file.");
+                print_error("Division by zero in system file.", stderr);
                 exit(BH_EXIT_BADPARSE);
             } else if (errno == ERANGE) {
                 char error_string[BH_TERMWIDTH];
                 snprintf(error_string, (size_t) BH_TERMWIDTH+1, "Invalid coefficient: %s", str_real);
 
-                print_error(error_string);
+                print_error(error_string, stderr);
                 exit(BH_EXIT_BADPARSE);
             }
         }
@@ -242,7 +242,7 @@ void parse_complex_rational(char *str_real, char *str_imag, rational_complex_num
         char error_string[BH_TERMWIDTH];
         snprintf(error_string, (size_t) BH_TERMWIDTH+1, "Invalid coefficient: %s", str_imag);
 
-        print_error(error_string);
+        print_error(error_string, stderr);
         exit(BH_EXIT_BADPARSE);
     } else {
         tok = strtok(NULL, "/");
@@ -251,13 +251,13 @@ void parse_complex_rational(char *str_real, char *str_imag, rational_complex_num
         else {
             denom = strtoul(tok, NULL, 0);
             if (denom == 0) {
-                print_error("Division by zero in system file.");
+                print_error("Division by zero in system file.", stderr);
                 exit(BH_EXIT_BADPARSE);
             } else if (errno == ERANGE) {
                 char error_string[BH_TERMWIDTH];
                 snprintf(error_string, (size_t) BH_TERMWIDTH+1, "Invalid coefficient: %s", str_imag);
 
-                print_error(error_string);
+                print_error(error_string, stderr);
                 exit(BH_EXIT_BADPARSE);
             }
         }
@@ -277,7 +277,7 @@ int read_points_file_rational(char *filename, void **t, void **w, int num_var) {
         char error_string[BH_TERMWIDTH];
         snprintf(error_string, (size_t) BH_TERMWIDTH+1, "Couldn't open points file %s: %s.", filename, strerror(errno));
 
-        print_error(error_string);
+        print_error(error_string, stderr);
         exit(BH_EXIT_BADFILE);
     }
 
@@ -290,13 +290,13 @@ int read_points_file_rational(char *filename, void **t, void **w, int num_var) {
         char error_string[BH_TERMWIDTH];
         snprintf(error_string, (size_t) BH_TERMWIDTH+1, "Error reading %s: unexpected EOF", filename);
 
-        print_error(error_string);
+        print_error(error_string, stderr);
         exit(BH_EXIT_BADREAD);
     } else if (errno == EILSEQ) {
         char error_string[BH_TERMWIDTH];
         snprintf(error_string, (size_t) BH_TERMWIDTH+1, "Error reading %s: %s.", filename, strerror(errno));
 
-        print_error(error_string);
+        print_error(error_string, stderr);
         exit(BH_EXIT_BADPARSE);
     }
 
@@ -304,7 +304,7 @@ int read_points_file_rational(char *filename, void **t, void **w, int num_var) {
     if (num_points < 2) {
         char error_string[] = "You must define 2 or more points to test";
 
-        print_error(error_string);
+        print_error(error_string, stderr);
         exit(BH_EXIT_BADDEF);
     }
 
@@ -323,13 +323,13 @@ int read_points_file_rational(char *filename, void **t, void **w, int num_var) {
             char error_string[BH_TERMWIDTH];
             snprintf(error_string, (size_t) BH_TERMWIDTH+1, "Error reading %s: unexpected EOF.", filename);
 
-            print_error(error_string);
+            print_error(error_string, stderr);
             exit(BH_EXIT_BADREAD);
         } else if (errno == EILSEQ) {
             char error_string[BH_TERMWIDTH];
             snprintf(error_string, (size_t) BH_TERMWIDTH+1, "Error reading %s: %s.", filename, strerror(errno));
 
-            print_error(error_string);
+            print_error(error_string, stderr);
             exit(BH_EXIT_BADPARSE);
         }
 
@@ -338,7 +338,7 @@ int read_points_file_rational(char *filename, void **t, void **w, int num_var) {
             char error_string[BH_TERMWIDTH];
             gmp_snprintf(error_string, (size_t) BH_TERMWIDTH+1, "Value for t not between 0 and 1: %Qd", t_rational[i]);
 
-            print_error(error_string);
+            print_error(error_string, stderr);
             exit(BH_EXIT_BADDEF);
         }
 
@@ -351,13 +351,13 @@ int read_points_file_rational(char *filename, void **t, void **w, int num_var) {
                 char error_string[BH_TERMWIDTH];
                 snprintf(error_string, (size_t) BH_TERMWIDTH+1, "Error reading %s: unexpected EOF.", filename);
 
-                print_error(error_string);
+                print_error(error_string, stderr);
                 exit(BH_EXIT_BADREAD);
             } else if (errno == EILSEQ) {
                 char error_string[BH_TERMWIDTH];
                 snprintf(error_string, (size_t) BH_TERMWIDTH+1, "Error reading %s: %s.", filename, strerror(errno));
 
-                print_error(error_string);
+                print_error(error_string, stderr);
                 exit(BH_EXIT_BADPARSE);
             }
 
@@ -490,42 +490,41 @@ void print_system_rational(polynomial_system *system, FILE *OUT) {
 }
 
 /************************************
- * print failed intervals to a file *
+ * print discontinuous intervals to a file *
  ************************************/
-void fprint_failed_rational(mpq_t t_left, mpq_t t_right, rational_complex_vector w_left, rational_complex_vector w_right, mpq_t alpha_sqr_left, mpq_t alpha_sqr_right, mpq_t beta_sqr_left, mpq_t beta_sqr_right, mpq_t gamma_sqr_left, mpq_t gamma_sqr_right) {
+void fprint_discontinuous_rational(mpq_t t_left, mpq_t t_right, rational_complex_vector w_left, rational_complex_vector w_right, mpq_t alpha_sqr_left, mpq_t alpha_sqr_right, mpq_t beta_sqr_left, mpq_t beta_sqr_right, mpq_t gamma_sqr_left, mpq_t gamma_sqr_right) {
     int i;
-    char filename[] = "failed";
 
     errno = 0;
 
-    FILE *failfile = fopen(filename, "a");
+    FILE *discfile = fopen(BH_FDISCONT, "a");
 
-    if (failfile == NULL) {
+    if (discfile == NULL) {
         char error_string[BH_TERMWIDTH];
-        snprintf(error_string, (size_t) BH_TERMWIDTH+1, "Couldn't open output file %s: %s.", filename, strerror(errno));
+        snprintf(error_string, (size_t) BH_TERMWIDTH+1, "Couldn't open output file %s: %s.", BH_FDISCONT, strerror(errno));
 
-        print_error(error_string);
+        print_error(error_string, stderr);
         exit(BH_EXIT_BADFILE);
     }
 
     for (i = 0; i < BH_TERMWIDTH; i++)
-        fprintf(failfile, "=");
+        fprintf(discfile, "=");
 
-    fprintf(failfile, "\n");
-    gmp_fprintf(failfile, "t interval: [%Qd, %Qd]\n", t_left, t_right);
-    gmp_fprintf(failfile, "x_left: ");
-    print_points_rational(w_left, failfile);
+    fprintf(discfile, "\n");
+    gmp_fprintf(discfile, "t interval: [%Qd, %Qd]\n", t_left, t_right);
+    gmp_fprintf(discfile, "x_left: ");
+    print_points_rational(w_left, discfile);
 
-    gmp_fprintf(failfile, "alpha^2 (x_left): %Qd\n", alpha_sqr_left);
-    gmp_fprintf(failfile, "beta^2 (x_left): %Qd\n", beta_sqr_left);
-    gmp_fprintf(failfile, "gamma^2 (x_left): %Qd\n", gamma_sqr_left);
+    gmp_fprintf(discfile, "alpha^2 (x_left): %Qd\n", alpha_sqr_left);
+    gmp_fprintf(discfile, "beta^2 (x_left): %Qd\n", beta_sqr_left);
+    gmp_fprintf(discfile, "gamma^2 (x_left): %Qd\n", gamma_sqr_left);
 
-    gmp_fprintf(failfile, "x_right: ");
-    print_points_rational(w_right, failfile);
+    gmp_fprintf(discfile, "x_right: ");
+    print_points_rational(w_right, discfile);
 
-    gmp_fprintf(failfile, "alpha^2 (x_right): %Qd\n", alpha_sqr_right);
-    gmp_fprintf(failfile, "beta^2 (x_right): %Qd\n", beta_sqr_right);
-    gmp_fprintf(failfile, "gamma^2 (x_right): %Qd\n", gamma_sqr_right);
+    gmp_fprintf(discfile, "alpha^2 (x_right): %Qd\n", alpha_sqr_right);
+    gmp_fprintf(discfile, "beta^2 (x_right): %Qd\n", beta_sqr_right);
+    gmp_fprintf(discfile, "gamma^2 (x_right): %Qd\n", gamma_sqr_right);
 
-    fclose(failfile);
+    fclose(discfile);
 }
