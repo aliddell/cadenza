@@ -344,8 +344,8 @@ int read_points_file_float(char *filename, void **t, void **w, int num_var) {
 /********************************
  * print a test point to stdout *
  ********************************/
-void print_points_float(complex_vector points, int num_var) {
-    int i;
+void print_points_float(complex_vector points, FILE *OUT) {
+    int i, num_var = points->size;
 
     for (i = 0; i < num_var; i++) {
         gmp_printf("\t\t[%Fd + %Fdi]\n", points->coord[i]->re, points->coord[i]->im);
@@ -356,7 +356,7 @@ void print_points_float(complex_vector points, int num_var) {
 /***************************************
  * print a polynomial system to stdout *
  ***************************************/
-void print_system_float(polynomial_system *system) {
+void print_system_float(polynomial_system *system, FILE *OUT) {
     int i, j, k;
     char variables[] = "xyzwuvabcdjkmnpqrs";
 

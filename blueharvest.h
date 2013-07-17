@@ -97,8 +97,8 @@ void read_system_file_rational(char *filename, polynomial_system *system, void *
 polynomial parse_polynomial_rational(FILE *sysfile, char *filename, int num_var); /* parses exponents of one polynomial, calls parse_complex */
 void parse_complex_rational(char *str_real, char *str_imag, rational_complex_number c); /* parses coefficients of one polynomial */
 int read_points_file_rational(char *filename, void **t, void **w, int num_var); /* see read_points_file(char *, void **, int) */
-void print_points_rational(rational_complex_vector points, int num_var);
-void print_system_rational(polynomial_system *system);
+void print_points_rational(rational_complex_vector points, FILE *OUT);
+void print_system_rational(polynomial_system *system, FILE *OUT);
 
 /****************************************
  * function declarations for io_float.c *
@@ -107,8 +107,8 @@ void read_system_file_float(char *filename, polynomial_system *system, void *v);
 polynomial parse_polynomial_float(FILE *sysfile, char *filename, int num_var); /* parses exponents of one polynomial, calls parse_complex */
 void parse_complex_float(char *str_real, char *str_imag, complex_number c); /* parses coefficients of one polynomial */
 int read_points_file_float(char *filename, void **t, void **w, int num_var); /* see read_points_file(char *, void **, int) */
-void print_points_float(complex_vector points, int num_var);
-void print_system_float(polynomial_system *system);
+void print_points_float(complex_vector points, FILE *OUT);
+void print_system_float(polynomial_system *system, FILE *OUT);
 
 /************************************************
  * function declarations for certify_rational.c *
@@ -124,9 +124,9 @@ void apply_tv_float(polynomial_system *base, polynomial_system *F, mpf_t t, comp
 void test_system_float(polynomial_system *system, configurations *config, void *v, void *t, void *w, int num_points); /* see test_system(polynomial_system*, ...) */
 int get_alpha_beta_gamma_float(complex_vector points, polynomial_system *F, mpf_t *alpha, mpf_t *beta, mpf_t *gamma);
 
-#define mpq_set_min(_setme, _prima, _secunda) { mpq_init(_setme); if (mpq_cmp(_prima, _secunda) <= 0) { mpq_set(_setme, _prima); } \
+#define mpq_set_min(_setme, _prima, _secunda) { if (mpq_cmp(_prima, _secunda) <= 0) { mpq_set(_setme, _prima); } \
     else { mpq_set(_setme, _secunda); }}
-#define mpq_set_max(_setme, _prima, _secunda) { mpq_init(_setme); if (mpq_cmp(_prima, _secunda) >= 0) { mpq_set(_setme, _prima); } \
+#define mpq_set_max(_setme, _prima, _secunda) { if (mpq_cmp(_prima, _secunda) >= 0) { mpq_set(_setme, _prima); } \
     else { mpq_set(_setme, _secunda); }}
 
 #define subtract_rational_vector(_diff, _minuend, _subtraend) { int _i; int _size = _minuend->size; for (_i = 0; _i < _size; _i++) \

@@ -384,22 +384,27 @@ int read_points_file_rational(char *filename, void **t, void **w, int num_var) {
 /********************************
  * print a test point to stdout *
  ********************************/
-void print_points_rational(rational_complex_vector points, int num_var) {
-    int i;
+void print_points_rational(rational_complex_vector points, FILE *OUT) {
+    int i, num_var = points->size;
 
-    for (i = 0; i < num_var; i++) {
+    gmp_fprintf(OUT, "[");
+    for (i = 0; i < num_var - 1; i++) {
         if (mpq_cmp_ui(points->coord[i]->im, 0, 1) == 0)
-            gmp_fprintf(stderr, "\t\t[%Qd]\n", points->coord[i]->re);
+            gmp_fprintf(OUT, "%Qd, ", points->coord[i]->re);
         else
-            gmp_fprintf(stderr, "\t\t[%Qd + %Qdi]\n", points->coord[i]->re, points->coord[i]->im);
+            gmp_fprintf(OUT, "%Qd + %Qdi, ", points->coord[i]->re, points->coord[i]->im);
     }
+    if (mpq_cmp_ui(points->coord[i]->im, 0, 1) == 0)
+        gmp_fprintf(OUT, "%Qd]\n", points->coord[i]->re);
+    else
+        gmp_fprintf(OUT, "%Qd + %Qdi]\n", points->coord[i]->re, points->coord[i]->im);
 
 }
 
 /***************************************
  * print a polynomial system to stdout *
  ***************************************/
-void print_system_rational(polynomial_system *system) {
+void print_system_rational(polynomial_system *system, FILE *OUT) {
     int i, j, k;
 
     for (i = 0; i < system->numPolynomials; i++) {
@@ -411,15 +416,15 @@ void print_system_rational(polynomial_system *system) {
                 if (mpq_cmp_ui(p.coeff[j]->im, 0, 1) == 0) {
                     /* real coefficient is not 1 */
                     if (mpq_cmp_ui(p.coeff[j]->re, 1, 1) != 0)
-                        gmp_fprintf(stderr, "%Qd", p.coeff[j]->re);
+                        gmp_fprintf(OUT, "%Qd", p.coeff[j]->re);
                 } 
                 /* imaginary part is 1 */
                 else if (mpq_cmp_ui(p.coeff[j]->im, 1, 1) == 1) {
-                    gmp_fprintf(stderr, "(%Qd + i)", p.coeff[j]->re);
+                    gmp_fprintf(OUT, "(%Qd + i)", p.coeff[j]->re);
                 }
                 /* imaginary part is neither 0 nor 1 */
                 else {
-                    gmp_fprintf(stderr, "(%Qd + %Qdi)", p.coeff[j]->re, p.coeff[j]->im);
+                    gmp_fprintf(OUT, "(%Qd + %Qdi)", p.coeff[j]->re, p.coeff[j]->im);
                 }
             }
             /* real part is zero */
@@ -429,19 +434,19 @@ void print_system_rational(polynomial_system *system) {
                     continue;
                 /* imaginary part is 1 */
                 else if (mpq_cmp_ui(p.coeff[j]->im, 1, 1) == 0)
-                    fprintf(stderr, "i");
+                    fprintf(OUT, "i");
                 /* imaginary part is neither 0 nor 1 */
                 else
-                    gmp_fprintf(stderr, "%Qdi", p.coeff[j]->im);
+                    gmp_fprintf(OUT, "%Qdi", p.coeff[j]->im);
             }
 
             for (k = 0; k < p.numVariables; k++) {
                 if (p.exponents[j][k] == 1)
-                    fprintf(stderr, "(x_%d)", k);
+                    fprintf(OUT, "(x_%d)", k);
                 else if (p.exponents[j][k] != 0)
-                    fprintf(stderr, "(x_%d)^%d", k, p.exponents[j][k]);
+                    fprintf(OUT, "(x_%d)^%d", k, p.exponents[j][k]);
             }
-            fprintf(stderr, " + ");
+            fprintf(OUT, " + ");
         }
 
         /* last term */
@@ -450,36 +455,77 @@ void print_system_rational(polynomial_system *system) {
             if (mpq_cmp_ui(p.coeff[j]->im, 0, 1) == 0) {
                 /* real coefficient is not 1 */
                 if (mpq_cmp_ui(p.coeff[j]->re, 1, 1) != 0)
-                    gmp_fprintf(stderr, "%Qd", p.coeff[j]->re);
+                    gmp_fprintf(OUT, "%Qd", p.coeff[j]->re);
             } 
             /* imaginary part is 1 */
             else if (mpq_cmp_ui(p.coeff[j]->im, 1, 1) == 1) {
-                gmp_fprintf(stderr, "(%Qd + i)", p.coeff[j]->re);
+                gmp_fprintf(OUT, "(%Qd + i)", p.coeff[j]->re);
             }
             /* imaginary part is neither 0 nor 1 */
             else {
-                gmp_fprintf(stderr, "(%Qd + %Qdi)", p.coeff[j]->re, p.coeff[j]->im);
+                gmp_fprintf(OUT, "(%Qd + %Qdi)", p.coeff[j]->re, p.coeff[j]->im);
             }
         }
         /* real part is zero */
         else {
             /* imaginary part is zero too */
             if (mpq_cmp_ui(p.coeff[j]->im, 0, 1) == 0)
-                continue;
+                fprintf(OUT, "0");
             /* imaginary part is 1 */
             else if (mpq_cmp_ui(p.coeff[j]->im, 1, 1) == 0)
-                fprintf(stderr, "i");
+                fprintf(OUT, "i");
             /* imaginary part is neither 0 nor 1 */
             else
-                gmp_fprintf(stderr, "%Qdi", p.coeff[j]->im);
+                gmp_fprintf(OUT, "%Qdi", p.coeff[j]->im);
         }
 
         for (k = 0; k < p.numVariables; k++) {
             if (p.exponents[j][k] == 1)
-                fprintf(stderr, "(x_%d)", k);
+                fprintf(OUT, "(x_%d)", k);
             else if (p.exponents[j][k] != 0)
-                fprintf(stderr, "(x_%d)^%d", k, p.exponents[j][k]);
+                fprintf(OUT, "(x_%d)^%d", k, p.exponents[j][k]);
         }
-        fputs("\n", stderr);
+        fputs("\n", OUT);
     }
+}
+
+/************************************
+ * print failed intervals to a file *
+ ************************************/
+void fprint_failed_rational(mpq_t t_left, mpq_t t_right, rational_complex_vector w_left, rational_complex_vector w_right, mpq_t alpha_sqr_left, mpq_t alpha_sqr_right, mpq_t beta_sqr_left, mpq_t beta_sqr_right, mpq_t gamma_sqr_left, mpq_t gamma_sqr_right) {
+    int i;
+    char filename[] = "failed";
+
+    errno = 0;
+
+    FILE *failfile = fopen(filename, "a");
+
+    if (failfile == NULL) {
+        char error_string[BH_TERMWIDTH];
+        snprintf(error_string, (size_t) BH_TERMWIDTH+1, "Couldn't open output file %s: %s.", filename, strerror(errno));
+
+        print_error(error_string);
+        exit(BH_EXIT_BADFILE);
+    }
+
+    for (i = 0; i < BH_TERMWIDTH; i++)
+        fprintf(failfile, "=");
+
+    fprintf(failfile, "\n");
+    gmp_fprintf(failfile, "t interval: [%Qd, %Qd]\n", t_left, t_right);
+    gmp_fprintf(failfile, "x_left: ");
+    print_points_rational(w_left, failfile);
+
+    gmp_fprintf(failfile, "alpha^2 (x_left): %Qd\n", alpha_sqr_left);
+    gmp_fprintf(failfile, "beta^2 (x_left): %Qd\n", beta_sqr_left);
+    gmp_fprintf(failfile, "gamma^2 (x_left): %Qd\n", gamma_sqr_left);
+
+    gmp_fprintf(failfile, "x_right: ");
+    print_points_rational(w_right, failfile);
+
+    gmp_fprintf(failfile, "alpha^2 (x_right): %Qd\n", alpha_sqr_right);
+    gmp_fprintf(failfile, "beta^2 (x_right): %Qd\n", beta_sqr_right);
+    gmp_fprintf(failfile, "gamma^2 (x_right): %Qd\n", gamma_sqr_right);
+
+    fclose(failfile);
 }

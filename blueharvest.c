@@ -86,7 +86,7 @@ int main(int argc, char *argv[]) {
         t_rational = (mpq_t *) t;
 
         fputs("F:\n", stderr);
-        print_system_rational(&F);
+        print_system_rational(&F, stderr);
 
         fputs("\n", stderr);
 
@@ -101,8 +101,8 @@ int main(int argc, char *argv[]) {
 
         fputs("(t_i, w_i)\n", stderr);
         for (i = 0; i < num_points; i++) {
-            gmp_fprintf(stderr, "%Qd", t_rational[i]);
-            print_points_rational(&w_rational[i], num_var);
+            gmp_fprintf(stderr, "%Qd, ", t_rational[i]);
+            print_points_rational(&w_rational[i], stderr);
         }
     }
 
