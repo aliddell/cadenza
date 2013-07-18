@@ -45,7 +45,7 @@
 /* filenames */
 #define BH_FDISCONT "discontinuous.out"
 #define BH_FCONT    "continuous.out"
-#define BH_SUMMARY  "summary.out"
+#define BH_FSUMMARY  "summary.out"
 
 /* string width and other memory-related constants */
 #define BH_MAX_DATECHAR 25
@@ -75,7 +75,7 @@ void (*read_system_file)(char *filename, polynomial_system *system, void *v); /*
 int (*read_points_file)(char *filename, void **t, void **w, int num_var); /* reads in a points file, sets data, returns number of points */
 void (*free_system)(void *system, void *v); /* frees dynamically-allocated memory for polynomial system */
 void (*free_vector)(void *w, void *t, int num_points); /* frees dynamically-allocated memory for array of points vectors */
-void (*test_system)(polynomial_system *system, configurations *config, void *v, void *t, void *w, int num_points); /* applies f(x) + tv for all t */
+void (*test_system)(polynomial_system *system, void *v, void *t, void *w, int num_points); /* applies f(x) + tv for all t */
 
 /*******************************************
  * function declarations for blueharvest.c *
@@ -90,7 +90,7 @@ void set_function_pointers(); /* set function pointers depending on arithmetic *
 /**********************************
  * function declarations for io.c *
  **********************************/
-void print_error(char *msg); /* prints msg to stderr */
+void print_error(char *msg, FILE *OUT); /* prints msg to OUT */
 void prog_info(); /* displays information about program, authors, libraries, &c on stderr */
 void usage(); /* displays a helpful message about invocation on stderr */
 void display_config(); /* displays the configuration (arithmetic type, precision, &c) on stderr */
@@ -104,6 +104,7 @@ void parse_complex_rational(char *str_real, char *str_imag, rational_complex_num
 int read_points_file_rational(char *filename, void **t, void **w, int num_var); /* see read_points_file(char *, void **, int) */
 void print_points_rational(rational_complex_vector points, FILE *OUT);
 void print_system_rational(polynomial_system *system, FILE *OUT);
+void fprint_discontinuous_rational(mpq_t t_left, mpq_t t_right, rational_complex_vector w_left, rational_complex_vector w_right, mpq_t alpha_sqr_left, mpq_t alpha_sqr_right, mpq_t beta_sqr_left, mpq_t beta_sqr_right, mpq_t gamma_sqr_left, mpq_t gamma_sqr_right);
 
 /****************************************
  * function declarations for io_float.c *
@@ -114,19 +115,20 @@ void parse_complex_float(char *str_real, char *str_imag, complex_number c); /* p
 int read_points_file_float(char *filename, void **t, void **w, int num_var); /* see read_points_file(char *, void **, int) */
 void print_points_float(complex_vector points, FILE *OUT);
 void print_system_float(polynomial_system *system, FILE *OUT);
+void fprint_discontinuous_float(mpf_t t_left, mpf_t t_right, complex_vector w_left, complex_vector w_right, mpf_t alpha_left, mpf_t alpha_right, mpf_t beta_left, mpf_t beta_right, mpf_t gamma_left, mpf_t gamma_right);
 
 /************************************************
  * function declarations for certify_rational.c *
  ************************************************/
 void apply_tv_rational(polynomial_system *base, polynomial_system *F, mpq_t t, rational_complex_vector v); /* add (t_i)(v_i) to F */
-void test_system_rational(polynomial_system *system, configurations *config, void *v, void *t, void *w, int num_points); /* see test_system(polynomial_system*, ...) */
+void test_system_rational(polynomial_system *system, void *v, void *t, void *w, int num_points); /* see test_system(polynomial_system*, ...) */
 int get_alpha_beta_gamma_rational(rational_complex_vector points, polynomial_system *F, mpq_t *alpha, mpq_t *beta, mpq_t *gamma);
 
 /*********************************************
  * function declarations for certify_float.c *
  *********************************************/
 void apply_tv_float(polynomial_system *base, polynomial_system *F, mpf_t t, complex_vector v); /* add (t_i)(v_i) to F */
-void test_system_float(polynomial_system *system, configurations *config, void *v, void *t, void *w, int num_points); /* see test_system(polynomial_system*, ...) */
+void test_system_float(polynomial_system *system, void *v, void *t, void *w, int num_points); /* see test_system(polynomial_system*, ...) */
 int get_alpha_beta_gamma_float(complex_vector points, polynomial_system *F, mpf_t *alpha, mpf_t *beta, mpf_t *gamma);
 
 #define mpq_set_min(_setme, _prima, _secunda) { if (mpq_cmp(_prima, _secunda) <= 0) { mpq_set(_setme, _prima); } \

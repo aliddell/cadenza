@@ -495,7 +495,7 @@ void apply_tv_rational(polynomial_system *base, polynomial_system *F, mpq_t t, r
  * get alpha^2, beta^2, gamma^2 values *
  ***************************************/
 int compute_abg_sqr_rational(rational_complex_vector points, polynomial_system *F, mpq_t *alpha, mpq_t *beta, mpq_t *gamma) {
-    int rV, numApproxSolns = 0, num_var = F->numVariables;
+    int res = 0, retval = 0, num_approx_solns = 0, num_var = F->numVariables;
 
     rational_point_struct P;
     /* setup point struct and determine if it is an approximate solution */
@@ -512,7 +512,7 @@ int compute_abg_sqr_rational(rational_complex_vector points, polynomial_system *
     norm_sqr_rational_vector(P.norm_sqr_x, P.x);
 
     /* compute alpha^2, beta^2, & gamma^2 */
-    rV = compute_alpha_beta_gamma_sqr_rational(P.Nx, P.alpha_sqr, P.beta_sqr, P.gamma_sqr, F, P.x);
+    res = compute_alpha_beta_gamma_sqr_rational(P.Nx, P.alpha_sqr, P.beta_sqr, P.gamma_sqr, F, P.x);
 
     mpq_set(*alpha, P.alpha_sqr->re);
     mpq_set(*beta, P.beta_sqr->re);
@@ -521,23 +521,21 @@ int compute_abg_sqr_rational(rational_complex_vector points, polynomial_system *
     //copy_rational_vector(points, P.Nx);
 
     /* check to see if we have successfully computed alpha_sqr, beta_sqr, & gamma_sqr */
-    if (rV == EXACT_SOLUTION_LU_ERROR) {
-        clear_rational_point_struct(&P);
-
+    if (res == EXACT_SOLUTION_LU_ERROR) {
         /* exact solution */
-        return 1;
-    } else if (rV) {
-        clear_rational_point_struct(&P);
-
+        retval = 1;
+    } else if (res) {
         /* unknown */
-        return 0;
+        retval = 0;
     } else {
         /* determine if alpha is small enough to be an approximate solution */
-        numApproxSolns += P.isApproxSoln = determine_approximate_solution_rational(P.alpha_sqr);
-        clear_rational_point_struct(&P);
-
-        return numApproxSolns;
+        num_approx_solns += P.isApproxSoln = determine_approximate_solution_rational(P.alpha_sqr);
+        retval = num_approx_solns;
     }
+
+    clear_rational_point_struct(&P);
+
+    return retval;
 }
 
 /***********************************************************************************
@@ -673,7 +671,7 @@ void test_pairwise_rational(polynomial_system *system, rational_complex_vector *
     } else {
         if (verbosity > BH_CHATTY)
             gmp_printf("segment [%Qd, %Qd] is not continuous\n", t_left, t_right);
-        fprint_failed_rational(t_left, t_right, w_left, w_right, alpha_sqr_left, alpha_sqr_right, beta_sqr_left, beta_sqr_right, gamma_sqr_left, gamma_sqr_right);
+        fprint_discontinuous_rational(t_left, t_right, w_left, w_right, alpha_sqr_left, alpha_sqr_right, beta_sqr_left, beta_sqr_right, gamma_sqr_left, gamma_sqr_right);
     }
 
     /* free up stuff */
@@ -695,7 +693,7 @@ void test_pairwise_rational(polynomial_system *system, rational_complex_vector *
  * if so, great, test for continuity btw w_i and w_{i+1}
  * if not, subdivide and retest
  */
-void test_system_rational(polynomial_system *system, configurations *config, void *v, void *t, void *w, int num_points) {
+void test_system_rational(polynomial_system *system, void *v, void *t, void *w, int num_points) {
     int i, num_var = system->numVariables;
 
     rational_complex_vector *v_rational = (rational_complex_vector *) v;

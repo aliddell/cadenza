@@ -66,11 +66,6 @@ int main(int argc, char *argv[]) {
         v = (void *) &v_rational;
     }
 
-    /* set configurations */
-    S.arithmeticType = arithmetic_type;
-    S.startingPrecision = default_precision;
-    S.algorithm = 1; /* real distinct certify */
-
     read_system_file(sysfile, &F, v);
     num_var = F.numVariables;
     num_poly = F.numPolynomials;
@@ -99,11 +94,11 @@ int main(int argc, char *argv[]) {
         fputs("(t_i, w_i)\n", stderr);
         for (i = 0; i < num_points; i++) {
             gmp_fprintf(stderr, "%Qd, ", t_rational[i]);
-            print_points_rational(&w_rational[i], stderr);
+            print_points_rational(w_rational[i], stderr);
         }
     }
 
-    test_system(&F, &S, v, t, w, num_points);
+    test_system(&F, v, t, w, num_points);
 
     /* clean up */
     free_system((void *) &F, v);
