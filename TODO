@@ -1,13 +1,5 @@
 = TO-DO =
 
-{* write certify_float
-{
-{--or--
-{
-{* convert floating point stuff to rational to do the calculations
-
-* rewrite io_float
-
 * clean up stuff on premature exit
 
 * parallelize!
