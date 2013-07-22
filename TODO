@@ -6,20 +6,10 @@
 {
 {* convert floating point stuff to rational to do the calculations
 
-* write a function to read the config file
-
-* clean up after polynomial systems in certify_*
+* rewrite io_float
 
 * clean up stuff on premature exit
 
-* check for fopen/fclose errors in certify_*
-
-* sort t_i from smallest to largest
-
-* replace parsing functions with gmp_fscanf
+* parallelize!
 
 * edit the parsing functions to throw away lines beginning with # (comments)
-
-* check after each malloc for a NULL pointer
-
-* clean up after free with NULL pointers

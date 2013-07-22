@@ -88,12 +88,13 @@ void compute_norm_sqr_Jv_rational(polynomial_system *F, rational_complex_vector 
         mpq_set_ui(*norm_sqr_Jv, 0, 1); /* this may need to be something else */
     }
 
-    free(rowswaps);
-
     clear_rational_vector(f);
     clear_rational_vector(X);
     clear_rational_matrix(J);
     clear_rational_matrix(LU);
+
+    free(rowswaps);
+    rowswaps = NULL;
 }
 
 int is_continuous(rational_complex_vector v, mpq_t t_left, mpq_t t_right, rational_complex_vector w_left, rational_complex_vector w_right, polynomial_system F_left, polynomial_system F_right, mpq_t alpha_sqr_left, mpq_t alpha_sqr_right, mpq_t gamma_sqr_left, mpq_t gamma_sqr_right) {
@@ -345,73 +346,38 @@ int test_continuity_rational(rational_complex_vector v, mpq_t t_left, mpq_t t_ri
     return 0;
 }
 
-/*********************************************
- * apply a Newton iteration to each endpoint *
- *********************************************/
-void apply_newton_left_right_mid(polynomial_system *base, rational_complex_vector w_left, rational_complex_vector w_mid, rational_complex_vector w_right, mpq_t t_left, mpq_t t_mid, mpq_t t_right, rational_complex_vector *v, int num_var) {
-    int retval = 0, *rowswaps = NULL;
-
-    polynomial_system F_left;
-    polynomial_system F_mid;
-    polynomial_system F_right;
-
-    apply_tv_rational(base, &F_left, t_left, *v);
-    apply_tv_rational(base, &F_mid, t_mid, *v);
-    apply_tv_rational(base, &F_right, t_right, *v);
-
-    rational_complex_vector w_left_new;
-    rational_complex_vector w_mid_new;
-    rational_complex_vector w_right_new;
-
-    initialize_rational_vector(w_left_new, num_var);
-    initialize_rational_vector(w_mid_new, num_var);
-    initialize_rational_vector(w_right_new, num_var);
-
-    rational_complex_number beta_sqr;
-    initialize_rational_number(beta_sqr);
-
-    rational_complex_matrix LU;
-    initialize_rational_matrix(LU, 0, 0);
-
-    retval = newton_iteration_rational(w_left_new, beta_sqr, LU, &rowswaps, &F_left, w_left);
-    retval = newton_iteration_rational(w_mid_new, beta_sqr, LU, &rowswaps, &F_mid, w_mid);
-    retval = newton_iteration_rational(w_right_new, beta_sqr, LU, &rowswaps, &F_right, w_right);
-
-    copy_rational_vector(w_left, w_left_new);
-    copy_rational_vector(w_mid, w_mid_new);
-    copy_rational_vector(w_right, w_right_new);
-
-    free(rowswaps);
-
-    clear_polynomial_system(&F_left);
-    clear_polynomial_system(&F_mid);
-    clear_polynomial_system(&F_right);
-
-    clear_rational_vector(w_left_new);
-    clear_rational_vector(w_mid_new);
-    clear_rational_vector(w_right_new);
-
-    clear_rational_number(beta_sqr);
-    clear_rational_matrix(LU);
-}
-
 /**************************************************************************************
  * subdivide a segment (t_1, w_1) <=> (t_2, w_2) for ((t_1 + t_2)/2, (w_1 + w_2) / 2) *
  **************************************************************************************/
-void subdivide_segment_rational(polynomial_system *base, mpq_t t_left, mpq_t t_right, rational_complex_vector w_left, rational_complex_vector w_right, mpq_t *t_mid, rational_complex_vector *w_mid, int num_var) {
+void subdivide_segment_rational(polynomial_system *base, rational_complex_vector v, mpq_t t_left, mpq_t t_right, rational_complex_vector w_left, rational_complex_vector w_right, mpq_t *t_mid, rational_complex_vector *w_mid, int num_var) {
     if (verbosity > BH_VERBOSE)
         printf("subdividing... ");
 
-    int i;
+    int i, retval = 0, *rowswaps = NULL;
 
     mpq_t one_half_rational;
+    mpq_t beta_sqr;
+
     mpq_init(one_half_rational);
+    mpq_init(beta_sqr);
+
     mpq_set_ui(one_half_rational, 1, 2);
 
     rational_complex_number one_half_complex;
     initialize_rational_number(one_half_complex);
     mpq_set_ui(one_half_complex->re, 1, 2);
     mpq_set_ui(one_half_complex->im, 0, 1);
+
+    rational_complex_number beta_sqr_complex;
+    initialize_rational_number(beta_sqr_complex);
+
+    mpq_set(beta_sqr_complex->re, beta_sqr);
+    mpq_set_ui(beta_sqr_complex->im, 0, 1);
+
+    rational_complex_matrix LU;
+    initialize_rational_matrix(LU, 0, 0);
+
+    polynomial_system F_mid;
 
     /* t_mid */
     mpq_add(*t_mid, t_left, t_right);
@@ -423,11 +389,28 @@ void subdivide_segment_rational(polynomial_system *base, mpq_t t_left, mpq_t t_r
         multiply_rational((*w_mid)->coord[i], (*w_mid)->coord[i], one_half_complex);
     }
 
+    /* apply Newton to w_mid */
+    apply_tv_rational(base, &F_mid, *t_mid, v);
+    retval = newton_iteration_rational(*w_mid, beta_sqr_complex, LU, &rowswaps, &F_mid, *w_mid);
+    if (retval == ERROR_LU_DECOMP) {
+        char error_string[]= "Invalid LU decomposition\n";
+        print_error(error_string, stderr);
+        exit(BH_EXIT_OTHER);
+    }
+
+
     if (verbosity > BH_VERBOSE)
         gmp_printf("new intervals are [%Qd, %Qd] and [%Qd, %Qd]\n", t_left, *t_mid, *t_mid, t_right);
 
     mpq_clear(one_half_rational);
+    mpq_clear(beta_sqr);
     clear_rational_number(one_half_complex);
+    clear_rational_number(beta_sqr_complex);
+    clear_rational_matrix(LU);
+    clear_polynomial_system(&F_mid);
+
+    free(rowswaps);
+    rowswaps = NULL;
 }
 
 /*******************************
@@ -439,12 +422,22 @@ void apply_tv_rational(polynomial_system *base, polynomial_system *F, mpq_t t, r
     num_var = base->numVariables;
     num_poly = base->numPolynomials;
 
+    errno = 0;
+
     F->numVariables = num_var;
     F->numPolynomials = num_poly;
     F->maximumDegree = base->maximumDegree;
     F->isReal = 0;
     F->numExponentials = 0;
     F->polynomials = malloc(num_var * sizeof(polynomial));
+    if (F->polynomials == NULL) {
+        char error_string[BH_TERMWIDTH];
+        snprintf(error_string, (size_t) BH_TERMWIDTH+1, "Couldn't alloc: %s\n", strerror(errno));
+        print_error(error_string, stderr);
+
+        exit(BH_EXIT_MEMORY);
+    }
+
     F->exponentials = NULL;
     mpq_init(F->norm_sqr);
 
@@ -459,20 +452,53 @@ void apply_tv_rational(polynomial_system *base, polynomial_system *F, mpq_t t, r
         p.degree = base->polynomials[i].degree;
 
         /* copy exponents from base->polynomials[i] */
+        errno = 0;
+
         p.exponents = malloc(num_terms * sizeof(int *));
+        if (p.exponents == NULL) {
+            char error_string[BH_TERMWIDTH];
+            snprintf(error_string, (size_t) BH_TERMWIDTH+1, "Couldn't alloc: %s\n", strerror(errno));
+            print_error(error_string, stderr);
+
+            exit(BH_EXIT_MEMORY);
+        }
+
         for (j = 0; j < num_terms - 1; j++) {
             p.exponents[j] = malloc(num_var * sizeof(int));
+            if (p.exponents[j] == NULL) {
+                char error_string[BH_TERMWIDTH];
+                snprintf(error_string, (size_t) BH_TERMWIDTH+1, "Couldn't alloc: %s\n", strerror(errno));
+                print_error(error_string, stderr);
+
+                exit(BH_EXIT_MEMORY);
+            }
+
             for (k = 0; k < num_var; k++)
                 p.exponents[j][k] = base->polynomials[i].exponents[j][k];
         }
         
         /* add 0's for exponents in last (constant) term */
         p.exponents[j] = malloc(num_var * sizeof(int));
+        if (p.exponents[j] == NULL) {
+            char error_string[BH_TERMWIDTH];
+            snprintf(error_string, (size_t) BH_TERMWIDTH+1, "Couldn't alloc: %s\n", strerror(errno));
+            print_error(error_string, stderr);
+
+            exit(BH_EXIT_MEMORY);
+        }
+
         for (k = 0; k < num_var; k++)
             p.exponents[j][k] = 0;
 
         /* copy the coefficients */
         p.coeff = malloc(num_terms * sizeof(rational_complex_number));
+        if (p.coeff == NULL) {
+            char error_string[BH_TERMWIDTH];
+            snprintf(error_string, (size_t) BH_TERMWIDTH+1, "Couldn't alloc: %s\n", strerror(errno));
+            print_error(error_string, stderr);
+
+            exit(BH_EXIT_MEMORY);
+        }
 
         for (j = 0; j < num_terms - 1; j++) {
             initialize_rational_number(p.coeff[j]);
@@ -541,7 +567,7 @@ int compute_abg_sqr_rational(rational_complex_vector points, polynomial_system *
 /***********************************************************************************
  * test that each w is in the quadratic convergence basin and check for continuity *
  ***********************************************************************************/
-void test_pairwise_rational(polynomial_system *system, rational_complex_vector *v, mpq_t t_left, mpq_t t_right, rational_complex_vector w_left, rational_complex_vector w_right, int num_var, int iter) {
+void test_pairwise_rational(polynomial_system *system, rational_complex_vector *v, mpq_t t_left, mpq_t t_right, rational_complex_vector w_left, rational_complex_vector w_right, int num_var, int iter, mpq_t **t_final, rational_complex_vector **w_final, int *tested, int *succeeded, int *failed) {
     /* test if we've been through this 20 times or what */
     if (iter > BH_SUB_TOLERANCE) {
         char error_string[] = "Number of subdivisions exceeds tolerance";
@@ -579,7 +605,7 @@ void test_pairwise_rational(polynomial_system *system, rational_complex_vector *
         }
 
         int retval, *rowswaps = NULL;
-        rational_complex_number beta_sqr_sqr;
+        rational_complex_number beta_sqr_complex;
         rational_complex_vector new_point;
         rational_complex_matrix LU;
 
@@ -597,18 +623,25 @@ void test_pairwise_rational(polynomial_system *system, rational_complex_vector *
                 gmp_fprintf(stderr, " (interval: [%Qd, %Qd])\n", t_left, t_right);
             }
 
-            initialize_rational_number(beta_sqr_sqr);
+            initialize_rational_number(beta_sqr_complex);
             initialize_rational_vector(new_point, num_var);
             initialize_rational_matrix(LU, 0, 0);
 
-            retval = newton_iteration_rational(new_point, beta_sqr_sqr, LU, &rowswaps, &F_left, w_left);
+            retval = newton_iteration_rational(new_point, beta_sqr_complex, LU, &rowswaps, &F_left, w_left);
+            if (retval == ERROR_LU_DECOMP) {
+                char error_string[]= "Invalid LU decomposition\n";
+                print_error(error_string, stderr);
+                exit(BH_EXIT_OTHER);
+            }
+
             copy_rational_vector(w_left, new_point);
 
             w_left_solution = compute_abg_sqr_rational(w_left, &F_left, &alpha_sqr_left, &beta_sqr_left, &gamma_sqr_left);
 
-            clear_rational_number(beta_sqr_sqr);
+            clear_rational_number(beta_sqr_complex);
             clear_rational_vector(new_point);
             clear_rational_matrix(LU);
+
             free(rowswaps);
             rowswaps = NULL;
         }
@@ -627,24 +660,34 @@ void test_pairwise_rational(polynomial_system *system, rational_complex_vector *
                 gmp_fprintf(stderr, " (interval: [%Qd, %Qd])\n", t_left, t_right);
             }
 
-            initialize_rational_number(beta_sqr_sqr);
+            initialize_rational_number(beta_sqr_complex);
             initialize_rational_vector(new_point, num_var);
             initialize_rational_matrix(LU, 0, 0);
 
-            retval = newton_iteration_rational(new_point, beta_sqr_sqr, LU, &rowswaps, &F_right, w_right);
+            retval = newton_iteration_rational(new_point, beta_sqr_complex, LU, &rowswaps, &F_right, w_right);
+            if (retval == ERROR_LU_DECOMP) {
+                char error_string[]= "Invalid LU decomposition\n";
+                print_error(error_string, stderr);
+                exit(BH_EXIT_OTHER);
+            }
+
             copy_rational_vector(w_right, new_point);
 
             w_right_solution = compute_abg_sqr_rational(w_right, &F_right, &alpha_sqr_right, &beta_sqr_right, &gamma_sqr_right);
 
-            clear_rational_number(beta_sqr_sqr);
+            clear_rational_number(beta_sqr_complex);
             clear_rational_vector(new_point);
             clear_rational_matrix(LU);
+
             free(rowswaps);
             rowswaps = NULL;
         }
 
         newton_counter++;
     }
+
+    if (verbosity > BH_CHATTY)
+        gmp_printf("testing segment [%Qd, %Qd]\n", t_left, t_right);
 
     seg_continuous = test_continuity_rational(*v, t_left, t_right, w_left, w_right, F_left, F_right, alpha_sqr_left, alpha_sqr_right, gamma_sqr_left, gamma_sqr_right);
 
@@ -657,21 +700,55 @@ void test_pairwise_rational(polynomial_system *system, rational_complex_vector *
         rational_complex_vector w_mid;
         initialize_rational_vector(w_mid, num_var);
 
-        subdivide_segment_rational(system, t_left, t_right, w_left, w_right, &t_mid, &w_mid, num_var);
-        apply_newton_left_right_mid(system, w_left, w_mid, w_right, t_left, t_mid, t_right, v, num_var);
+        subdivide_segment_rational(system, v, t_left, t_right, w_left, w_right, &t_mid, &w_mid, num_var);
 
         /* recurse! */
-        test_pairwise_rational(system, v, t_left, t_mid, w_left, w_mid, num_var, iter + 1);
-        test_pairwise_rational(system, v, t_mid, t_right, w_mid, w_right, num_var, iter + 1);
+        test_pairwise_rational(system, v, t_left, t_mid, w_left, w_mid, num_var, iter + 1, t_final, w_final, tested, succeeded, failed);
+        test_pairwise_rational(system, v, t_mid, t_right, w_mid, w_right, num_var, iter + 1, t_final, w_final, tested, succeeded, failed);
         mpq_clear(t_mid);
         clear_rational_vector(w_mid);
     } else if (seg_continuous == 1) {
-        if (verbosity > BH_CHATTY)
+        if (verbosity > BH_LACONIC)
             gmp_printf("segment [%Qd, %Qd] is continuous\n", t_left, t_right);
+        fprint_continuous_rational(t_left, t_right, w_left, w_right, alpha_sqr_left, alpha_sqr_right, beta_sqr_left, beta_sqr_right, gamma_sqr_left, gamma_sqr_right);
+        *tested += 1;
+        *succeeded += 1;
+
+        /* copy t and w values into t_final and w_final respectively */
+        errno = 0;
+
+        mpq_t *t_final_tmp = realloc(*t_final, (size_t) (*succeeded + 1) * sizeof(mpq_t));
+        if (t_final_tmp == NULL) {
+            char error_string[BH_TERMWIDTH];
+            snprintf(error_string, (size_t) BH_TERMWIDTH+1, "Couldn't realloc: %s\n", strerror(errno));
+            print_error(error_string, stderr);
+            exit(BH_EXIT_MEMORY);
+        } else {
+            *t_final = t_final_tmp;
+            mpq_init((*t_final)[*succeeded]);
+            mpq_set((*t_final)[*succeeded], t_right);
+        }
+
+        errno = 0;
+
+        rational_complex_vector *w_final_tmp = realloc(*w_final, (size_t) (*succeeded + 1) * sizeof(rational_complex_vector));
+        if (w_final_tmp == NULL) {
+            char error_string[BH_TERMWIDTH];
+            snprintf(error_string, (size_t) BH_TERMWIDTH+1, "Couldn't realloc: %s\n", strerror(errno));
+            print_error(error_string, stderr);
+            exit(BH_EXIT_MEMORY);
+        } else {
+            *w_final = w_final_tmp;
+            initialize_rational_vector((*w_final)[*succeeded], w_right->size);
+            copy_rational_vector((*w_final)[*succeeded], w_right);
+        }
     } else {
-        if (verbosity > BH_CHATTY)
+        if (verbosity > BH_LACONIC)
             gmp_printf("segment [%Qd, %Qd] is not continuous\n", t_left, t_right);
         fprint_discontinuous_rational(t_left, t_right, w_left, w_right, alpha_sqr_left, alpha_sqr_right, beta_sqr_left, beta_sqr_right, gamma_sqr_left, gamma_sqr_right);
+
+        *tested += 1;
+        *failed += 1;
     }
 
     /* free up stuff */
@@ -687,22 +764,47 @@ void test_pairwise_rational(polynomial_system *system, rational_complex_vector *
     mpq_clear(beta_sqr_min);
 }
 
-/* here's what we really want to do:
- * take each t_i, t_{i+1} and get the alpha, beta, gamma values for each
- * then test that each is in convergence zone
- * if so, great, test for continuity btw w_i and w_{i+1}
- * if not, subdivide and retest
- */
-void test_system_rational(polynomial_system *system, void *v, void *t, void *w, int num_points) {
+/*******************
+ * certify H(x, t) *
+ *******************/
+void test_system_rational(polynomial_system *system, void *v, void *t, void *w, int num_points, void **t_final, void **w_final, int *tested, int *succeeded, int *failed) {
     int i, num_var = system->numVariables;
 
     rational_complex_vector *v_rational = (rational_complex_vector *) v;
     mpq_t *t_rational = (mpq_t *) t;
     rational_complex_vector *w_rational = (rational_complex_vector *) w;
 
+    mpq_t **t_final_rational = (mpq_t **) t_final;
+    rational_complex_vector **w_final_rational = (rational_complex_vector **) w_final;
+
+    /* set up t_final and w_final */
+    *t_final_rational = malloc(sizeof(mpq_t));
+    if (*t_final_rational == NULL) {
+        char error_string[BH_TERMWIDTH];
+        snprintf(error_string, (size_t) BH_TERMWIDTH+1, "Couldn't alloc: %s\n", strerror(errno));
+        print_error(error_string, stderr);
+
+        exit(BH_EXIT_MEMORY);
+    }
+
+    mpq_init(t_final_rational[0]);
+    mpq_set(t_final_rational[0], t_rational[0]);
+
+    *w_final_rational = malloc(sizeof(rational_complex_vector));
+    if (*w_final_rational == NULL) {
+        char error_string[BH_TERMWIDTH];
+        snprintf(error_string, (size_t) BH_TERMWIDTH+1, "Couldn't alloc: %s\n", strerror(errno));
+        print_error(error_string, stderr);
+
+        exit(BH_EXIT_MEMORY);
+    }
+
+    initialize_rational_vector((*w_final_rational)[0], w_rational[0]->size);
+    copy_rational_vector((*w_final_rational)[0], w_rational[0]);
+
     /* for each t_i, t_{i+1} */
     /* this is the part that needs to get parallelized */
     for (i = 0; i < num_points - 1; i++) {
-        test_pairwise_rational(system, v_rational, t_rational[i], t_rational[i+1], w_rational[i], w_rational[i+1], num_var, 1);
+        test_pairwise_rational(system, v_rational, t_rational[i], t_rational[i+1], w_rational[i], w_rational[i+1], num_var, 1, t_final_rational, w_final_rational, tested, succeeded, failed);
     }
 }

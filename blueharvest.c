@@ -10,33 +10,40 @@
 #include "blueharvest.h"
 
 int main(int argc, char *argv[]) {
-    int i, num_var, num_poly, num_points;
+    int i, num_var = 0, num_points = 0, tested = 0, succeeded = 0, failed = 0;
 
     /* polynomial system */
     polynomial_system F;
     
-    /* constant vector v_i */
+    /* vector v */
     rational_complex_vector v_rational;
     complex_vector v_float;
     void *v = NULL;
 
-    /* t_i */
+    /* initial vector t */
     mpq_t *t_rational = NULL;
     mpf_t *t_float = NULL;
     void *t = NULL;
 
-    /* vector w_i */
+    /* final vector t */
+    void *t_final = NULL;
+
+    /* initial vector w */
     rational_complex_vector *w_rational = NULL;
     complex_vector *w_float = NULL;
     void *w = NULL;
+
+    /* final vector w */
+    void *w_final = NULL;
 
     /* init random seed */
     srand(time(NULL));
 
     /* get command-line arguments before anything else happens */
     getargs(argc, argv);
+
     if (verbosity > BH_LACONIC)
-        prog_info();
+        prog_info(stderr);
 
     /* do this before checking filenames, duh */
     if (help_flag) {
@@ -45,18 +52,18 @@ int main(int argc, char *argv[]) {
     }
 
     /* ensure filenames are properly defined */
-    if (sysfile == NULL) {
+    if (strcmp(sysfile, "unset") == 0) {
         print_error("You need to define a system file.", stderr);
         usage();
         exit(BH_EXIT_BADFILE);
-    } else if (pointsfile == NULL) {
+    } else if (strcmp(pointsfile, "unset") == 0) {
         print_error("You need to define a points file.", stderr);
         usage();
         exit(BH_EXIT_BADFILE);
     }
 
     if (verbosity > BH_CHATTY)
-        display_config();
+        display_config(stderr);
 
     /* set void and function pointers */
     set_function_pointers();
@@ -66,16 +73,15 @@ int main(int argc, char *argv[]) {
         v = (void *) &v_rational;
     }
 
-    read_system_file(sysfile, &F, v);
+    read_system_file(&F, v);
     num_var = F.numVariables;
-    num_poly = F.numPolynomials;
 
-    num_points = read_points_file(pointsfile, &t, &w, num_var);
+    num_points = read_points_file(&t, &w, num_var);
 
+    w_rational = (rational_complex_vector *) w;
+    t_rational = (mpq_t *) t;
     /* print out the system, vector and points */
     if (verbosity > BH_CHATTY) {
-        w_rational = (rational_complex_vector *) w;
-        t_rational = (mpq_t *) t;
 
         fputs("F:\n", stderr);
         print_system_rational(&F, stderr);
@@ -98,104 +104,24 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    test_system(&F, v, t, w, num_points);
+    initialize_output_files();
+    test_system(&F, v, t, w, num_points, &t_final, &w_final, &tested, &succeeded, &failed);
+
+    /* print an output file only if all intervals certified continuous */
+    if (tested == succeeded)
+        fprint_solutions(t_final, w_final, succeeded + 1);
+    
+    summarize(tested, succeeded, failed);
 
     /* clean up */
-    free_system((void *) &F, v);
-    free_vector(w, t, num_points);
+    clear_polynomial_system(&F);
+    free_v(v);
+    free_t(t, num_points);
+    free_t(t_final, succeeded + 1);
+    free_w(w, num_points);
+    free_w(w_final, succeeded + 1);
 
     exit(BH_EXIT_SUCCESS);
-}
-
-/******************************************************************************
- * free all dynamically-allocated variables in the rational polynomial system *
- ******************************************************************************/
-void free_system_rational(void *system, void *v) {
-    int i, j;
-    polynomial_system *F = (polynomial_system *) system;
-    rational_complex_vector *v_rational = (rational_complex_vector *) v;
-
-    for (i = 0; i < F->numPolynomials; i++) {
-        polynomial p = F->polynomials[i];
-        int num_terms = p.numTerms;
-        for (j = 0; j < num_terms; j++)
-            free(p.exponents[j]);
-
-        free(p.exponents);
-
-        for (j = 0; j < num_terms; j++)
-            clear_rational_number(p.coeff[j]);
-
-        free(p.coeff);
-        mpq_clear(p.norm_sqr);
-    }
-
-    mpq_clear(F->norm_sqr);
-    free(F->polynomials);
-    clear_rational_vector(*v_rational);
-}
-
-/*********************************************************************
- * free all dynamically-allocated variables in the polynomial system *
- *********************************************************************/
-void free_system_float(void *system, void *v) {
-    int i, j;
-    polynomial_system *F = (polynomial_system *) system;
-    complex_vector *v_float = (complex_vector *) v;
-
-    for (i = 0; i < F->numPolynomials; i++) {
-        polynomial p = F->polynomials[i];
-        int num_terms = p.numTerms;
-        for (j = 0; j < num_terms; j++)
-            free(p.exponents[j]);
-
-        free(p.exponents);
-
-        for (j = 0; j < num_terms; j++)
-            clear_number(p.coeff[j]);
-
-        mpq_clear(p.norm_sqr);
-        free(p.coeff);
-    }
-
-    mpq_clear(F->norm_sqr);
-    free(F->polynomials);
-    clear_vector(*v_float);
-}
-
-/**************************************************************************
- * free all dynamically-allocated variables in the rational points vector *
- **************************************************************************/
-void free_vector_rational(void *w, void *t, int num_points) {
-    int i;
-    rational_complex_vector *w_rational = (rational_complex_vector *) w;
-    mpq_t *t_rational = (mpq_t *) t;
-
-    for (i = 0; i < num_points; i++)
-        mpq_clear(t_rational[i]);
-    for (i = 0; i < num_points; i++)
-        clear_rational_vector(w_rational[i]);
-
-    free(t_rational);
-    free(w_rational);
-}
-
-/***********************************************************************
- * free all dynamically-allocated variables in the float points vector *
- ***********************************************************************/
-void free_vector_float(void *w, void *t, int num_points) {
-    int i;
-
-    complex_vector *w_float = (complex_vector *) w;
-    mpf_t *t_float = (mpf_t *) t;
-
-    for (i = 0; i < num_points; i++)
-        mpf_clear(t_float[i]);
-    for (i = 0; i < num_points; i++)
-        clear_vector(w_float[i]);
-
-    free(t_float);
-    free(w_float);
 }
 
 /*******************************************************
@@ -204,13 +130,13 @@ void free_vector_float(void *w, void *t, int num_points) {
 void getargs(int argc, char *argv[]) {
     /* define default values */
     help_flag = 0;
-    verbosity = BH_LACONIC;
-    arithmetic_type = BH_USE_RATIONAL;
-    default_precision = MPFR_PREC_MIN;
-    newton_tolerance = BH_NEWT_TOLERANCE;
-    sysfile = NULL;
-    pointsfile = NULL;
-    configfile = NULL;
+    verbosity = BH_UNSET;
+    arithmetic_type = BH_UNSET;
+    default_precision = BH_UNSET;
+    newton_tolerance = BH_UNSET;
+    strcpy(sysfile, "unset");
+    strcpy(pointsfile, "unset");
+    strcpy(configfile, "unset");
 
     int c = 0;
 
@@ -251,7 +177,7 @@ void getargs(int argc, char *argv[]) {
                 break;
 
             case 'c':
-                configfile = optarg;
+                strcpy(configfile, optarg);
                 break;
 
             case 'f':
@@ -267,7 +193,7 @@ void getargs(int argc, char *argv[]) {
                 break;
 
             case 'p':
-                pointsfile = optarg;
+                strcpy(pointsfile, optarg);
                 break;
 
             case 'q':
@@ -275,7 +201,7 @@ void getargs(int argc, char *argv[]) {
                 break;
 
             case 's':
-                sysfile = optarg;
+                strcpy(sysfile, optarg);
                 break;
 
             case 't':
@@ -283,12 +209,28 @@ void getargs(int argc, char *argv[]) {
                 break;
 
             case 'v':
+                if (verbosity == BH_UNSET)
+                    verbosity = BH_LACONIC;
+
                 verbosity++;
                 if (verbosity > BH_LOQUACIOUS)
                     verbosity = BH_LOQUACIOUS;
                 break;
         }
     }
+
+    if (strcmp(configfile, "unset") != 0)
+        read_config_file();
+
+    /* if after reading flags and config file, options are still unset */
+    if (verbosity == BH_UNSET)
+        verbosity = BH_LACONIC;
+    if (arithmetic_type == BH_UNSET)
+        arithmetic_type = BH_USE_RATIONAL;
+    if (default_precision == BH_UNSET)
+        default_precision = MPFR_PREC_MIN;
+    if (newton_tolerance == BH_UNSET)
+        newton_tolerance = BH_NEWT_TOLERANCE;
 }
 
 /**********************************************************************************
@@ -301,8 +243,7 @@ void set_function_pointers() {
         read_system_file = &read_system_file_float;
         read_points_file = &read_points_file_float;
         test_system = &test_system_float;
-        free_system = &free_system_float;
-        free_vector = &free_vector_float;
+        fprint_solutions = &fprint_solutions_float;
     }
 
     /* rational functions */
@@ -310,7 +251,77 @@ void set_function_pointers() {
         read_system_file = &read_system_file_rational;
         read_points_file = &read_points_file_rational;
         test_system = &test_system_rational;
-        free_system = &free_system_rational;
-        free_vector = &free_vector_rational;
+        fprint_solutions = &fprint_solutions_rational;
+    }
+}
+
+/************************************
+ * free [rational_]complex_vector v *
+ ************************************/
+void free_v(void *v) {
+    if (arithmetic_type == BH_USE_FLOAT) {
+        complex_vector *v_float = (complex_vector *) v;
+        clear_vector(*v_float);
+        v_float = NULL;
+        v = NULL;
+    } else {
+        rational_complex_vector *v_rational = (rational_complex_vector *) v;
+        clear_rational_vector(*v_rational);
+        v_rational = NULL;
+        v = NULL;
+    }
+}
+
+/*******************
+ * free mp[qf]_t t *
+ *******************/
+void free_t(void *t, int num_points) {
+    int i;
+
+    if (arithmetic_type == BH_USE_FLOAT) {
+        mpf_t *t_float = (mpf_t *) t;
+
+        for (i = 0; i < num_points; i++)
+            mpf_clear(t_float[i]);
+
+        free(t_float);
+        t_float = NULL;
+        t = NULL;
+    } else {
+        mpq_t *t_rational = (mpq_t *) t;
+
+        for (i = 0; i < num_points; i++)
+            mpq_clear(t_rational[i]);
+
+        free(t_rational);
+        t_rational = NULL;
+        t = NULL;
+    }
+}
+
+/*************************************
+ * free [rational_]complex_vector *w *
+ *************************************/
+void free_w(void *w, int num_points) {
+    int i;
+
+    if (arithmetic_type == BH_USE_FLOAT) {
+        complex_vector *w_float = (complex_vector *) w;
+
+        for (i = 0; i < num_points; i++)
+            clear_vector(w_float[i]);
+
+        free(w_float);
+        w_float = NULL;
+        w = NULL;
+    } else {
+        rational_complex_vector *w_rational = (rational_complex_vector *) w;
+
+        for (i = 0; i < num_points; i++)
+            clear_rational_vector(w_rational[i]);
+
+        free(w_rational);
+        w_rational = NULL;
+        w = NULL;
     }
 }
