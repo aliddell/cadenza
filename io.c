@@ -143,6 +143,95 @@ void display_config(FILE *outfile) {
         puts("");
 }
 
+/***********************************
+* parse polynomial from input file *
+************************************/
+polynomial parse_polynomial(FILE *sysfh, int num_var) {
+    int num_terms, res, i, j, max_degree;
+    polynomial p;
+
+    p.numVariables = num_var;
+
+    /* first get the number of terms */
+    res = fscanf(sysfh, "%d", &num_terms);
+
+    if (res == EOF || res == 0) {
+        char error_string[BH_TERMWIDTH];
+        snprintf(error_string, (size_t) BH_TERMWIDTH+1, "Error reading %s: unexpected EOF", sysfile);
+
+        print_error(error_string, stderr);
+        exit(BH_EXIT_BADREAD);
+    } else if (errno == EILSEQ) {
+        char error_string[BH_TERMWIDTH];
+        snprintf(error_string, (size_t) BH_TERMWIDTH+1, "Error reading %s: %s.", sysfile, strerror(errno));
+
+        print_error(error_string, stderr);
+        exit(BH_EXIT_BADPARSE);
+    }
+
+    p.exponents = malloc(num_terms * sizeof(int*));
+
+    for (i = 0; i < num_terms; i++)
+        p.exponents[i] = malloc(num_var * sizeof(int));
+    p.coeff = malloc(num_terms * sizeof(rational_complex_number));
+    p.numTerms = num_terms;
+    p.degree = 0;
+    p.isReal = 0;
+
+    /* get the exponents and coefficients for each term */
+    for (i = 0; i < num_terms; i++) {
+        max_degree = 0;
+        /* get exponent for each variable in the term */
+        for (j = 0; j < num_var; j++) {
+            res = fscanf(sysfh, "%d", &p.exponents[i][j]);
+            if (res == EOF || res == 0) {
+                char error_string[BH_TERMWIDTH];
+                snprintf(error_string, (size_t) BH_TERMWIDTH+1, "Error reading %s: unexpected EOF", sysfile);
+
+                print_error(error_string, stderr);
+                exit(BH_EXIT_BADREAD);
+            } else if (errno == EILSEQ) {
+                char error_string[BH_TERMWIDTH];
+                snprintf(error_string, (size_t) BH_TERMWIDTH+1, "Error reading %s: %s.", sysfile, strerror(errno));
+
+                print_error(error_string, stderr);
+                exit(BH_EXIT_BADPARSE);
+            }
+
+            max_degree += p.exponents[i][j];
+        }
+
+        /* check if degree is greater than p.degree */
+        if (max_degree > p.degree)
+            p.degree = max_degree;
+
+        initialize_rational_number(p.coeff[i]);
+
+        errno = 0;
+
+        res = gmp_fscanf(sysfh, "%Qd %Qd", p.coeff[i]->re, p.coeff[i]->im);
+
+        if (res == EOF || res == 0) {
+            char error_string[BH_TERMWIDTH];
+            snprintf(error_string, (size_t) BH_TERMWIDTH+1, "Error reading %s: unexpected EOF", sysfile);
+
+            print_error(error_string, stderr);
+            exit(BH_EXIT_BADREAD);
+        } else if (errno == EILSEQ) {
+            char error_string[BH_TERMWIDTH];
+            snprintf(error_string, (size_t) BH_TERMWIDTH+1, "Error reading %s: %s.", sysfile, strerror(errno));
+
+            print_error(error_string, stderr);
+            exit(BH_EXIT_BADPARSE);
+        }
+    }
+
+    mpq_init(p.norm_sqr);
+    norm_sqr_polynomial(p.norm_sqr, &p);
+
+    return p;
+}
+
 /*********************************
  * create empty files for output *
  *********************************/

@@ -10,7 +10,7 @@
 #include "blueharvest.h"
 
 int main(int argc, char *argv[]) {
-    int i, num_var = 0, num_points = 0, tested = 0, succeeded = 0, failed = 0;
+    int num_var = 0, num_points = 0, tested = 0, succeeded = 0, failed = 0;
 
     /* polynomial system */
     polynomial_system F;
@@ -42,8 +42,8 @@ int main(int argc, char *argv[]) {
     /* get command-line arguments before anything else happens */
     getargs(argc, argv);
 
-    if (verbosity > BH_LACONIC)
-        prog_info(stderr);
+    /* tell em who we are */
+    prog_info(stderr);
 
     /* do this before checking filenames, duh */
     if (help_flag) {
@@ -62,12 +62,14 @@ int main(int argc, char *argv[]) {
         exit(BH_EXIT_BADFILE);
     }
 
-    if (verbosity > BH_CHATTY)
+    /* display the options the user has selected */
+    if (verbosity > BH_LACONIC)
         display_config(stderr);
 
     /* set void and function pointers */
     set_function_pointers();
     if (arithmetic_type == BH_USE_FLOAT) {
+        mpf_set_default_prec(default_precision);
         v = (void *) &v_float;
     } else {
         v = (void *) &v_rational;
@@ -78,30 +80,9 @@ int main(int argc, char *argv[]) {
 
     num_points = read_points_file(&t, &w, num_var);
 
-    w_rational = (rational_complex_vector *) w;
-    t_rational = (mpq_t *) t;
     /* print out the system, vector and points */
     if (verbosity > BH_CHATTY) {
-
-        fputs("F:\n", stderr);
-        print_system_rational(&F, stderr);
-
-        fputs("\n", stderr);
-
-        fputs("v:\n", stderr);
-        fprintf(stderr, "[");
-        for (i = 0; i < num_var - 1; i++) {
-            gmp_fprintf(stderr, "%Qd + %Qdi, ", v_rational->coord[i]->re, v_rational->coord[i]->im);
-        }
-        gmp_fprintf(stderr, "%Qd + %Qdi]\n", v_rational->coord[i]->re, v_rational->coord[i]->im);
-
-        fputs("\n", stderr);
-
-        fputs("(t_i, w_i)\n", stderr);
-        for (i = 0; i < num_points; i++) {
-            gmp_fprintf(stderr, "%Qd, ", t_rational[i]);
-            print_points_rational(w_rational[i], stderr);
-        }
+        print_back_input(&F, v, t, w, num_points);
     }
 
     initialize_output_files();
@@ -143,6 +124,7 @@ void getargs(int argc, char *argv[]) {
     while (c != -1) {
         static struct option long_options[] = {
             /* These options set a flag. */
+            {"laconic",    no_argument, &verbosity, BH_LACONIC},
             {"chatty",     no_argument, &verbosity, BH_CHATTY},
             {"verbose",    no_argument, &verbosity, BH_VERBOSE},
             {"loquacious", no_argument, &verbosity, BH_LOQUACIOUS},
@@ -242,6 +224,7 @@ void set_function_pointers() {
     if (arithmetic_type == BH_USE_FLOAT) {
         read_system_file = &read_system_file_float;
         read_points_file = &read_points_file_float;
+        print_back_input = &print_back_input_float;
         test_system = &test_system_float;
         fprint_solutions = &fprint_solutions_float;
     }
@@ -250,6 +233,7 @@ void set_function_pointers() {
     else {
         read_system_file = &read_system_file_rational;
         read_points_file = &read_points_file_rational;
+        print_back_input = &print_back_input_rational;
         test_system = &test_system_rational;
         fprint_solutions = &fprint_solutions_rational;
     }

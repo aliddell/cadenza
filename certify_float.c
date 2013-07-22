@@ -363,7 +363,7 @@ void subdivide_segment_float(polynomial_system *base, complex_vector v, mpf_t t_
 
 
     if (verbosity > BH_VERBOSE)
-        gmp_printf("new intervals are [%.Ff, %.Ff] and [%.Ff, %.Ff]\n", t_left, *t_mid, *t_mid, t_right);
+        mpfr_printf("new intervals are [%.Rf, %.Rf] and [%.Rf, %.Rf]\n", t_left, *t_mid, *t_mid, t_right);
 
     mpf_clear(beta);
     mpf_clear(pivot_tol);
@@ -382,16 +382,23 @@ void subdivide_segment_float(polynomial_system *base, complex_vector v, mpf_t t_
  *******************************/
 void apply_tv_float(polynomial_system *base, polynomial_system *F, mpf_t t, complex_vector v) {
     int i, j, k, num_terms, num_var, num_poly;
+    double t_dub, v_dub;
 
     /* convert t to t_rational */
     mpq_t t_rational;
     mpq_init(t_rational);
-    mpq_set_f(t_rational, t);
+    t_dub = mpf_get_d(t);
+    mpq_set_d(t_rational, t_dub);
 
     /* convert v to v_rational */
     rational_complex_vector v_rational;
     initialize_rational_vector(v_rational, v->size);
-    convert_f2q_vector(v_rational, v);
+    for (i = 0; i < v->size; i++) {
+        v_dub = mpf_get_d(v->coord[i]->re);
+        mpq_set_d(v_rational->coord[i]->re, v_dub);
+        v_dub = mpf_get_d(v->coord[i]->im);
+        mpq_set_d(v_rational->coord[i]->im, v_dub);
+    }
 
     /* get information from base */
     num_var = base->numVariables;
@@ -597,7 +604,7 @@ void test_pairwise_float(polynomial_system *system, complex_vector *v, mpf_t t_l
                 else
                     fprintf(stderr, "performing %dth Newton iteration on w_left", newton_counter);
                 
-                gmp_fprintf(stderr, " (interval: [%Qd, %Qd])\n", t_left, t_right);
+                mpfr_fprintf(stderr, " (interval: [%.Rf, %.Rf])\n", t_left, t_right);
             }
 
             mpf_t pivot_tol, pivot_drop_tol;
@@ -644,7 +651,7 @@ void test_pairwise_float(polynomial_system *system, complex_vector *v, mpf_t t_l
                 else
                     fprintf(stderr, "performing %dth Newton iteration on w_right", newton_counter);
 
-                gmp_fprintf(stderr, " (interval: [%Qd, %Qd])\n", t_left, t_right);
+                mpfr_fprintf(stderr, " (interval: [%.Rf, %.Rf])\n", t_left, t_right);
             }
 
             mpf_t pivot_tol, pivot_drop_tol;
@@ -684,13 +691,13 @@ void test_pairwise_float(polynomial_system *system, complex_vector *v, mpf_t t_l
     }
 
     if (verbosity > BH_CHATTY)
-        gmp_printf("testing segment [%.Ff, %.Ff]\n", t_left, t_right);
+        mpfr_printf("testing segment [%.Rf, %.Rf]\n", t_left, t_right);
 
     seg_continuous = test_continuity_float(*v, t_left, t_right, w_left, w_right, F_left, F_right, alpha_left, alpha_right, gamma_left, gamma_right);
 
     if (seg_continuous == 0) {
         if (verbosity > BH_CHATTY)
-            gmp_printf("unsure whether segment [%.Ff, %.Ff] is continuous\n", t_left, t_right);
+            mpfr_printf("unsure whether segment [%.Rf, %.Rf] is continuous\n", t_left, t_right);
 
         mpf_t t_mid;
         mpf_init(t_mid);
@@ -707,7 +714,7 @@ void test_pairwise_float(polynomial_system *system, complex_vector *v, mpf_t t_l
         clear_vector(w_mid);
     } else if (seg_continuous == 1) {
         if (verbosity > BH_LACONIC)
-            gmp_printf("segment [%.Ff, %.Ff] is continuous\n", t_left, t_right);
+            mpfr_printf("segment [%.Rf, %.Rf] is continuous\n", t_left, t_right);
 
         fprint_continuous_float(t_left, t_right, w_left, w_right, alpha_left, alpha_right, beta_left, beta_right, gamma_left, gamma_right);
 
@@ -744,7 +751,7 @@ void test_pairwise_float(polynomial_system *system, complex_vector *v, mpf_t t_l
         }
     } else {
         if (verbosity > BH_LACONIC)
-            gmp_printf("segment [%.Ff, %.Ff] is not continuous\n", t_left, t_right);
+            mpfr_printf("segment [%.Rf, %.Rf] is not continuous\n", t_left, t_right);
 
         fprint_discontinuous_float(t_left, t_right, w_left, w_right, alpha_left, alpha_right, beta_left, beta_right, gamma_left, gamma_right);
 

@@ -81,12 +81,12 @@ void sort_points_float(mpf_t *t, complex_vector *w, int num_points) {
  * read the polynomial system file *
  ***********************************/
 void read_system_file_float(polynomial_system *system, void *v) {
-    int i, res, num_var, num_poly;
+    int i, res, num_var = 0, num_poly = 0, base = 10;
+
     complex_vector *v_float = (complex_vector *) v;
 
     /* sanity-check the system file */
     errno = 0;
-
     FILE *sysfh = fopen(sysfile, "r");
     if (sysfh == NULL) {
         char error_string[BH_TERMWIDTH];
@@ -96,11 +96,9 @@ void read_system_file_float(polynomial_system *system, void *v) {
         exit(BH_EXIT_BADFILE);
     }
 
-    /* gather number of variables and polynomials */
+    /* gather number of variables */
     errno = 0;
-
     res = fscanf(sysfh, "%d", &num_var);
-
     if (res == EOF || res == 0) {
         char error_string[BH_TERMWIDTH];
         snprintf(error_string, (size_t) BH_TERMWIDTH+1, "Error reading %s: unexpected EOF", sysfile);
@@ -120,28 +118,26 @@ void read_system_file_float(polynomial_system *system, void *v) {
     system->numVariables = num_var;
     system->numPolynomials = num_poly;
     system->maximumDegree = 0;
-    system->isReal = 1;
+    system->isReal = 0;
     mpq_init(system->norm_sqr);
     system->numExponentials = 0;
-    system->polynomials = malloc(num_var * sizeof(polynomial));
+    system->polynomials = malloc(num_poly * sizeof(polynomial));
     system->exponentials = NULL;
 
     /* read in each polynomial piece by piece */
     for (i = 0; i < num_poly; i++) {
-        system->polynomials[i] = parse_polynomial_float(sysfh, num_var);
+        system->polynomials[i] = parse_polynomial(sysfh, num_var);
         if (system->polynomials[i].degree > system->maximumDegree)
             system->maximumDegree = system->polynomials[i].degree;
     }
 
-    /* read in v */
     initialize_vector(*v_float, num_var);
 
     for (i = 0; i < num_var; i++) {
-        /* get (real & imag) coefficients for the term */
+        /* get (real & imag) parts for each v_i */
         errno = 0;
 
-        res = gmp_fscanf(sysfh, "%.Ff %.Ff", (*v_float)->coord[i]->re, (*v_float)->coord[i]->im);
-
+        res = mpf_inp_str((*v_float)->coord[i]->re, sysfh, base);
         if (res == EOF || res == 0) {
             char error_string[BH_TERMWIDTH];
             snprintf(error_string, (size_t) BH_TERMWIDTH+1, "Error reading %s: unexpected EOF", sysfile);
@@ -155,13 +151,28 @@ void read_system_file_float(polynomial_system *system, void *v) {
             print_error(error_string, stderr);
             exit(BH_EXIT_BADPARSE);
         }
+
+        res = mpf_inp_str((*v_float)->coord[i]->im, sysfh, base);
+        if (res == EOF || res == 0) {
+            char error_string[BH_TERMWIDTH];
+            snprintf(error_string, (size_t) BH_TERMWIDTH+1, "Error reading %s: unexpected EOF", sysfile);
+
+            print_error(error_string, stderr);
+            exit(BH_EXIT_BADREAD);
+        } else if (errno == EILSEQ) {
+            char error_string[BH_TERMWIDTH];
+            snprintf(error_string, (size_t) BH_TERMWIDTH+1, "Error reading %s: %s.", sysfile, strerror(errno));
+
+            print_error(error_string, stderr);
+            exit(BH_EXIT_BADPARSE);
+        }
+
     }
 
     /* clean up the file */
     errno = 0;
 
     res = fclose(sysfh);
-
     if (res == EOF) {
         char error_string[BH_TERMWIDTH];
         snprintf(error_string, (size_t) BH_TERMWIDTH+1, "Couldn't close %s: %s.", sysfile, strerror(errno));
@@ -173,121 +184,14 @@ void read_system_file_float(polynomial_system *system, void *v) {
     v = (void *) v_float;
 }
 
-/***********************************
-* parse polynomial from input file *
-************************************/
-polynomial parse_polynomial_float(FILE *sysfh, int num_var) {
-    int num_terms, res, i, j, max_degree;
-    double re_double, im_double;
-    polynomial p;
-
-    p.numVariables = num_var;
-
-    mpf_t re;
-    mpf_t im;
-    mpf_init(re);
-    mpf_init(im);
-
-    /* first get the number of terms */
-    res = fscanf(sysfh, "%d", &num_terms);
-
-    if (res == EOF || res == 0) {
-        char error_string[BH_TERMWIDTH];
-        snprintf(error_string, (size_t) BH_TERMWIDTH+1, "Error reading %s: unexpected EOF", sysfile);
-
-        print_error(error_string, stderr);
-        exit(BH_EXIT_BADREAD);
-    } else if (errno == EILSEQ) {
-        char error_string[BH_TERMWIDTH];
-        snprintf(error_string, (size_t) BH_TERMWIDTH+1, "Error reading %s: %s.", sysfile, strerror(errno));
-
-        print_error(error_string, stderr);
-        exit(BH_EXIT_BADPARSE);
-    }
-
-    p.exponents = malloc(num_terms * sizeof(int*));
-
-    for (i = 0; i < num_terms; i++)
-        p.exponents[i] = malloc(num_var * sizeof(int));
-
-    p.coeff = malloc(num_terms * sizeof(rational_complex_number));
-    p.numTerms = num_terms;
-    p.degree = 0;
-    p.isReal = 0;
-
-    /* get the exponents and coefficients for each term */
-    for (i = 0; i < num_terms; i++) {
-        max_degree = 0;
-        /* get exponent for each variable in the term */
-        for (j = 0; j < num_var; j++) {
-            res = fscanf(sysfh, "%d", &p.exponents[i][j]);
-
-            if (res == EOF || res == 0) {
-                char error_string[BH_TERMWIDTH];
-                snprintf(error_string, (size_t) BH_TERMWIDTH+1, "Error reading %s: unexpected EOF", sysfile);
-
-                print_error(error_string, stderr);
-                exit(BH_EXIT_BADREAD);
-            } else if (errno == EILSEQ) {
-                char error_string[BH_TERMWIDTH];
-                snprintf(error_string, (size_t) BH_TERMWIDTH+1, "Error reading %s: %s.", sysfile, strerror(errno));
-
-                print_error(error_string, stderr);
-                exit(BH_EXIT_BADPARSE);
-            }
-
-            max_degree += p.exponents[i][j];
-        }
-
-        /* check if degree is greater than p.degree */
-        if (max_degree > p.degree)
-            p.degree = max_degree;
-
-        initialize_rational_number(p.coeff[i]);
-
-        errno = 0;
-
-        res = fscanf(sysfh, "%lf %lf", &re_double, &im_double);
-
-        mpf_set_d(re, re_double);
-        mpf_set_d(im, im_double);
-
-        gmp_fprintf(stderr, "%.Ff\t%.Ff\n", re, im);
-
-        if (res == EOF || res == 0) {
-            char error_string[BH_TERMWIDTH];
-            snprintf(error_string, (size_t) BH_TERMWIDTH+1, "Error reading %s: unexpected EOF", sysfile);
-
-            print_error(error_string, stderr);
-            exit(BH_EXIT_BADREAD);
-        } else if (errno == EILSEQ) {
-            char error_string[BH_TERMWIDTH];
-            snprintf(error_string, (size_t) BH_TERMWIDTH+1, "Error reading %s: %s.", sysfile, strerror(errno));
-
-            print_error(error_string, stderr);
-            exit(BH_EXIT_BADPARSE);
-        }
-
-        mpq_set_f(p.coeff[i]->re, re);
-        mpq_set_f(p.coeff[i]->im, im);
-
-    }
-
-    mpq_init(p.norm_sqr);
-    norm_sqr_polynomial(p.norm_sqr, &p);
-
-    mpf_clear(re);
-    mpf_clear(im);
-
-    return p;
-}
-
 /********************
  * read points file *
  ********************/
 int read_points_file_float(void **t, void **w, int num_var) {
-    int i, j, num_points, res;
+    int i, j, num_points, res, base = 10;;
+
     mpf_t *t_float;
+
     complex_vector *w_float;
 
     /* sanity-check the points file */
@@ -338,11 +242,10 @@ int read_points_file_float(void **t, void **w, int num_var) {
 
         errno = 0;
 
-        res = gmp_fscanf(pointsfh, "%.Ff", t_float[i]);
-
+        res = mpf_inp_str(t_float[i], pointsfh, base);
         if (res == EOF || res == 0) {
             char error_string[BH_TERMWIDTH];
-            snprintf(error_string, (size_t) BH_TERMWIDTH+1, "Error reading %s: unexpected EOF.", pointsfile);
+            snprintf(error_string, (size_t) BH_TERMWIDTH+1, "Error reading %s: unexpected EOF", pointsfile);
 
             print_error(error_string, stderr);
             exit(BH_EXIT_BADREAD);
@@ -357,7 +260,7 @@ int read_points_file_float(void **t, void **w, int num_var) {
         /* check if 0 < t < 1 */
         if (mpf_cmp_ui(t_float[i], 0) < 0 || mpf_cmp_ui(t_float[i], 1) > 0) {
             char error_string[BH_TERMWIDTH];
-            gmp_snprintf(error_string, (size_t) BH_TERMWIDTH+1, "Value for t not between 0 and 1: %.Ff", t_float[i]);
+            mpfr_snprintf(error_string, (size_t) BH_TERMWIDTH+1, "Value for t not between 0 and 1: %.Rf", t_float[i]);
 
             print_error(error_string, stderr);
             exit(BH_EXIT_BADDEF);
@@ -365,13 +268,25 @@ int read_points_file_float(void **t, void **w, int num_var) {
 
         for (j = 0; j < num_var; j++) {
             /* get real and imag points */
-            res = gmp_fscanf(pointsfh, "%.Ff %.Ff", w_float[i]->coord[j]->re, w_float[i]->coord[j]->im);
-
-            gmp_fprintf(stderr, "%.Ff\t%.Ff\n", w_float[i]->coord[j]->re, w_float[i]->coord[j]->im);
-
+            res = mpf_inp_str(w_float[i]->coord[j]->re, pointsfh, base);
             if (res == EOF || res == 0) {
                 char error_string[BH_TERMWIDTH];
-                snprintf(error_string, (size_t) BH_TERMWIDTH+1, "Error reading %s: unexpected EOF.", pointsfile);
+                snprintf(error_string, (size_t) BH_TERMWIDTH+1, "Error reading %s: unexpected EOF", pointsfile);
+
+                print_error(error_string, stderr);
+                exit(BH_EXIT_BADREAD);
+            } else if (errno == EILSEQ) {
+                char error_string[BH_TERMWIDTH];
+                snprintf(error_string, (size_t) BH_TERMWIDTH+1, "Error reading %s: %s.", pointsfile, strerror(errno));
+
+                print_error(error_string, stderr);
+                exit(BH_EXIT_BADPARSE);
+            }
+
+            res = mpf_inp_str(w_float[i]->coord[j]->im, pointsfh, base);
+            if (res == EOF || res == 0) {
+                char error_string[BH_TERMWIDTH];
+                snprintf(error_string, (size_t) BH_TERMWIDTH+1, "Error reading %s: unexpected EOF", pointsfile);
 
                 print_error(error_string, stderr);
                 exit(BH_EXIT_BADREAD);
@@ -421,15 +336,15 @@ void print_back_input_float(polynomial_system *system, void *v, void *t, void *w
     puts("v:");
     printf("[");
     for (i = 0; i < num_var - 1; i++) {
-        gmp_printf("%.Ff + %.Ffi, ", (*v_float)->coord[i]->re, (*v_float)->coord[i]->im);
+        mpfr_printf("%.Rf + %.Rfi, ", (*v_float)->coord[i]->re, (*v_float)->coord[i]->im);
     }
-    gmp_printf("%.Ff + %.Ffi]\n", (*v_float)->coord[i]->re, (*v_float)->coord[i]->im);
+    mpfr_printf("%.Rf + %.Rfi]\n", (*v_float)->coord[i]->re, (*v_float)->coord[i]->im);
 
     puts("\n");
 
     puts("(t_i, w_i)");
     for (i = 0; i < num_points; i++) {
-        gmp_printf("%.Ff, ", t_float[i]);
+        mpfr_printf("%.Rf, ", t_float[i]);
         print_points_float(w_float[i], stdout);
     }
 }
@@ -443,14 +358,14 @@ void print_points_float(complex_vector points, FILE *outfile) {
     fprintf(outfile, "[");
     for (i = 0; i < num_var - 1; i++) {
         if (mpf_cmp_ui(points->coord[i]->im, 0) == 0)
-            gmp_fprintf(outfile, "%.Ff, ", points->coord[i]->re);
+            mpfr_fprintf(outfile, "%.Rf, ", points->coord[i]->re);
         else
-            gmp_fprintf(outfile, "%.Ff + %.Ffi, ", points->coord[i]->re, points->coord[i]->im);
+            mpfr_fprintf(outfile, "%.Rf + %.Rfi, ", points->coord[i]->re, points->coord[i]->im);
     }
     if (mpf_cmp_ui(points->coord[i]->im, 0) == 0)
-        gmp_fprintf(outfile, "%.Ff]\n", points->coord[i]->re);
+        mpfr_fprintf(outfile, "%.Rf]\n", points->coord[i]->re);
     else
-        gmp_fprintf(outfile, "%.Ff + %.Ffi]\n", points->coord[i]->re, points->coord[i]->im);
+        mpfr_fprintf(outfile, "%.Rf + %.Rfi]\n", points->coord[i]->re, points->coord[i]->im);
 }
 
 /****************************************
@@ -474,19 +389,21 @@ void print_system_float(polynomial_system *system, FILE *outfile) {
                     /* real coefficient is not 1 */
                     if (mpq_cmp_ui(p.coeff[j]->re, 1, 1) != 0) {
                         mpf_set_q(re, p.coeff[j]->re);
-                        gmp_fprintf(outfile, "%.Ff", re);
+                        mpfr_fprintf(outfile, "%.Rf", re);
+                    } else {
+                        mpfr_fprintf(outfile, "1");
                     }
                 } 
                 /* imaginary part is 1 */
                 else if (mpq_cmp_ui(p.coeff[j]->im, 1, 1) == 1) {
                     mpf_set_q(re, p.coeff[j]->re);
-                    gmp_fprintf(outfile, "(%.Ff + i)", re);
+                    mpfr_fprintf(outfile, "(%.Rf + i)", re);
                 }
                 /* imaginary part is neither 0 nor 1 */
                 else {
                     mpf_set_q(re, p.coeff[j]->re);
                     mpf_set_q(im, p.coeff[j]->im);
-                    gmp_fprintf(outfile, "(%.Ff + %.Ffi)", re, im);
+                    mpfr_fprintf(outfile, "(%.Rf + %.Rfi)", re, im);
                 }
             }
             /* real part is zero */
@@ -500,7 +417,7 @@ void print_system_float(polynomial_system *system, FILE *outfile) {
                 /* imaginary part is neither 0 nor 1 */
                 else {
                     mpf_set_q(im, p.coeff[j]->im);
-                    gmp_fprintf(outfile, "%.Ffi", im);
+                    mpfr_fprintf(outfile, "%.Rfi", im);
                 }
             }
 
@@ -520,19 +437,21 @@ void print_system_float(polynomial_system *system, FILE *outfile) {
                 /* real coefficient is not 1 */
                 if (mpq_cmp_ui(p.coeff[j]->re, 1, 1) != 0) {
                     mpf_set_q(re, p.coeff[j]->re);
-                    gmp_fprintf(outfile, "%.Ff", re);
+                    mpfr_fprintf(outfile, "%.Rf", re);
+                } else {
+                    mpfr_fprintf(outfile, "1");
                 }
             } 
             /* imaginary part is 1 */
             else if (mpq_cmp_ui(p.coeff[j]->im, 1, 1) == 1) {
                 mpf_set_q(re, p.coeff[j]->re);
-                gmp_fprintf(outfile, "(%.Ff + i)", re);
+                mpfr_fprintf(outfile, "(%.Rf + i)", re);
             }
             /* imaginary part is neither 0 nor 1 */
             else {
                 mpf_set_q(re, p.coeff[j]->re);
                 mpf_set_q(im, p.coeff[j]->im);
-                gmp_fprintf(outfile, "(%.Ff + %.Ffi)", re, im);
+                mpfr_fprintf(outfile, "(%.Rf + %.Rfi)", re, im);
             }
         }
         /* real part is zero */
@@ -546,7 +465,7 @@ void print_system_float(polynomial_system *system, FILE *outfile) {
             /* imaginary part is neither 0 nor 1 */
             else {
                 mpf_set_q(im, p.coeff[j]->im);
-                gmp_fprintf(outfile, "%.Ffi", im);
+                mpfr_fprintf(outfile, "%.Rfi", im);
             }
         }
 
@@ -584,20 +503,20 @@ void fprint_continuous_float(mpf_t t_left, mpf_t t_right, complex_vector w_left,
         fprintf(contfh, "=");
 
     fprintf(contfh, "\n");
-    gmp_fprintf(contfh, "t interval: [%.Ff, %.Ff]\n", t_left, t_right);
-    gmp_fprintf(contfh, "x_left: ");
+    mpfr_fprintf(contfh, "t interval: [%.Rf, %.Rf]\n", t_left, t_right);
+    mpfr_fprintf(contfh, "x_left: ");
     print_points_float(w_left, contfh);
 
-    gmp_fprintf(contfh, "alpha (x_left): %.Ff\n", alpha_left);
-    gmp_fprintf(contfh, "beta (x_left): %.Ff\n", beta_left);
-    gmp_fprintf(contfh, "gamma (x_left): %.Ff\n", gamma_left);
+    mpfr_fprintf(contfh, "alpha (x_left): %.Rf\n", alpha_left);
+    mpfr_fprintf(contfh, "beta (x_left): %.Rf\n", beta_left);
+    mpfr_fprintf(contfh, "gamma (x_left): %.Rf\n", gamma_left);
 
-    gmp_fprintf(contfh, "x_right: ");
+    mpfr_fprintf(contfh, "x_right: ");
     print_points_float(w_right, contfh);
 
-    gmp_fprintf(contfh, "alpha (x_right): %.Ff\n", alpha_right);
-    gmp_fprintf(contfh, "beta (x_right): %.Ff\n", beta_right);
-    gmp_fprintf(contfh, "gamma (x_right): %.Ff\n", gamma_right);
+    mpfr_fprintf(contfh, "alpha (x_right): %.Rf\n", alpha_right);
+    mpfr_fprintf(contfh, "beta (x_right): %.Rf\n", beta_right);
+    mpfr_fprintf(contfh, "gamma (x_right): %.Rf\n", gamma_right);
 
     errno = 0;
 
@@ -630,20 +549,20 @@ void fprint_discontinuous_float(mpf_t t_left, mpf_t t_right, complex_vector w_le
         fprintf(discfh, "=");
 
     fprintf(discfh, "\n");
-    gmp_fprintf(discfh, "t interval: [%.Ff, %.Ff]\n", t_left, t_right);
-    gmp_fprintf(discfh, "x_left: ");
+    mpfr_fprintf(discfh, "t interval: [%.Rf, %.Rf]\n", t_left, t_right);
+    mpfr_fprintf(discfh, "x_left: ");
     print_points_float(w_left, discfh);
 
-    gmp_fprintf(discfh, "alpha (x_left): %.Ff\n", alpha_left);
-    gmp_fprintf(discfh, "beta (x_left): %.Ff\n", beta_left);
-    gmp_fprintf(discfh, "gamma (x_left): %.Ff\n", gamma_left);
+    mpfr_fprintf(discfh, "alpha (x_left): %.Rf\n", alpha_left);
+    mpfr_fprintf(discfh, "beta (x_left): %.Rf\n", beta_left);
+    mpfr_fprintf(discfh, "gamma (x_left): %.Rf\n", gamma_left);
 
-    gmp_fprintf(discfh, "x_right: ");
+    mpfr_fprintf(discfh, "x_right: ");
     print_points_float(w_right, discfh);
 
-    gmp_fprintf(discfh, "alpha (x_right): %.Ff\n", alpha_right);
-    gmp_fprintf(discfh, "beta (x_right): %.Ff\n", beta_right);
-    gmp_fprintf(discfh, "gamma (x_right): %.Ff\n", gamma_right);
+    mpfr_fprintf(discfh, "alpha (x_right): %.Rf\n", alpha_right);
+    mpfr_fprintf(discfh, "beta (x_right): %.Rf\n", beta_right);
+    mpfr_fprintf(discfh, "gamma (x_right): %.Rf\n", gamma_right);
 
     errno = 0;
 
@@ -679,10 +598,10 @@ void fprint_solutions_float(void *t, void *w, int num_points) {
     fprintf(outfile, "%d\n", num_points);
 
     for (i = 0; i < num_points; i++) {
-        gmp_fprintf(outfile, "%.Ff\n", t_float[i]);
+        mpfr_fprintf(outfile, "%.Rf\n", t_float[i]);
 
         for (j = 0; j < w_float[i]->size; j++)
-            gmp_fprintf(outfile, "%.Ff\t%.Ff\n", w_float[i]->coord[j]->re, w_float[i]->coord[j]->im);
+            mpfr_fprintf(outfile, "%.Rf\t%.Rf\n", w_float[i]->coord[j]->re, w_float[i]->coord[j]->im);
     }
 
     errno = 0;

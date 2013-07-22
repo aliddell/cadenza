@@ -95,6 +95,7 @@ void prog_info(); /* displays information about program, authors, libraries, &c 
 void usage(); /* displays a helpful message about invocation on stderr */
 void read_config_file(); /* reads in a configuration file */
 void display_config(); /* displays the configuration (arithmetic type, precision, &c) on stderr */
+polynomial parse_polynomial(FILE *sysfh, int num_var);
 void initialize_output_files(); /* creates empty output files in the working directory */
 void summarize(int tested, int succeeded, int failed); /* print a summary to stdout */
 
@@ -104,7 +105,6 @@ void summarize(int tested, int succeeded, int failed); /* print a summary to std
 int compare_mpq(const void *a, const void *b);
 void sort_points_rational(mpq_t *t, rational_complex_vector *w, int num_points);
 void read_system_file_rational(polynomial_system *system, void *v);
-polynomial parse_polynomial_rational(FILE *sysfh, int num_var);
 int read_points_file_rational(void **t, void **w, int num_var);
 void print_back_input_rational(polynomial_system *system, void *v, void *t, void *w, int num_points);
 void print_points_rational(rational_complex_vector points, FILE *outfile);
@@ -119,7 +119,6 @@ void fprint_solutions_rational(void *t, void *w, int num_points);
 int compare_mpf(const void *a, const void *b);
 void sort_points_float(mpf_t *t, complex_vector *w, int num_points);
 void read_system_file_float(polynomial_system *system, void *v); /* see read_system_file(char *, void *) */
-polynomial parse_polynomial_float(FILE *sysfile, int num_var); /* parses exponents of one polynomial, calls parse_complex */
 int read_points_file_float(void **t, void **w, int num_var); /* see read_points_file(char *, void **, int) */
 void print_back_input_float(polynomial_system *system, void *v, void *t, void *w, int num_points);
 void print_points_float(complex_vector points, FILE *outfile);
@@ -168,9 +167,5 @@ void test_system_float(polynomial_system *system, void *v, void *t, void *w, int
     { subtract_rational(_diff->coord[_i], _minuend->coord[_i], _subtraend->coord[_i]); }}
 #define subtract_vector(_diff, _minuend, _subtraend) { int _i; int _size = _minuend->size; for (_i = 0; _i < _size; _i++) \
     { subtract(_diff->coord[_i], _minuend->coord[_i], _subtraend->coord[_i]); }}
-
-#define convert_f2q_number(_c_rat, _c) { mpq_set_f((_c_rat)->re, (_c)->re); mpq_set_f((_c_rat)->im, (_c)->im); }
-#define convert_f2q_vector(_v_rat, _v) { int _i, _size = (_v)->size; change_size_vector(_v_rat, _size); \
-    for (_i = 0; _i < _size; _i++) convert_f2q_number((_v_rat)->coord[_i], (_v)->coord[_i]); }
 
 #endif
