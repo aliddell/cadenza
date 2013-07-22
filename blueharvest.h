@@ -74,6 +74,7 @@ char pointsfile[BH_MAX_FILENAME], sysfile[BH_MAX_FILENAME], configfile[BH_MAX_FI
  *********************/
 void (*read_system_file)(polynomial_system *system, void *v); /* reads in a polynomial system file, sets data */
 int (*read_points_file)(void **t, void **w, int num_var); /* reads in a points file, sets data, returns number of points */
+void (*print_back_input)(polynomial_system *system, void *v, void *t, void *w, int num_points); /* prints input files to stdout for debugging */
 void (*test_system)(polynomial_system *system, void *v, void *t, void *w, int num_points, void **t_final, void **w_final, int *tested, int *succeeded, int *failed); /* certify H(x, t) */
 void (*fprint_solutions)(void *t, void *w, int num_points); /* print solutions to H(x, t) in a program-readable format */
 
@@ -100,9 +101,12 @@ void summarize(int tested, int succeeded, int failed); /* print a summary to std
 /*******************************************
  * function declarations for io_rational.c *
  *******************************************/
-void read_system_file_rational(polynomial_system *system, void *v); /* see read_system_file(char *, void *) */
-polynomial parse_polynomial_rational(FILE *sysfile, int num_var); /* parses exponents of one polynomial, calls parse_complex */
-int read_points_file_rational(void **t, void **w, int num_var); /* see read_points_file(char *, void **, int) */
+int compare_mpq(const void *a, const void *b);
+void sort_points_rational(mpq_t *t, rational_complex_vector *w, int num_points);
+void read_system_file_rational(polynomial_system *system, void *v);
+polynomial parse_polynomial_rational(FILE *sysfh, int num_var);
+int read_points_file_rational(void **t, void **w, int num_var);
+void print_back_input_rational(polynomial_system *system, void *v, void *t, void *w, int num_points);
 void print_points_rational(rational_complex_vector points, FILE *outfile);
 void print_system_rational(polynomial_system *system, FILE *outfile);
 void fprint_continuous_rational(mpq_t t_left, mpq_t t_right, rational_complex_vector w_left, rational_complex_vector w_right, mpq_t alpha_sqr_left, mpq_t alpha_sqr_right, mpq_t beta_sqr_left, mpq_t beta_sqr_right, mpq_t gamma_sqr_left, mpq_t gamma_sqr_right);
@@ -112,10 +116,12 @@ void fprint_solutions_rational(void *t, void *w, int num_points);
 /****************************************
  * function declarations for io_float.c *
  ****************************************/
+int compare_mpf(const void *a, const void *b);
+void sort_points_float(mpf_t *t, complex_vector *w, int num_points);
 void read_system_file_float(polynomial_system *system, void *v); /* see read_system_file(char *, void *) */
 polynomial parse_polynomial_float(FILE *sysfile, int num_var); /* parses exponents of one polynomial, calls parse_complex */
-void parse_complex_float(char *str_real, char *str_imag, complex_number c); /* parses coefficients of one polynomial */
 int read_points_file_float(void **t, void **w, int num_var); /* see read_points_file(char *, void **, int) */
+void print_back_input_float(polynomial_system *system, void *v, void *t, void *w, int num_points);
 void print_points_float(complex_vector points, FILE *outfile);
 void print_system_float(polynomial_system *system, FILE *outfile);
 void fprint_continuous_float(mpf_t t_left, mpf_t t_right, complex_vector w_left, complex_vector w_right, mpf_t alpha_left, mpf_t alpha_right, mpf_t beta_left, mpf_t beta_right, mpf_t gamma_left, mpf_t gamma_right);
@@ -127,8 +133,8 @@ void fprint_solutions_float(void *t, void *w, int num_points);
  ************************************************/
 int lte_sqr_rational(mpq_t X_sqr, mpq_t Y_sqr, mpq_t Z_sqr);
 void compute_norm_sqr_Jv_rational(polynomial_system *F, rational_complex_vector v, rational_complex_vector w, mpq_t *norm_sqr_Jv);
-int is_continuous(rational_complex_vector v, mpq_t t_left, mpq_t t_right, rational_complex_vector w_left, rational_complex_vector w_right, polynomial_system F_left, polynomial_system F_right, mpq_t alpha_sqr_left, mpq_t alpha_sqr_right, mpq_t gamma_sqr_left, mpq_t gamma_sqr_right);
-int is_not_continuous(rational_complex_vector v, mpq_t t_left, mpq_t t_right, rational_complex_vector w_left, rational_complex_vector w_right, polynomial_system F_left, polynomial_system F_right, mpq_t alpha_sqr_left, mpq_t alpha_sqr_right, mpq_t gamma_sqr_left, mpq_t gamma_sqr_right);
+int is_continuous_rational(rational_complex_vector v, mpq_t t_left, mpq_t t_right, rational_complex_vector w_left, rational_complex_vector w_right, polynomial_system F_left, polynomial_system F_right, mpq_t alpha_sqr_left, mpq_t alpha_sqr_right, mpq_t gamma_sqr_left, mpq_t gamma_sqr_right);
+int is_not_continuous_rational(rational_complex_vector v, mpq_t t_left, mpq_t t_right, rational_complex_vector w_left, rational_complex_vector w_right, polynomial_system F_left, polynomial_system F_right, mpq_t alpha_sqr_left, mpq_t alpha_sqr_right, mpq_t gamma_sqr_left, mpq_t gamma_sqr_right);
 int test_continuity_rational(rational_complex_vector v, mpq_t t_left, mpq_t t_right, rational_complex_vector w_left, rational_complex_vector w_right, polynomial_system F_left, polynomial_system F_right, mpq_t alpha_sqr_left, mpq_t alpha_sqr_right, mpq_t gamma_sqr_left, mpq_t gamma_sqr_right);
 void subdivide_segment_rational(polynomial_system *base, rational_complex_vector v, mpq_t t_left, mpq_t t_right, rational_complex_vector w_left, rational_complex_vector w_right, mpq_t *t_mid, rational_complex_vector *w_mid, int num_var);
 void apply_tv_rational(polynomial_system *base, polynomial_system *F, mpq_t t, rational_complex_vector v);
@@ -139,14 +145,32 @@ void test_system_rational(polynomial_system *system, void *v, void *t, void *w, 
 /*********************************************
  * function declarations for certify_float.c *
  *********************************************/
-void test_system_float(polynomial_system *system, void *v, void *t, void *w, int num_points, void **t_final, void **w_final, int *tested, int *succeeded, int *failed); /* see test_system(polynomial_system*, ...) */
+void compute_norm_Jv_float(polynomial_system *F, complex_vector v, complex_vector w, mpf_t *norm_Jv);
+int is_continuous_float(complex_vector v, mpf_t t_left, mpf_t t_right, complex_vector w_left, complex_vector w_right, polynomial_system F_left, polynomial_system F_right, mpf_t alpha_left, mpf_t alpha_right, mpf_t gamma_left, mpf_t gamma_right);
+int is_not_continuous_float(complex_vector v, mpf_t t_left, mpf_t t_right, complex_vector w_left, complex_vector w_right, polynomial_system F_left, polynomial_system F_right, mpf_t alpha_left, mpf_t alpha_right, mpf_t gamma_left, mpf_t gamma_right);
+int test_continuity_float(complex_vector v, mpf_t t_left, mpf_t t_right, complex_vector w_left, complex_vector w_right, polynomial_system F_left, polynomial_system F_right, mpf_t alpha_left, mpf_t alpha_right, mpf_t gamma_left, mpf_t gamma_right);
+void subdivide_segment_float(polynomial_system *base, complex_vector v, mpf_t t_left, mpf_t t_right, complex_vector w_left, complex_vector w_right, mpf_t *t_mid, complex_vector *w_mid, int num_var);
+void apply_tv_float(polynomial_system *base, polynomial_system *F, mpf_t t, complex_vector v);
+int compute_abg_float(complex_vector points, polynomial_system *F, mpf_t *alpha, mpf_t *beta, mpf_t *gamma);
+void test_pairwise_float(polynomial_system *system, complex_vector *v, mpf_t t_left, mpf_t t_right, complex_vector w_left, complex_vector w_right, int num_var, int iter, mpf_t **t_final, complex_vector **w_final, int *tested, int *succeeded, int *failed);
+void test_system_float(polynomial_system *system, void *v, void *t, void *w, int num_points, void **t_final, void **w_final, int *tested, int *succeeded, int *failed);
 
 #define mpq_set_min(_setme, _prima, _secunda) { if (mpq_cmp(_prima, _secunda) <= 0) { mpq_set(_setme, _prima); } \
     else { mpq_set(_setme, _secunda); }}
 #define mpq_set_max(_setme, _prima, _secunda) { if (mpq_cmp(_prima, _secunda) >= 0) { mpq_set(_setme, _prima); } \
     else { mpq_set(_setme, _secunda); }}
+#define mpf_set_min(_setme, _prima, _secunda) { if (mpf_cmp(_prima, _secunda) <= 0) { mpf_set(_setme, _prima); } \
+    else { mpf_set(_setme, _secunda); }}
+#define mpf_set_max(_setme, _prima, _secunda) { if (mpf_cmp(_prima, _secunda) >= 0) { mpf_set(_setme, _prima); } \
+    else { mpf_set(_setme, _secunda); }}
 
 #define subtract_rational_vector(_diff, _minuend, _subtraend) { int _i; int _size = _minuend->size; for (_i = 0; _i < _size; _i++) \
     { subtract_rational(_diff->coord[_i], _minuend->coord[_i], _subtraend->coord[_i]); }}
+#define subtract_vector(_diff, _minuend, _subtraend) { int _i; int _size = _minuend->size; for (_i = 0; _i < _size; _i++) \
+    { subtract(_diff->coord[_i], _minuend->coord[_i], _subtraend->coord[_i]); }}
+
+#define convert_f2q_number(_c_rat, _c) { mpq_set_f((_c_rat)->re, (_c)->re); mpq_set_f((_c_rat)->im, (_c)->im); }
+#define convert_f2q_vector(_v_rat, _v) { int _i, _size = (_v)->size; change_size_vector(_v_rat, _size); \
+    for (_i = 0; _i < _size; _i++) convert_f2q_number((_v_rat)->coord[_i], (_v)->coord[_i]); }
 
 #endif

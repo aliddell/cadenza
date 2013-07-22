@@ -255,6 +255,7 @@ polynomial parse_polynomial_rational(FILE *sysfh, int num_var) {
 
     mpq_init(p.norm_sqr);
     norm_sqr_polynomial(p.norm_sqr, &p);
+
     return p;
 }
 
@@ -372,16 +373,48 @@ int read_points_file_rational(void **t, void **w, int num_var) {
 
     *w = (void *) w_rational;
     *t = (void *) t_rational;
+
     return num_points;
 }
 
-/********************************
- * print a test point to stdout *
- ********************************/
+/**************************************************************
+ * print the file input back to stdout for debugging purposes *
+ **************************************************************/
+void print_back_input_rational(polynomial_system *system, void *v, void *t, void *w, int num_points) {
+    int i, num_var = system->numVariables;
+
+    rational_complex_vector *v_rational = (rational_complex_vector *) v;
+    mpq_t *t_rational = (mpq_t *) t;
+    rational_complex_vector *w_rational = (rational_complex_vector *) w;
+
+    puts("F:");
+    print_system_rational(system, stdout);
+
+    puts("\n");
+
+    puts("v:");
+    printf("[");
+    for (i = 0; i < num_var - 1; i++) {
+        gmp_printf("%Qd + %Qdi, ", (*v_rational)->coord[i]->re, (*v_rational)->coord[i]->im);
+    }
+    gmp_printf("%Qd + %Qdi]\n", (*v_rational)->coord[i]->re, (*v_rational)->coord[i]->im);
+
+    puts("\n");
+
+    puts("(t_i, w_i)");
+    for (i = 0; i < num_points; i++) {
+        gmp_printf("%Qd, ", t_rational[i]);
+        print_points_rational(w_rational[i], stdout);
+    }
+}
+
+/*********************************
+ * print a test point to outfile *
+ *********************************/
 void print_points_rational(rational_complex_vector points, FILE *outfile) {
     int i, num_var = points->size;
 
-    gmp_fprintf(outfile, "[");
+    fprintf(outfile, "[");
     for (i = 0; i < num_var - 1; i++) {
         if (mpq_cmp_ui(points->coord[i]->im, 0, 1) == 0)
             gmp_fprintf(outfile, "%Qd, ", points->coord[i]->re);
@@ -394,9 +427,9 @@ void print_points_rational(rational_complex_vector points, FILE *outfile) {
         gmp_fprintf(outfile, "%Qd + %Qdi]\n", points->coord[i]->re, points->coord[i]->im);
 }
 
-/************************************
+/****************************************
  * print a polynomial system to outfile *
- ************************************/
+ ****************************************/
 void print_system_rational(polynomial_system *system, FILE *outfile) {
     int i, j, k;
 

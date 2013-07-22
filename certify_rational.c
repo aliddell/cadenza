@@ -60,6 +60,9 @@ int lte_sqr_rational(mpq_t X_sqr, mpq_t Y_sqr, mpq_t Z_sqr) {
     return 0;
 }
 
+/*****************************
+ * compute ||J(f)^-1 * v||^2 *
+ *****************************/
 void compute_norm_sqr_Jv_rational(polynomial_system *F, rational_complex_vector v, rational_complex_vector w, mpq_t *norm_sqr_Jv) {
     int retval = 0, *rowswaps = NULL;
 
@@ -97,7 +100,10 @@ void compute_norm_sqr_Jv_rational(polynomial_system *F, rational_complex_vector 
     rowswaps = NULL;
 }
 
-int is_continuous(rational_complex_vector v, mpq_t t_left, mpq_t t_right, rational_complex_vector w_left, rational_complex_vector w_right, polynomial_system F_left, polynomial_system F_right, mpq_t alpha_sqr_left, mpq_t alpha_sqr_right, mpq_t gamma_sqr_left, mpq_t gamma_sqr_right) {
+/*********************************************
+ * return 1 if interval certifies continuous *
+ *********************************************/
+int is_continuous_rational(rational_complex_vector v, mpq_t t_left, mpq_t t_right, rational_complex_vector w_left, rational_complex_vector w_right, polynomial_system F_left, polynomial_system F_right, mpq_t alpha_sqr_left, mpq_t alpha_sqr_right, mpq_t gamma_sqr_left, mpq_t gamma_sqr_right) {
     int retval = 0, left_success = 0, right_success = 0;
 
     mpq_t alpha_star_sqr;
@@ -143,15 +149,9 @@ int is_continuous(rational_complex_vector v, mpq_t t_left, mpq_t t_right, ration
     right_success = lte_sqr_rational(alpha_sqr_right, magic_number_right, alpha_star_sqr);
 
     /* test fails for both left and right */
-    if (left_success == 0 && right_success == 0) {
-        mpfr_t floatrep;
-        mpfr_init(floatrep);
-
-        mpfr_set_q(floatrep, alpha_sqr_left, GMP_RNDN);
-        mpfr_printf("alpha_sqr_left: %Rd\n", alpha_sqr_left);
+    if (left_success == 0 && right_success == 0)
         retval = 0;
-        mpfr_clear(floatrep);
-    } else {
+    else {
         mpq_t gamma_sqr_inv;
         mpq_t points_dist_sqr;
         mpq_t magic_number_sqr;
@@ -179,9 +179,7 @@ int is_continuous(rational_complex_vector v, mpq_t t_left, mpq_t t_right, ration
         mpq_mul(magic_number_sqr, magic_number_sqr, gamma_sqr_inv); /* (71 / (1000 * gamma))^2 */
 
         subtract_rational_vector(points_dist, w_left, w_right);
-        norm_sqr_rational_vector(points_dist_sqr, points_dist); /* ||x_1 - x_2|| */
-
-        mpq_mul(points_dist_sqr, points_dist_sqr, points_dist_sqr); /* ||x_1 - x_2||^2 */
+        norm_sqr_rational_vector(points_dist_sqr, points_dist); /* ||x_1 - x_2||^2 */
 
         if (mpq_cmp(points_dist_sqr, magic_number_sqr) <= 0) {
             retval = 1;
@@ -206,7 +204,10 @@ int is_continuous(rational_complex_vector v, mpq_t t_left, mpq_t t_right, ration
     return retval;
 }
 
-int is_not_continuous(rational_complex_vector v, mpq_t t_left, mpq_t t_right, rational_complex_vector w_left, rational_complex_vector w_right, polynomial_system F_left, polynomial_system F_right, mpq_t alpha_sqr_left, mpq_t alpha_sqr_right, mpq_t gamma_sqr_left, mpq_t gamma_sqr_right) {
+/************************************************
+ * return 1 if interval certifies discontinuous *
+ ************************************************/
+int is_not_continuous_rational(rational_complex_vector v, mpq_t t_left, mpq_t t_right, rational_complex_vector w_left, rational_complex_vector w_right, polynomial_system F_left, polynomial_system F_right, mpq_t alpha_sqr_left, mpq_t alpha_sqr_right, mpq_t gamma_sqr_left, mpq_t gamma_sqr_right) {
     int retval = 0, beta_retval = 0, left_success = 0, right_success = 0;
 
     mpq_t alpha_star_sqr;
@@ -304,14 +305,12 @@ int is_not_continuous(rational_complex_vector v, mpq_t t_left, mpq_t t_right, ra
         initialize_rational_vector(points_dist, w_left->size);
 
         subtract_rational_vector(points_dist, w_left, w_right);
-        norm_sqr_rational_vector(points_dist_sqr, points_dist); /* ||x_1 - x_2|| */
-
-        mpq_mul(points_dist_sqr, points_dist_sqr, points_dist_sqr); /* ||x_1 - x_2||^2 */
+        norm_sqr_rational_vector(points_dist_sqr, points_dist); /* ||x_1 - x_2||^2 */
 
         if (lte_sqr_rational(beta_sqr1, beta_sqr2, points_dist_sqr))
             retval = 1;
         else
-            retval = 2;
+            retval = 0;
 
         clear_rational_number(beta_sqr_complex1);
         clear_rational_number(beta_sqr_complex2);
@@ -338,9 +337,9 @@ int is_not_continuous(rational_complex_vector v, mpq_t t_left, mpq_t t_right, ra
  * test for the continuity of a given segment *
  **********************************************/
 int test_continuity_rational(rational_complex_vector v, mpq_t t_left, mpq_t t_right, rational_complex_vector w_left, rational_complex_vector w_right, polynomial_system F_left, polynomial_system F_right, mpq_t alpha_sqr_left, mpq_t alpha_sqr_right, mpq_t gamma_sqr_left, mpq_t gamma_sqr_right) {
-    if (is_continuous(v, t_left, t_right, w_left, w_right, F_left, F_right, alpha_sqr_left, alpha_sqr_right, gamma_sqr_left, gamma_sqr_right))
+    if (is_continuous_rational(v, t_left, t_right, w_left, w_right, F_left, F_right, alpha_sqr_left, alpha_sqr_right, gamma_sqr_left, gamma_sqr_right))
         return 1;
-    else if (is_not_continuous(v, t_left, t_right, w_left, w_right, F_left, F_right, alpha_sqr_left, alpha_sqr_right, gamma_sqr_left, gamma_sqr_right))
+    else if (is_not_continuous_rational(v, t_left, t_right, w_left, w_right, F_left, F_right, alpha_sqr_left, alpha_sqr_right, gamma_sqr_left, gamma_sqr_right))
         return -1;
 
     return 0;
@@ -520,7 +519,7 @@ void apply_tv_rational(polynomial_system *base, polynomial_system *F, mpq_t t, r
 /***************************************
  * get alpha^2, beta^2, gamma^2 values *
  ***************************************/
-int compute_abg_sqr_rational(rational_complex_vector points, polynomial_system *F, mpq_t *alpha, mpq_t *beta, mpq_t *gamma) {
+int compute_abg_sqr_rational(rational_complex_vector points, polynomial_system *F, mpq_t *alpha_sqr, mpq_t *beta_sqr, mpq_t *gamma_sqr) {
     int res = 0, retval = 0, num_approx_solns = 0, num_var = F->numVariables;
 
     rational_point_struct P;
@@ -540,9 +539,9 @@ int compute_abg_sqr_rational(rational_complex_vector points, polynomial_system *
     /* compute alpha^2, beta^2, & gamma^2 */
     res = compute_alpha_beta_gamma_sqr_rational(P.Nx, P.alpha_sqr, P.beta_sqr, P.gamma_sqr, F, P.x);
 
-    mpq_set(*alpha, P.alpha_sqr->re);
-    mpq_set(*beta, P.beta_sqr->re);
-    mpq_set(*gamma, P.gamma_sqr->re);
+    mpq_set(*alpha_sqr, P.alpha_sqr->re);
+    mpq_set(*beta_sqr, P.beta_sqr->re);
+    mpq_set(*gamma_sqr, P.gamma_sqr->re);
 
     //copy_rational_vector(points, P.Nx);
 
@@ -554,7 +553,7 @@ int compute_abg_sqr_rational(rational_complex_vector points, polynomial_system *
         /* unknown */
         retval = 0;
     } else {
-        /* determine if alpha is small enough to be an approximate solution */
+        /* determine if alpha_sqr is small enough to be an approximate solution */
         num_approx_solns += P.isApproxSoln = determine_approximate_solution_rational(P.alpha_sqr);
         retval = num_approx_solns;
     }
@@ -700,7 +699,7 @@ void test_pairwise_rational(polynomial_system *system, rational_complex_vector *
         rational_complex_vector w_mid;
         initialize_rational_vector(w_mid, num_var);
 
-        subdivide_segment_rational(system, v, t_left, t_right, w_left, w_right, &t_mid, &w_mid, num_var);
+        subdivide_segment_rational(system, *v, t_left, t_right, w_left, w_right, &t_mid, &w_mid, num_var);
 
         /* recurse! */
         test_pairwise_rational(system, v, t_left, t_mid, w_left, w_mid, num_var, iter + 1, t_final, w_final, tested, succeeded, failed);
@@ -787,8 +786,8 @@ void test_system_rational(polynomial_system *system, void *v, void *t, void *w, 
         exit(BH_EXIT_MEMORY);
     }
 
-    mpq_init(t_final_rational[0]);
-    mpq_set(t_final_rational[0], t_rational[0]);
+    mpq_init((*t_final_rational)[0]);
+    mpq_set((*t_final_rational)[0], t_rational[0]);
 
     *w_final_rational = malloc(sizeof(rational_complex_vector));
     if (*w_final_rational == NULL) {
