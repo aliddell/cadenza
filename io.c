@@ -37,25 +37,48 @@ void prog_info(FILE *outfile) {
     if (res == 0)
         strcpy(compile_date, "Jan 1, 1970");
 
-    fputs("\n", outfile);
-    fprintf(outfile, "\t%s v%s (built %s) (compiled %s)\n", BH_PROGRAM_NAME, BH_VERSION, BH_BUILD_DATE, compile_date);
-    fprintf(outfile, "\t%s\n", BH_AUTHORS);
-    fprintf(outfile, "\tGMP v%d.%d.%d & MPFR v%s\n\n", __GNU_MP_VERSION, __GNU_MP_VERSION_MINOR, __GNU_MP_VERSION_PATCHLEVEL, mpfr_get_version());
+    fprintf(outfile, "%s v%s (built %s) (compiled %s)\n", BH_PROGRAM_NAME, BH_VERSION, BH_BUILD_DATE, compile_date);
+    fprintf(outfile, "%s\n", BH_AUTHORS);
+    fprintf(outfile, "GMP v%d.%d.%d & MPFR v%s\n\n", __GNU_MP_VERSION, __GNU_MP_VERSION_MINOR, __GNU_MP_VERSION_PATCHLEVEL, mpfr_get_version());
+}
+
+/******************************************
+ * print the details of the configuration *
+ ******************************************/
+void display_config(FILE *outfile) {
+    char precision_str[BH_TERMWIDTH];
+
+    if (arithmetic_type == BH_USE_FLOAT)
+        snprintf(precision_str, (size_t) BH_TERMWIDTH+1, "%d-bit precision floating point", default_precision);
+    else
+        strcpy(precision_str, "exact rational");
+
+    fprintf(outfile, "Computing using %s arithmetic\n", precision_str);
+    fprintf(outfile, "Polynomial system file is %s\n", sysfile);
+    fprintf(outfile, "Point set file is %s\n", pointsfile);
+    if (configfile != NULL)
+        fprintf(outfile, "Configuration file is %s\n", configfile);
+    fprintf(outfile, "Maximum Newton iterations: %d\n", newton_tolerance);
+    fprintf(outfile, "Maximum segment subdivisions: %d\n\n", subd_tolerance);
 }
 
 /*************************************************************
  * read the configuration file, if given, and apply settings *
  *************************************************************/
 void read_config_file() {
-    int verb = BH_LACONIC;
-    int arith_type = BH_USE_RATIONAL;
-    int def_prec = MPFR_PREC_MIN;
-    int newtol = BH_NEWT_TOLERANCE;
-    char sysf[BH_MAX_FILENAME] = "unset";
-    char pointsf[BH_MAX_FILENAME] = "unset";
+    int verb = BH_LACONIC, arith_type = BH_USE_RATIONAL, def_prec = MPFR_PREC_MIN,  newtol = BH_NEWT_TOLERANCE, subtol = BH_SUB_TOLERANCE, errno;
+    char sysf[BH_MAX_FILENAME] = "";
+    char pointsf[BH_MAX_FILENAME] = "";
     char line[BH_TERMWIDTH];
 
     FILE *config = fopen(configfile, "r");
+    if (config == NULL) {
+        char error_string[BH_TERMWIDTH];
+        snprintf(error_string, (size_t) BH_TERMWIDTH+1, "Couldn't open config file `%s': %s", configfile, strerror(errno));
+
+        print_error(error_string, stderr);
+        exit(BH_EXIT_BADFILE);
+    }
 
     /* read information from the file and copy it to local values */
     while (fgets(line, BH_TERMWIDTH, config) != NULL) {
@@ -79,12 +102,10 @@ void read_config_file() {
                     verb = BH_LACONIC;
             }
         } else if (strcmp(key, "arithmetic") == 0) {
-            errno = 0;
-
-            if (strcmp(val, "rational") == 0)
-                arith_type = BH_USE_RATIONAL;
-            else if (strcmp(val, "float") == 0)
+            if (strcmp(val, "float") == 0)
                 arith_type = BH_USE_FLOAT;
+            else if (strcmp(val, "rational") == 0)
+                arith_type = BH_USE_RATIONAL;
         } else if (strcmp(key, "precision") == 0) {
             errno = 0;
             
@@ -92,14 +113,20 @@ void read_config_file() {
 
             if (errno == ERANGE || def_prec < MPFR_PREC_MIN)
                 def_prec = MPFR_PREC_MIN;
-        } else if (strcmp(key, "tolerance") == 0) {
+        } else if (strcmp(key, "newtons") == 0) {
             errno = 0;
             
             newtol = (int) strtol(val, NULL, 10);
 
             if (errno == ERANGE || newtol < 1)
                 newtol = BH_NEWT_TOLERANCE;
+        } else if (strcmp(key, "subdivisions") == 0) {
+            errno = 0;
 
+            subtol = (int) strtol(val, NULL, 10);
+
+            if (errno == ERANGE || subtol < 1)
+                subtol = BH_SUB_TOLERANCE;
         } else if (strcmp(key, "sysfile") == 0) {
             strcpy(sysf, val);
         } else if (strcmp(key, "pointsfile") == 0) {
@@ -118,29 +145,12 @@ void read_config_file() {
         default_precision = def_prec;
     if (newton_tolerance == BH_UNSET)
         newton_tolerance = newtol;
-    if (strcmp(sysfile, "unset") == 0)
+    if (subd_tolerance == BH_UNSET)
+        subd_tolerance = subtol;
+    if (strcmp(sysfile, "") == 0)
         strcpy(sysfile, sysf);
-    if (strcmp(pointsfile, "unset") == 0)
+    if (strcmp(pointsfile, "") == 0)
         strcpy(pointsfile, pointsf);
-}
-
-/******************************************
- * print the details of the configuration *
- ******************************************/
-void display_config(FILE *outfile) {
-    char str_arithmetic_type[15];
-    if (arithmetic_type == BH_USE_FLOAT)
-        strcpy(str_arithmetic_type, "floating point");
-    else
-        strcpy(str_arithmetic_type, "rational");
-
-    fprintf(outfile, "\tComputing using %d-bit precision %s arithmetic\n", default_precision, str_arithmetic_type);
-    fprintf(outfile, "\tPolynomial system file is %s\n", sysfile);
-    fprintf(outfile, "\tPoint set file is %s\n", pointsfile);
-    if (configfile != NULL)
-        fprintf(outfile, "\tConfiguration file is %s\n\n", configfile);
-    else
-        puts("");
 }
 
 /***********************************
@@ -153,17 +163,24 @@ polynomial parse_polynomial(FILE *sysfh, int num_var) {
     p.numVariables = num_var;
 
     /* first get the number of terms */
+    errno = 0;
     res = fscanf(sysfh, "%d", &num_terms);
 
-    if (res == EOF || res == 0) {
+    if (res == EOF) {
         char error_string[BH_TERMWIDTH];
         snprintf(error_string, (size_t) BH_TERMWIDTH+1, "Error reading %s: unexpected EOF", sysfile);
 
         print_error(error_string, stderr);
         exit(BH_EXIT_BADREAD);
+    } else if (res == 0) {
+        char error_string[BH_TERMWIDTH];
+        snprintf(error_string, (size_t) BH_TERMWIDTH+1, "Error reading %s: %s", sysfile, strerror(errno));
+
+        print_error(error_string, stderr);
+        exit(BH_EXIT_BADREAD);
     } else if (errno == EILSEQ) {
         char error_string[BH_TERMWIDTH];
-        snprintf(error_string, (size_t) BH_TERMWIDTH+1, "Error reading %s: %s.", sysfile, strerror(errno));
+        snprintf(error_string, (size_t) BH_TERMWIDTH+1, "Error reading %s: %s", sysfile, strerror(errno));
 
         print_error(error_string, stderr);
         exit(BH_EXIT_BADPARSE);
@@ -183,16 +200,24 @@ polynomial parse_polynomial(FILE *sysfh, int num_var) {
         max_degree = 0;
         /* get exponent for each variable in the term */
         for (j = 0; j < num_var; j++) {
+            errno = 0;
             res = fscanf(sysfh, "%d", &p.exponents[i][j]);
-            if (res == EOF || res == 0) {
+
+            if (res == EOF) {
                 char error_string[BH_TERMWIDTH];
                 snprintf(error_string, (size_t) BH_TERMWIDTH+1, "Error reading %s: unexpected EOF", sysfile);
 
                 print_error(error_string, stderr);
                 exit(BH_EXIT_BADREAD);
+            } else if (res == 0) {
+                char error_string[BH_TERMWIDTH];
+                snprintf(error_string, (size_t) BH_TERMWIDTH+1, "Error reading %s: %s", sysfile, strerror(errno));
+
+                print_error(error_string, stderr);
+                exit(BH_EXIT_BADREAD);
             } else if (errno == EILSEQ) {
                 char error_string[BH_TERMWIDTH];
-                snprintf(error_string, (size_t) BH_TERMWIDTH+1, "Error reading %s: %s.", sysfile, strerror(errno));
+                snprintf(error_string, (size_t) BH_TERMWIDTH+1, "Error reading %s: %s", sysfile, strerror(errno));
 
                 print_error(error_string, stderr);
                 exit(BH_EXIT_BADPARSE);
@@ -208,18 +233,23 @@ polynomial parse_polynomial(FILE *sysfh, int num_var) {
         initialize_rational_number(p.coeff[i]);
 
         errno = 0;
-
         res = gmp_fscanf(sysfh, "%Qd %Qd", p.coeff[i]->re, p.coeff[i]->im);
 
-        if (res == EOF || res == 0) {
+        if (res == EOF) {
             char error_string[BH_TERMWIDTH];
             snprintf(error_string, (size_t) BH_TERMWIDTH+1, "Error reading %s: unexpected EOF", sysfile);
 
             print_error(error_string, stderr);
             exit(BH_EXIT_BADREAD);
+        } else if (res == 0) {
+            char error_string[BH_TERMWIDTH];
+            snprintf(error_string, (size_t) BH_TERMWIDTH+1, "Error reading %s: %s", sysfile, strerror(errno));
+
+            print_error(error_string, stderr);
+            exit(BH_EXIT_BADREAD);
         } else if (errno == EILSEQ) {
             char error_string[BH_TERMWIDTH];
-            snprintf(error_string, (size_t) BH_TERMWIDTH+1, "Error reading %s: %s.", sysfile, strerror(errno));
+            snprintf(error_string, (size_t) BH_TERMWIDTH+1, "Error reading %s: %s", sysfile, strerror(errno));
 
             print_error(error_string, stderr);
             exit(BH_EXIT_BADPARSE);
@@ -235,18 +265,25 @@ polynomial parse_polynomial(FILE *sysfh, int num_var) {
 /*********************************
  * create empty files for output *
  *********************************/
-void initialize_output_files() {
+void initialize_output_files(polynomial_system *system, void *v, void *t, void *w, int num_points) {
+    FILE *fh;
+
     errno = 0;
-    FILE *fh = fopen(BH_FDISCONT, "w");
+
+    fh = fopen(BH_FSUMMARY, "w");
     if (fh == NULL) {
         char error_string[BH_TERMWIDTH];
-        snprintf(error_string, (size_t) BH_TERMWIDTH+1, "Couldn't open output file %s: %s.", BH_FDISCONT, strerror(errno));
+        snprintf(error_string, (size_t) BH_TERMWIDTH+1, "Couldn't open output file %s: %s", BH_FSUMMARY, strerror(errno));
 
         print_error(error_string, stderr);
         exit(BH_EXIT_BADFILE);
     }
 
-    fprintf(fh, "The following segments are discontinuous:\n");
+    fprintf(fh, "Summary:\n\n");
+    prog_info(fh);
+    display_config(fh);
+    fprint_input(fh, system, v, t, w, num_points);
+    fputs("\n", fh);
 
     fclose(fh);
 
@@ -255,13 +292,28 @@ void initialize_output_files() {
     fh = fopen(BH_FCONT, "w");
     if (fh == NULL) {
         char error_string[BH_TERMWIDTH];
-        snprintf(error_string, (size_t) BH_TERMWIDTH+1, "Couldn't open output file %s: %s.", BH_FCONT, strerror(errno));
+        snprintf(error_string, (size_t) BH_TERMWIDTH+1, "Couldn't open output file %s: %s", BH_FCONT, strerror(errno));
 
         print_error(error_string, stderr);
         exit(BH_EXIT_BADFILE);
     }
 
     fprintf(fh, "The following segments are continuous:\n");
+
+    fclose(fh);
+
+    errno = 0;
+
+    fh = fopen(BH_FDISCONT, "w");
+    if (fh == NULL) {
+        char error_string[BH_TERMWIDTH];
+        snprintf(error_string, (size_t) BH_TERMWIDTH+1, "Couldn't open output file %s: %s", BH_FDISCONT, strerror(errno));
+
+        print_error(error_string, stderr);
+        exit(BH_EXIT_BADFILE);
+    }
+
+    fprintf(fh, "The following segments are discontinuous:\n");
 
     fclose(fh);
 }
@@ -276,6 +328,7 @@ void summarize(int tested, int succeeded, int failed) {
     printf("Number of intervals discontinuous: %d\n", failed);
 
     puts("\nThe following files have been created:");
+    printf("%s:\t\tA general summary\n", BH_FSUMMARY);
     printf("%s:\t\tA summary of continuous intervals\n", BH_FCONT);
     printf("%s:\tA summary of discontinuous intervals\n", BH_FDISCONT);
 

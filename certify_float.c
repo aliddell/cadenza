@@ -9,6 +9,70 @@
  */
 #include "blueharvest.h"
 
+/****************************
+ * get an mpq_t from mpfr_t *
+ ****************************/
+void mpq_set_r(mpq_t *q, mpfr_t  r) {
+    int i, base = 10;
+    mpfr_exp_t expptr;
+    char *str_mp = mpfr_get_str(NULL, &expptr, base, 0, r, MPFR_RNDN);
+
+    if (expptr < 0) {
+        int exp_int = -1 * (int) expptr;
+
+        exp_int += strlen(str_mp);
+
+        if (str_mp[0] == '-')
+            exp_int--;
+
+        mpq_t denominator;
+        mpq_t one_tenth;
+
+        mpq_init(one_tenth);
+        mpq_init(denominator);
+
+        mpq_set_str(*q, str_mp, base);
+        mpq_set_ui(one_tenth, 1, 10);
+        mpq_set_ui(denominator, 1, 1);
+
+        for (i = 0; i < exp_int; i++)
+            mpq_mul(denominator, denominator, one_tenth);
+
+        mpq_mul(*q, *q, denominator);
+
+        mpq_clear(denominator);
+        mpq_clear(one_tenth);
+    } else {
+        int exp_int = (int) expptr;
+
+        if (str_mp[0] == '-')
+            exp_int++;
+
+        exp_int = strlen(str_mp) - exp_int;
+
+        mpq_set_str(*q, str_mp, base);
+        mpq_t denominator;
+        mpq_t one_tenth;
+
+        mpq_init(one_tenth);
+        mpq_init(denominator);
+
+        mpq_set_str(*q, str_mp, base);
+        mpq_set_ui(one_tenth, 1, 10);
+        mpq_set_ui(denominator, 1, 1);
+
+        for (i = 0; i < exp_int; i++)
+            mpq_mul(denominator, denominator, one_tenth);
+
+        mpq_mul(*q, *q, denominator);
+
+        mpq_clear(denominator);
+        mpq_clear(one_tenth);
+    }
+
+    mpfr_free_str(str_mp);
+}
+
 /*****************************
  * compute ||J(f)^-1 * v||^2 *
  *****************************/
@@ -382,22 +446,18 @@ void subdivide_segment_float(polynomial_system *base, complex_vector v, mpf_t t_
  *******************************/
 void apply_tv_float(polynomial_system *base, polynomial_system *F, mpf_t t, complex_vector v) {
     int i, j, k, num_terms, num_var, num_poly;
-    double t_dub, v_dub;
 
     /* convert t to t_rational */
     mpq_t t_rational;
     mpq_init(t_rational);
-    t_dub = mpf_get_d(t);
-    mpq_set_d(t_rational, t_dub);
+    mpq_set_r(&t_rational, t);
 
     /* convert v to v_rational */
     rational_complex_vector v_rational;
     initialize_rational_vector(v_rational, v->size);
     for (i = 0; i < v->size; i++) {
-        v_dub = mpf_get_d(v->coord[i]->re);
-        mpq_set_d(v_rational->coord[i]->re, v_dub);
-        v_dub = mpf_get_d(v->coord[i]->im);
-        mpq_set_d(v_rational->coord[i]->im, v_dub);
+        mpq_set_r(&v_rational->coord[i]->re, v->coord[i]->re);
+        mpq_set_r(&v_rational->coord[i]->im, v->coord[i]->im);
     }
 
     /* get information from base */
@@ -552,13 +612,6 @@ int compute_abg_float(complex_vector points, polynomial_system *F, mpf_t *alpha,
  * test that each w is in the quadratic convergence basin and check for continuity *
  ***********************************************************************************/
 void test_pairwise_float(polynomial_system *system, complex_vector *v, mpf_t t_left, mpf_t t_right, complex_vector w_left, complex_vector w_right, int num_var, int iter, mpf_t **t_final, complex_vector **w_final, int *tested, int *succeeded, int *failed) {
-    /* test if we've been through this 20 times or what */
-    if (iter > BH_SUB_TOLERANCE) {
-        char error_string[] = "Number of subdivisions exceeds tolerance";
-        print_error(error_string, stderr);
-        exit(BH_EXIT_INTOLERANT);
-    }
-
     int w_left_solution, w_right_solution, seg_continuous;
     polynomial_system F_left, F_right;
     mpf_t alpha_left, beta_left, gamma_left, alpha_right, beta_right, gamma_right, beta_min;
@@ -575,6 +628,34 @@ void test_pairwise_float(polynomial_system *system, complex_vector *v, mpf_t t_l
 
     w_left_solution = compute_abg_float(w_left, &F_left, &alpha_left, &beta_left, &gamma_left);
     w_right_solution = compute_abg_float(w_right, &F_right, &alpha_right, &beta_right, &gamma_right);
+
+    /* test if we've been through this too many times */
+    if (iter > subd_tolerance) {
+        *tested += 1;
+
+        if (verbosity > BH_LACONIC)
+            mpfr_printf("unsure whether segment [%.Rf, %.Rf] is continuous\n", t_left, t_right);
+        fprint_uncertain_float(t_left, t_right, w_left, w_right, alpha_left, alpha_right, beta_left, beta_right, gamma_left, gamma_right);
+
+        /* alert user to singularities */
+        mpf_t test;
+        mpf_init(test);
+
+        mpf_sub_ui(test, gamma_left, 10); /* inf - 10 == inf */
+        if (mpf_cmp(test, gamma_left) == 0) {
+            mpfr_fprintf(stderr, "singularity on left of interval [%.Rf, %.Rf] at point ", t_left, t_right);
+            print_points_float(stderr, w_left);
+        }
+        mpf_sub_ui(test, gamma_right, 10);
+        if (mpf_cmp(test, gamma_right) == 0) {
+            mpfr_fprintf(stderr, "singularity on right of interval [%.Rf, %.Rf] at point ", t_left, t_right);
+            print_points_float(stderr, w_right);
+        }
+
+        mpf_clear(test);
+
+        return;
+    }
 
     mpf_set_min(beta_min, beta_left, beta_right);
 
@@ -593,6 +674,7 @@ void test_pairwise_float(polynomial_system *system, complex_vector *v, mpf_t t_l
         complex_vector new_point;
         complex_matrix LU;
 
+        /* perform Newton iterations if w_left is not a solution */
         if (!w_left_solution) {
             if (verbosity > BH_VERBOSE) {
                 if (newton_counter % 10 == 1 && newton_counter % 100 != 11)
@@ -640,6 +722,7 @@ void test_pairwise_float(polynomial_system *system, complex_vector *v, mpf_t t_l
             rowswaps = NULL;
         }
 
+        /* perform Newton iterations if w_right is not a solution */
         if (!w_right_solution) {
             if (verbosity > BH_VERBOSE) {
                 if (newton_counter % 10 == 1 && newton_counter % 100 != 11)
@@ -721,6 +804,23 @@ void test_pairwise_float(polynomial_system *system, complex_vector *v, mpf_t t_l
         *tested += 1;
         *succeeded += 1;
 
+        /* alert user to singularities */
+        mpf_t test;
+        mpf_init(test);
+
+        mpf_sub_ui(test, gamma_left, 10); /* inf - 10 == inf */
+        if (mpf_cmp(test, gamma_left) == 0) {
+            mpfr_fprintf(stderr, "singularity on left of interval [%.Rf, %.Rf] at point ", t_left, t_right);
+            print_points_float(stderr, w_left);
+        }
+        mpf_sub_ui(test, gamma_right, 10);
+        if (mpf_cmp(test, gamma_right) == 0) {
+            mpfr_fprintf(stderr, "singularity on right of interval [%.Rf, %.Rf] at point ", t_left, t_right);
+            print_points_float(stderr, w_right);
+        }
+
+        mpf_clear(test);
+
         /* copy t and w values into t_final and w_final respectively */
         errno = 0;
 
@@ -754,6 +854,23 @@ void test_pairwise_float(polynomial_system *system, complex_vector *v, mpf_t t_l
             mpfr_printf("segment [%.Rf, %.Rf] is not continuous\n", t_left, t_right);
 
         fprint_discontinuous_float(t_left, t_right, w_left, w_right, alpha_left, alpha_right, beta_left, beta_right, gamma_left, gamma_right);
+
+        /* alert user to singularities */
+        mpf_t test;
+        mpf_init(test);
+
+        mpf_sub_ui(test, gamma_left, 10); /* inf - 10 == inf */
+        if (mpf_cmp(test, gamma_left) == 0) {
+            mpfr_fprintf(stderr, "singularity on left of interval [%.Rf, %.Rf] at point ", t_left, t_right);
+            print_points_float(stderr, w_left);
+        }
+        mpf_sub_ui(test, gamma_right, 10);
+        if (mpf_cmp(test, gamma_right) == 0) {
+            mpfr_fprintf(stderr, "singularity on right of interval [%.Rf, %.Rf] at point ", t_left, t_right);
+            print_points_float(stderr, w_right);
+        }
+
+        mpf_clear(test);
 
         *tested += 1;
         *failed += 1;

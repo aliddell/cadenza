@@ -43,6 +43,7 @@ int main(int argc, char *argv[]) {
     getargs(argc, argv);
 
     /* tell em who we are */
+    fputs("\n", stderr);
     prog_info(stderr);
 
     /* do this before checking filenames, duh */
@@ -52,19 +53,21 @@ int main(int argc, char *argv[]) {
     }
 
     /* ensure filenames are properly defined */
-    if (strcmp(sysfile, "unset") == 0) {
-        print_error("You need to define a system file.", stderr);
+    if (strcmp(sysfile, "") == 0) {
+        print_error("You need to define a system file", stderr);
         usage();
         exit(BH_EXIT_BADFILE);
-    } else if (strcmp(pointsfile, "unset") == 0) {
-        print_error("You need to define a points file.", stderr);
+    } else if (strcmp(pointsfile, "") == 0) {
+        print_error("You need to define a points file", stderr);
         usage();
         exit(BH_EXIT_BADFILE);
     }
 
     /* display the options the user has selected */
-    if (verbosity > BH_LACONIC)
+    if (verbosity > BH_LACONIC) {
+        fputs("\n", stderr);
         display_config(stderr);
+    }
 
     /* set void and function pointers */
     set_function_pointers();
@@ -82,10 +85,10 @@ int main(int argc, char *argv[]) {
 
     /* print out the system, vector and points */
     if (verbosity > BH_CHATTY) {
-        print_back_input(&F, v, t, w, num_points);
+        fprint_input(stdout, &F, v, t, w, num_points);
     }
 
-    initialize_output_files();
+    initialize_output_files(&F, v, t, w, num_points);
     test_system(&F, v, t, w, num_points, &t_final, &w_final, &tested, &succeeded, &failed);
 
     /* print an output file only if all intervals certified continuous */
@@ -115,15 +118,16 @@ void getargs(int argc, char *argv[]) {
     arithmetic_type = BH_UNSET;
     default_precision = BH_UNSET;
     newton_tolerance = BH_UNSET;
-    strcpy(sysfile, "unset");
-    strcpy(pointsfile, "unset");
-    strcpy(configfile, "unset");
+    subd_tolerance = BH_UNSET;
+    strcpy(sysfile, "");
+    strcpy(pointsfile, "");
+    strcpy(configfile, "");
 
     int c = 0;
 
     while (c != -1) {
         static struct option long_options[] = {
-            /* These options set a flag. */
+            /* These options set a flag */
             {"laconic",    no_argument, &verbosity, BH_LACONIC},
             {"chatty",     no_argument, &verbosity, BH_CHATTY},
             {"verbose",    no_argument, &verbosity, BH_VERBOSE},
@@ -131,19 +135,20 @@ void getargs(int argc, char *argv[]) {
             {"help",       no_argument, &help_flag, 1},
             {"float",      no_argument, &arithmetic_type, BH_USE_FLOAT},
             {"rational",   no_argument, &arithmetic_type, BH_USE_RATIONAL},
-            /* These options don't set a flag. */
-            {"points",     required_argument, 0, 'p'},
-            {"system",     required_argument, 0, 's'},
-            {"precision",  required_argument, 0, 'm'},
-            {"config",     required_argument, 0, 'c'},
-            {"tolerance",  required_argument, 0, 't'},
+            /* These options set a global */
+            {"points",       required_argument, 0, 'p'},
+            {"system",       required_argument, 0, 's'},
+            {"precision",    required_argument, 0, 'm'},
+            {"newtons",       required_argument, 0, 'n'},
+            {"subdivisions", required_argument, 0, 'd'},
+            {"config",       required_argument, 0, 'c'},
             {0, 0, 0, 0}
         };
 
         /* getopt_long stores the option index here. */
         int option_index = 0;
 
-        c = getopt_long (argc, argv, "hvfqp:s:m:c:t:", long_options, &option_index);
+        c = getopt_long (argc, argv, "hvfqp:s:m:n:d:c:", long_options, &option_index);
         if (c == -1) break;
 
         switch (c) {
@@ -186,8 +191,12 @@ void getargs(int argc, char *argv[]) {
                 strcpy(sysfile, optarg);
                 break;
 
-            case 't':
+            case 'n':
                 newton_tolerance = atoi(optarg);
+                break;
+
+            case 'd':
+                subd_tolerance = atoi(optarg);
                 break;
 
             case 'v':
@@ -201,7 +210,7 @@ void getargs(int argc, char *argv[]) {
         }
     }
 
-    if (strcmp(configfile, "unset") != 0)
+    if (strcmp(configfile, "") != 0)
         read_config_file();
 
     /* if after reading flags and config file, options are still unset */
@@ -213,6 +222,8 @@ void getargs(int argc, char *argv[]) {
         default_precision = MPFR_PREC_MIN;
     if (newton_tolerance == BH_UNSET)
         newton_tolerance = BH_NEWT_TOLERANCE;
+    if (subd_tolerance == BH_UNSET)
+        subd_tolerance = BH_SUB_TOLERANCE;
 }
 
 /**********************************************************************************
@@ -224,7 +235,7 @@ void set_function_pointers() {
     if (arithmetic_type == BH_USE_FLOAT) {
         read_system_file = &read_system_file_float;
         read_points_file = &read_points_file_float;
-        print_back_input = &print_back_input_float;
+        fprint_input = &fprint_input_float;
         test_system = &test_system_float;
         fprint_solutions = &fprint_solutions_float;
     }
@@ -233,7 +244,7 @@ void set_function_pointers() {
     else {
         read_system_file = &read_system_file_rational;
         read_points_file = &read_points_file_rational;
-        print_back_input = &print_back_input_rational;
+        fprint_input = &fprint_input_rational;
         test_system = &test_system_rational;
         fprint_solutions = &fprint_solutions_rational;
     }

@@ -567,13 +567,6 @@ int compute_abg_sqr_rational(rational_complex_vector points, polynomial_system *
  * test that each w is in the quadratic convergence basin and check for continuity *
  ***********************************************************************************/
 void test_pairwise_rational(polynomial_system *system, rational_complex_vector *v, mpq_t t_left, mpq_t t_right, rational_complex_vector w_left, rational_complex_vector w_right, int num_var, int iter, mpq_t **t_final, rational_complex_vector **w_final, int *tested, int *succeeded, int *failed) {
-    /* test if we've been through this 20 times or what */
-    if (iter > BH_SUB_TOLERANCE) {
-        char error_string[] = "Number of subdivisions exceeds tolerance";
-        print_error(error_string, stderr);
-        exit(BH_EXIT_INTOLERANT);
-    }
-
     int w_left_solution, w_right_solution, seg_continuous;
     polynomial_system F_left, F_right;
     mpq_t alpha_sqr_left, beta_sqr_left, gamma_sqr_left, alpha_sqr_right, beta_sqr_right, gamma_sqr_right, beta_sqr_min;
@@ -590,6 +583,34 @@ void test_pairwise_rational(polynomial_system *system, rational_complex_vector *
 
     w_left_solution = compute_abg_sqr_rational(w_left, &F_left, &alpha_sqr_left, &beta_sqr_left, &gamma_sqr_left);
     w_right_solution = compute_abg_sqr_rational(w_right, &F_right, &alpha_sqr_right, &beta_sqr_right, &gamma_sqr_right);
+
+    /* test if we've been through too many times */
+    if (iter > subd_tolerance) {
+        *tested += 1;
+
+        if (verbosity > BH_LACONIC)
+            gmp_printf("unsure whether segment [%Qd, %Qd] is continuous\n", t_left, t_right);
+        fprint_uncertain_rational(t_left, t_right, w_left, w_right, alpha_sqr_left, alpha_sqr_right, beta_sqr_left, beta_sqr_right, gamma_sqr_left, gamma_sqr_right);
+
+        /* alert user to singularities */
+        mpz_t denom;
+        mpz_init(denom);
+
+        mpq_get_den(denom, gamma_sqr_left);
+        if (mpz_cmp_ui(denom, 0) == 0) {
+            gmp_fprintf(stderr, "singularity on left of interval [%Qd, %Qd] at point ", t_left, t_right);
+            print_points_rational(stderr, w_left);
+        }
+        mpq_get_den(denom, gamma_sqr_right);
+        if (mpz_cmp_ui(denom, 0) == 0) {
+            gmp_fprintf(stderr, "singularity on right of interval [%Qd, %Qd] at point ", t_left, t_right);
+            print_points_rational(stderr, w_right);
+        }
+
+        mpz_clear(denom);
+
+        return;
+    }
 
     mpq_set_min(beta_sqr_min, beta_sqr_left, beta_sqr_right);
 
@@ -608,6 +629,7 @@ void test_pairwise_rational(polynomial_system *system, rational_complex_vector *
         rational_complex_vector new_point;
         rational_complex_matrix LU;
 
+        /* perform Newton iterations if w_left is not a solution */
         if (!w_left_solution) {
             if (verbosity > BH_VERBOSE) {
                 if (newton_counter % 10 == 1 && newton_counter % 100 != 11)
@@ -645,6 +667,7 @@ void test_pairwise_rational(polynomial_system *system, rational_complex_vector *
             rowswaps = NULL;
         }
 
+        /* perform Newton iterations if w_right is not a solution */
         if (!w_right_solution) {
             if (verbosity > BH_VERBOSE) {
                 if (newton_counter % 10 == 1 && newton_counter % 100 != 11)
@@ -691,9 +714,6 @@ void test_pairwise_rational(polynomial_system *system, rational_complex_vector *
     seg_continuous = test_continuity_rational(*v, t_left, t_right, w_left, w_right, F_left, F_right, alpha_sqr_left, alpha_sqr_right, gamma_sqr_left, gamma_sqr_right);
 
     if (seg_continuous == 0) {
-        if (verbosity > BH_CHATTY)
-            gmp_printf("unsure whether segment [%Qd, %Qd] is continuous\n", t_left, t_right);
-
         mpq_t t_mid;
         mpq_init(t_mid);
         rational_complex_vector w_mid;
@@ -712,6 +732,23 @@ void test_pairwise_rational(polynomial_system *system, rational_complex_vector *
         fprint_continuous_rational(t_left, t_right, w_left, w_right, alpha_sqr_left, alpha_sqr_right, beta_sqr_left, beta_sqr_right, gamma_sqr_left, gamma_sqr_right);
         *tested += 1;
         *succeeded += 1;
+
+        /* alert user to singularities */
+        mpz_t denom;
+        mpz_init(denom);
+
+        mpq_get_den(denom, gamma_sqr_left);
+        if (mpz_cmp_ui(denom, 0) == 0) {
+            gmp_fprintf(stderr, "singularity on left of interval [%Qd, %Qd] at point ", t_left, t_right);
+            print_points_rational(stderr, w_left);
+        }
+        mpq_get_den(denom, gamma_sqr_right);
+        if (mpz_cmp_ui(denom, 0) == 0) {
+            gmp_fprintf(stderr, "singularity on right of interval [%Qd, %Qd] at point ", t_left, t_right);
+            print_points_rational(stderr, w_right);
+        }
+
+        mpz_clear(denom);
 
         /* copy t and w values into t_final and w_final respectively */
         errno = 0;
@@ -745,6 +782,23 @@ void test_pairwise_rational(polynomial_system *system, rational_complex_vector *
         if (verbosity > BH_LACONIC)
             gmp_printf("segment [%Qd, %Qd] is not continuous\n", t_left, t_right);
         fprint_discontinuous_rational(t_left, t_right, w_left, w_right, alpha_sqr_left, alpha_sqr_right, beta_sqr_left, beta_sqr_right, gamma_sqr_left, gamma_sqr_right);
+
+        /* alert user to singularities */
+        mpz_t denom;
+        mpz_init(denom);
+
+        mpq_get_den(denom, gamma_sqr_left);
+        if (mpz_cmp_ui(denom, 0) == 0) {
+            gmp_fprintf(stderr, "singularity on left of interval [%Qd, %Qd] at point ", t_left, t_right);
+            print_points_rational(stderr, w_left);
+        }
+        mpq_get_den(denom, gamma_sqr_right);
+        if (mpz_cmp_ui(denom, 0) == 0) {
+            gmp_fprintf(stderr, "singularity on right of interval [%Qd, %Qd] at point ", t_left, t_right);
+            print_points_rational(stderr, w_right);
+        }
+
+        mpz_clear(denom);
 
         *tested += 1;
         *failed += 1;

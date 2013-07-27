@@ -14,9 +14,9 @@
 #include <errno.h>
 #include <getopt.h>
 
-/***************************************
- * data structures from alphaCertified *
- ***************************************/
+/*****************************************************
+ * data structures and functions from alphaCertified *
+ *****************************************************/
 #include "alphaCertified.h"
 
 /******************************
@@ -44,6 +44,7 @@
 #define BH_BUILD_DATE "Jul 26, 2013"
 
 /* filenames */
+#define BH_FSUMMARY  "summary.out"
 #define BH_FCONT    "continuous.out"
 #define BH_FDISCONT "discontinuous.out"
 #define BH_FPTSOUT  "points.out"
@@ -60,13 +61,12 @@
 #define BH_EXIT_BADPARSE 3 /* general parse error */
 #define BH_EXIT_BADDEF 4 /* system is not square, not enough points, bad t-value, &c*/
 #define BH_EXIT_MEMORY 5 /* out of memory */
-#define BH_EXIT_INTOLERANT 6 /* number of iterations exceeds tolerance */
-#define BH_EXIT_OTHER 7 /* something else */
+#define BH_EXIT_OTHER 6 /* something else */
 
 /**************************************
  * global variables for blueharvest.c *
  **************************************/
-int verbosity, help_flag, default_precision, arithmetic_type, newton_tolerance;
+int verbosity, help_flag, default_precision, arithmetic_type, newton_tolerance, subd_tolerance;
 char pointsfile[BH_MAX_FILENAME], sysfile[BH_MAX_FILENAME], configfile[BH_MAX_FILENAME];
 
 /*********************
@@ -74,7 +74,7 @@ char pointsfile[BH_MAX_FILENAME], sysfile[BH_MAX_FILENAME], configfile[BH_MAX_FI
  *********************/
 void (*read_system_file)(polynomial_system *system, void *v); /* reads in a polynomial system file, sets data */
 int (*read_points_file)(void **t, void **w, int num_var); /* reads in a points file, sets data, returns number of points */
-void (*print_back_input)(polynomial_system *system, void *v, void *t, void *w, int num_points); /* prints input files to stdout for debugging */
+void (*fprint_input)(FILE *outfile, polynomial_system *system, void *v, void *t, void *w, int num_points); /* prints input files to stdout for debugging */
 void (*test_system)(polynomial_system *system, void *v, void *t, void *w, int num_points, void **t_final, void **w_final, int *tested, int *succeeded, int *failed); /* certify H(x, t) */
 void (*fprint_solutions)(void *t, void *w, int num_points); /* print solutions to H(x, t) in a program-readable format */
 
@@ -96,7 +96,7 @@ void usage(); /* displays a helpful message about invocation on stderr */
 void read_config_file(); /* reads in a configuration file */
 void display_config(); /* displays the configuration (arithmetic type, precision, &c) on stderr */
 polynomial parse_polynomial(FILE *sysfh, int num_var);
-void initialize_output_files(); /* creates empty output files in the working directory */
+void initialize_output_files(polynomial_system *system, void *v, void *t, void *w, int num_points); /* creates empty output files in the working directory */
 void summarize(int tested, int succeeded, int failed); /* print a summary to stdout */
 
 /*******************************************
@@ -106,11 +106,12 @@ int compare_mpq(const void *a, const void *b);
 void sort_points_rational(mpq_t *t, rational_complex_vector *w, int num_points);
 void read_system_file_rational(polynomial_system *system, void *v);
 int read_points_file_rational(void **t, void **w, int num_var);
-void print_back_input_rational(polynomial_system *system, void *v, void *t, void *w, int num_points);
-void print_points_rational(rational_complex_vector points, FILE *outfile);
-void print_system_rational(polynomial_system *system, FILE *outfile);
+void fprint_input_rational(FILE *outfile, polynomial_system *system, void *v, void *t, void *w, int num_points);
+void print_system_rational(FILE *outfile, polynomial_system *system);
+void print_points_rational(FILE *outfile, rational_complex_vector points);
 void fprint_continuous_rational(mpq_t t_left, mpq_t t_right, rational_complex_vector w_left, rational_complex_vector w_right, mpq_t alpha_sqr_left, mpq_t alpha_sqr_right, mpq_t beta_sqr_left, mpq_t beta_sqr_right, mpq_t gamma_sqr_left, mpq_t gamma_sqr_right);
 void fprint_discontinuous_rational(mpq_t t_left, mpq_t t_right, rational_complex_vector w_left, rational_complex_vector w_right, mpq_t alpha_sqr_left, mpq_t alpha_sqr_right, mpq_t beta_sqr_left, mpq_t beta_sqr_right, mpq_t gamma_sqr_left, mpq_t gamma_sqr_right);
+void fprint_uncertain_rational(mpq_t t_left, mpq_t t_right, rational_complex_vector w_left, rational_complex_vector w_right, mpq_t alpha_sqr_left, mpq_t alpha_sqr_right, mpq_t beta_sqr_left, mpq_t beta_sqr_right, mpq_t gamma_sqr_left, mpq_t gamma_sqr_right);
 void fprint_solutions_rational(void *t, void *w, int num_points);
 
 /****************************************
@@ -120,11 +121,12 @@ int compare_mpf(const void *a, const void *b);
 void sort_points_float(mpf_t *t, complex_vector *w, int num_points);
 void read_system_file_float(polynomial_system *system, void *v); /* see read_system_file(char *, void *) */
 int read_points_file_float(void **t, void **w, int num_var); /* see read_points_file(char *, void **, int) */
-void print_back_input_float(polynomial_system *system, void *v, void *t, void *w, int num_points);
-void print_points_float(complex_vector points, FILE *outfile);
-void print_system_float(polynomial_system *system, FILE *outfile);
+void fprint_input_float(FILE *outfile, polynomial_system *system, void *v, void *t, void *w, int num_points);
+void print_system_float(FILE *outfile, polynomial_system *system);
+void print_points_float(FILE *outfile, complex_vector points);
 void fprint_continuous_float(mpf_t t_left, mpf_t t_right, complex_vector w_left, complex_vector w_right, mpf_t alpha_left, mpf_t alpha_right, mpf_t beta_left, mpf_t beta_right, mpf_t gamma_left, mpf_t gamma_right);
 void fprint_discontinuous_float(mpf_t t_left, mpf_t t_right, complex_vector w_left, complex_vector w_right, mpf_t alpha_left, mpf_t alpha_right, mpf_t beta_left, mpf_t beta_right, mpf_t gamma_left, mpf_t gamma_right);
+void fprint_uncertain_float(mpf_t t_left, mpf_t t_right, complex_vector w_left, complex_vector w_right, mpf_t alpha_left, mpf_t alpha_right, mpf_t beta_left, mpf_t beta_right, mpf_t gamma_left, mpf_t gamma_right);
 void fprint_solutions_float(void *t, void *w, int num_points);
 
 /************************************************
