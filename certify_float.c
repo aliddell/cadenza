@@ -641,12 +641,12 @@ void test_pairwise_float(polynomial_system *system, complex_vector *v, mpf_t t_l
         mpf_t test;
         mpf_init(test);
 
-        mpf_sub_ui(test, gamma_left, 10); /* inf - 10 == inf */
+        mpf_sub_ui(test, gamma_left, 1); /* inf - 1 == inf */
         if (mpf_cmp(test, gamma_left) == 0) {
             mpfr_fprintf(stderr, "singularity on left of interval [%.Rf, %.Rf] at point ", t_left, t_right);
             print_points_float(stderr, w_left);
         }
-        mpf_sub_ui(test, gamma_right, 10);
+        mpf_sub_ui(test, gamma_right, 1);
         if (mpf_cmp(test, gamma_right) == 0) {
             mpfr_fprintf(stderr, "singularity on right of interval [%.Rf, %.Rf] at point ", t_left, t_right);
             print_points_float(stderr, w_right);
@@ -808,12 +808,12 @@ void test_pairwise_float(polynomial_system *system, complex_vector *v, mpf_t t_l
         mpf_t test;
         mpf_init(test);
 
-        mpf_sub_ui(test, gamma_left, 10); /* inf - 10 == inf */
+        mpf_sub_ui(test, gamma_left, 1); /* inf - 1 == inf */
         if (mpf_cmp(test, gamma_left) == 0) {
             mpfr_fprintf(stderr, "singularity on left of interval [%.Rf, %.Rf] at point ", t_left, t_right);
             print_points_float(stderr, w_left);
         }
-        mpf_sub_ui(test, gamma_right, 10);
+        mpf_sub_ui(test, gamma_right, 1);
         if (mpf_cmp(test, gamma_right) == 0) {
             mpfr_fprintf(stderr, "singularity on right of interval [%.Rf, %.Rf] at point ", t_left, t_right);
             print_points_float(stderr, w_right);
@@ -859,12 +859,12 @@ void test_pairwise_float(polynomial_system *system, complex_vector *v, mpf_t t_l
         mpf_t test;
         mpf_init(test);
 
-        mpf_sub_ui(test, gamma_left, 10); /* inf - 10 == inf */
+        mpf_sub_ui(test, gamma_left, 1); /* inf - 1 == inf */
         if (mpf_cmp(test, gamma_left) == 0) {
             mpfr_fprintf(stderr, "singularity on left of interval [%.Rf, %.Rf] at point ", t_left, t_right);
             print_points_float(stderr, w_left);
         }
-        mpf_sub_ui(test, gamma_right, 10);
+        mpf_sub_ui(test, gamma_right, 1);
         if (mpf_cmp(test, gamma_right) == 0) {
             mpfr_fprintf(stderr, "singularity on right of interval [%.Rf, %.Rf] at point ", t_left, t_right);
             print_points_float(stderr, w_right);
