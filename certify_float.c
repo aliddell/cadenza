@@ -638,21 +638,14 @@ void test_pairwise_float(polynomial_system *system, complex_vector *v, mpf_t t_l
         fprint_uncertain_float(t_left, t_right, w_left, w_right, alpha_left, alpha_right, beta_left, beta_right, gamma_left, gamma_right);
 
         /* alert user to singularities */
-        mpf_t test;
-        mpf_init(test);
-
-        mpf_sub_ui(test, gamma_left, 1); /* inf - 1 == inf */
-        if (mpf_cmp(test, gamma_left) == 0) {
+        if (mpfr_inf_p(gamma_left)) {
             mpfr_fprintf(stderr, "singularity on left of interval [%.Rf, %.Rf] at point ", t_left, t_right);
             print_points_float(stderr, w_left);
         }
-        mpf_sub_ui(test, gamma_right, 1);
-        if (mpf_cmp(test, gamma_right) == 0) {
+        if (mpfr_inf_p(gamma_right)) {
             mpfr_fprintf(stderr, "singularity on right of interval [%.Rf, %.Rf] at point ", t_left, t_right);
             print_points_float(stderr, w_right);
         }
-
-        mpf_clear(test);
 
         return;
     }
@@ -805,21 +798,14 @@ void test_pairwise_float(polynomial_system *system, complex_vector *v, mpf_t t_l
         *succeeded += 1;
 
         /* alert user to singularities */
-        mpf_t test;
-        mpf_init(test);
-
-        mpf_sub_ui(test, gamma_left, 1); /* inf - 1 == inf */
-        if (mpf_cmp(test, gamma_left) == 0) {
+        if (mpfr_inf_p(gamma_left)) {
             mpfr_fprintf(stderr, "singularity on left of interval [%.Rf, %.Rf] at point ", t_left, t_right);
             print_points_float(stderr, w_left);
         }
-        mpf_sub_ui(test, gamma_right, 1);
-        if (mpf_cmp(test, gamma_right) == 0) {
+        if (mpfr_inf_p(gamma_right)) {
             mpfr_fprintf(stderr, "singularity on right of interval [%.Rf, %.Rf] at point ", t_left, t_right);
             print_points_float(stderr, w_right);
         }
-
-        mpf_clear(test);
 
         /* copy t and w values into t_final and w_final respectively */
         errno = 0;
@@ -856,21 +842,14 @@ void test_pairwise_float(polynomial_system *system, complex_vector *v, mpf_t t_l
         fprint_discontinuous_float(t_left, t_right, w_left, w_right, alpha_left, alpha_right, beta_left, beta_right, gamma_left, gamma_right);
 
         /* alert user to singularities */
-        mpf_t test;
-        mpf_init(test);
-
-        mpf_sub_ui(test, gamma_left, 1); /* inf - 1 == inf */
-        if (mpf_cmp(test, gamma_left) == 0) {
+        if (mpfr_inf_p(gamma_left)) {
             mpfr_fprintf(stderr, "singularity on left of interval [%.Rf, %.Rf] at point ", t_left, t_right);
             print_points_float(stderr, w_left);
         }
-        mpf_sub_ui(test, gamma_right, 1);
-        if (mpf_cmp(test, gamma_right) == 0) {
+        if (mpfr_inf_p(gamma_right)) {
             mpfr_fprintf(stderr, "singularity on right of interval [%.Rf, %.Rf] at point ", t_left, t_right);
             print_points_float(stderr, w_right);
         }
-
-        mpf_clear(test);
 
         *tested += 1;
         *failed += 1;
