@@ -5,3 +5,7 @@
 * parallelize!
 
 * edit the parsing functions to throw away lines beginning with # (comments)
+
+* add a --version flag
+
+* replace occurrences of BH_TERMWIDTH with a computed termwidth

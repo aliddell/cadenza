@@ -349,7 +349,7 @@ void fprint_input_rational(FILE *outfile, polynomial_system *system, void *v, vo
 
     fputs("\n", outfile);
 
-    fputs("(t_i, w_i)", outfile);
+    fputs("(t_i, w_i)\n", outfile);
     for (i = 0; i < num_points; i++) {
         gmp_fprintf(outfile, "%Qd, ", t_rational[i]);
         print_points_rational(outfile, w_rational[i]);

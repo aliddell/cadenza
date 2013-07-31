@@ -425,7 +425,6 @@ void subdivide_segment_float(polynomial_system *base, complex_vector v, mpf_t t_
         exit(BH_EXIT_OTHER);
     }
 
-
     if (verbosity > BH_VERBOSE)
         mpfr_printf("new intervals are [%.Rf, %.Rf] and [%.Rf, %.Rf]\n", t_left, *t_mid, *t_mid, t_right);
 

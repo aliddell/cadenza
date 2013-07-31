@@ -66,7 +66,7 @@
 /**************************************
  * global variables for blueharvest.c *
  **************************************/
-int verbosity, help_flag, default_precision, arithmetic_type, newton_tolerance, subd_tolerance;
+int verbosity, help_flag, ver_flag, default_precision, arithmetic_type, newton_tolerance, subd_tolerance;
 char pointsfile[BH_MAX_FILENAME], sysfile[BH_MAX_FILENAME], configfile[BH_MAX_FILENAME];
 
 /*********************

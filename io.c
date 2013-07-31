@@ -56,7 +56,7 @@ void display_config(FILE *outfile) {
     fprintf(outfile, "Computing using %s arithmetic\n", precision_str);
     fprintf(outfile, "Polynomial system file is %s\n", sysfile);
     fprintf(outfile, "Point set file is %s\n", pointsfile);
-    if (configfile != NULL)
+    if (strcmp(configfile, "unset") != 0)
         fprintf(outfile, "Configuration file is %s\n", configfile);
     fprintf(outfile, "Maximum Newton iterations: %d\n", newton_tolerance);
     fprintf(outfile, "Maximum segment subdivisions: %d\n\n", subd_tolerance);

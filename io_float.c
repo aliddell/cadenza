@@ -391,7 +391,7 @@ void fprint_input_float(FILE *outfile, polynomial_system *system, void *v, void 
 
     fputs("\n", outfile);
 
-    fputs("(t_i, w_i)", outfile);
+    fputs("(t_i, w_i)\n", outfile);
     for (i = 0; i < num_points; i++) {
         mpfr_fprintf(outfile, "%.Rf, ", t_float[i]);
         print_points_float(outfile, w_float[i]);

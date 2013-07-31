@@ -1,5 +1,5 @@
-CC=gcc
-MPI=`which mpicc`
+CC=/usr/lib64/ccache/gcc
+MPI=/usr/lib64/mpich2/bin/mpicc
 LIB= -lm -lgmp -lmpfr
 OPT= -g -O3 -funroll-loops -fexpensive-optimizations -Wall 
 ARGS=$(OPT) 
