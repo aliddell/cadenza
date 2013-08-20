@@ -25,7 +25,7 @@
 // version and error information
 #define VERSION_STRING "1.2.0"
 #define DATE_STRING "August 15, 2011"
-#define ERROR_MESSAGE "alphaCertified will now exit due to this error.\n"
+#define ERROR_MESSAGE "Blue Harvest will now exit due to this error.\n"
 
 // length of random rational number
 #define RATIONALDIGITLENGTH 10

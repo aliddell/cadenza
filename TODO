@@ -6,6 +6,6 @@
 
 * edit the parsing functions to throw away lines beginning with # (comments)
 
-* add a --version flag
+* add precision to mpfr_printf and friends
 
-* replace occurrences of BH_TERMWIDTH with a computed termwidth
+* add singularities to array for summary file

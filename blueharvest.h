@@ -13,6 +13,7 @@
 
 #include <errno.h>
 #include <getopt.h>
+#include <sys/ioctl.h>
 
 /*****************************************************
  * data structures and functions from alphaCertified *
@@ -40,19 +41,20 @@
 /* meta constants */
 #define BH_PROGRAM_NAME "Blue Harvest"
 #define BH_AUTHORS "Jonathan D. Hauenstein, Alan C. Liddell, Jr., and Ian T. Haywood"
-#define BH_VERSION "0.0.1"
-#define BH_BUILD_DATE "Jul 26, 2013"
+#define BH_VERSION "0.1.0"
+#define BH_BUILD_DATE "Aug 19, 2013"
 
 /* filenames */
 #define BH_FSUMMARY  "summary.out"
 #define BH_FCONT    "continuous.out"
 #define BH_FDISCONT "discontinuous.out"
+#define BH_FUNCERTAIN "uncertain.out"
 #define BH_FPTSOUT  "points.out"
 
 /* string width and other memory-related constants */
 #define BH_MAX_DATECHAR 25
-#define BH_MAX_FILENAME 52
-#define BH_TERMWIDTH 80
+#define BH_MAX_FILENAME 1000
+#define BH_TERMWIDTH    80
 
 /* exit codes */
 #define BH_EXIT_SUCCESS 0
@@ -61,13 +63,13 @@
 #define BH_EXIT_BADPARSE 3 /* general parse error */
 #define BH_EXIT_BADDEF 4 /* system is not square, not enough points, bad t-value, &c*/
 #define BH_EXIT_MEMORY 5 /* out of memory */
-#define BH_EXIT_OTHER 6 /* something else */
+#define BH_EXIT_OTHER 7 /* something else */
 
 /**************************************
  * global variables for blueharvest.c *
  **************************************/
-int verbosity, help_flag, ver_flag, default_precision, arithmetic_type, newton_tolerance, subd_tolerance;
-char pointsfile[BH_MAX_FILENAME], sysfile[BH_MAX_FILENAME], configfile[BH_MAX_FILENAME];
+int verbosity, help_flag, ver_flag, default_precision, arithmetic_type, newton_tolerance, subd_tolerance, termwidth;
+char pointsfile[BH_MAX_FILENAME], sysfile[BH_MAX_FILENAME], configfile[BH_MAX_FILENAME], *error_string;
 
 /*********************
  * function pointers *
@@ -75,13 +77,14 @@ char pointsfile[BH_MAX_FILENAME], sysfile[BH_MAX_FILENAME], configfile[BH_MAX_FI
 void (*read_system_file)(polynomial_system *system, void *v); /* reads in a polynomial system file, sets data */
 int (*read_points_file)(void **t, void **w, int num_var); /* reads in a points file, sets data, returns number of points */
 void (*fprint_input)(FILE *outfile, polynomial_system *system, void *v, void *t, void *w, int num_points); /* prints input files to stdout for debugging */
-void (*test_system)(polynomial_system *system, void *v, void *t, void *w, int num_points, void **t_final, void **w_final, int *tested, int *succeeded, int *failed); /* certify H(x, t) */
+void (*test_system)(polynomial_system *system, void *v, void *t, void *w, int num_points, void **t_final, void **w_final, void **sing, int *tested, int *succeeded, int *failed, int *num_sing); /* certify H(x, t) */
 void (*fprint_solutions)(void *t, void *w, int num_points); /* print solutions to H(x, t) in a program-readable format */
 
 /*******************************************
  * function declarations for blueharvest.c *
  *******************************************/
 void getargs(int argc, char *argv[]); /* get command-line arguments, set flags and filenames */
+int set_termwidth(); /* set the terminal width */
 void set_function_pointers(); /* set function pointers depending on arithmetic */
 void free_v(void *v); /* free [rational_]complex_vector v */
 void free_t(void *t, int num_points); /* free mp[qf]_t *t */
@@ -97,7 +100,7 @@ void read_config_file(); /* reads in a configuration file */
 void display_config(); /* displays the configuration (arithmetic type, precision, &c) on stderr */
 polynomial parse_polynomial(FILE *sysfh, int num_var);
 void initialize_output_files(polynomial_system *system, void *v, void *t, void *w, int num_points); /* creates empty output files in the working directory */
-void summarize(int tested, int succeeded, int failed); /* print a summary to stdout */
+void summarize(int tested, int succeeded, int failed, int singularities); /* print a summary to stdout */
 
 /*******************************************
  * function declarations for io_rational.c *
@@ -140,8 +143,8 @@ int test_continuity_rational(rational_complex_vector v, mpq_t t_left, mpq_t t_ri
 void subdivide_segment_rational(polynomial_system *base, rational_complex_vector v, mpq_t t_left, mpq_t t_right, rational_complex_vector w_left, rational_complex_vector w_right, mpq_t *t_mid, rational_complex_vector *w_mid, int num_var);
 void apply_tv_rational(polynomial_system *base, polynomial_system *F, mpq_t t, rational_complex_vector v);
 int compute_abg_sqr_rational(rational_complex_vector points, polynomial_system *F, mpq_t *alpha, mpq_t *beta, mpq_t *gamma);
-void test_pairwise_rational(polynomial_system *system, rational_complex_vector *v, mpq_t t_left, mpq_t t_right, rational_complex_vector w_left, rational_complex_vector w_right, int num_var, int iter, mpq_t **t_final, rational_complex_vector **w_final, int *tested, int *succeeded, int *failed);
-void test_system_rational(polynomial_system *system, void *v, void *t, void *w, int num_points, void **t_final, void **w_final, int *tested, int *succeeded, int *failed); /* see test_system(polynomial_system*, ...) */
+void test_pairwise_rational(polynomial_system *system, rational_complex_vector *v, mpq_t t_left, mpq_t t_right, rational_complex_vector w_left, rational_complex_vector w_right, int num_var, int iter, mpq_t **t_final, rational_complex_vector **w_final, rational_complex_vector **sing, int *tested, int *succeeded, int *failed, int *num_sing, int check_left);
+void test_system_rational(polynomial_system *system, void *v, void *t, void *w, int num_points, void **t_final, void **w_final, void **sing, int *tested, int *succeeded, int *failed, int *num_sing); /* see test_system(polynomial_system*, ...) */
 
 /*********************************************
  * function declarations for certify_float.c *
@@ -153,8 +156,8 @@ int test_continuity_float(complex_vector v, mpf_t t_left, mpf_t t_right, complex
 void subdivide_segment_float(polynomial_system *base, complex_vector v, mpf_t t_left, mpf_t t_right, complex_vector w_left, complex_vector w_right, mpf_t *t_mid, complex_vector *w_mid, int num_var);
 void apply_tv_float(polynomial_system *base, polynomial_system *F, mpf_t t, complex_vector v);
 int compute_abg_float(complex_vector points, polynomial_system *F, mpf_t *alpha, mpf_t *beta, mpf_t *gamma);
-void test_pairwise_float(polynomial_system *system, complex_vector *v, mpf_t t_left, mpf_t t_right, complex_vector w_left, complex_vector w_right, int num_var, int iter, mpf_t **t_final, complex_vector **w_final, int *tested, int *succeeded, int *failed);
-void test_system_float(polynomial_system *system, void *v, void *t, void *w, int num_points, void **t_final, void **w_final, int *tested, int *succeeded, int *failed);
+void test_pairwise_float(polynomial_system *system, complex_vector *v, mpf_t t_left, mpf_t t_right, complex_vector w_left, complex_vector w_right, int num_var, int iter, mpf_t **t_final, complex_vector **w_final, complex_vector **sing, int *tested, int *succeeded, int *failed, int *num_sing, int check_left);
+void test_system_float(polynomial_system *system, void *v, void *t, void *w, int num_points, void **t_final, void **w_final, void **sing, int *tested, int *succeeded, int *failed, int *num_sing); /* see test_system(polynomial_system*, ...) */
 
 #define mpq_set_min(_setme, _prima, _secunda) { if (mpq_cmp(_prima, _secunda) <= 0) { mpq_set(_setme, _prima); } \
     else { mpq_set(_setme, _secunda); }}

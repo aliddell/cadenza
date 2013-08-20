@@ -399,6 +399,10 @@ void subdivide_segment_float(polynomial_system *base, complex_vector v, mpf_t t_
 
     polynomial_system F_mid;
 
+    complex_vector new_point;
+
+    initialize_vector(new_point, num_var);
+
     mpf_t pivot_tol, pivot_drop_tol;
     mpf_init(pivot_tol);
     mpf_init(pivot_drop_tol);
@@ -418,15 +422,18 @@ void subdivide_segment_float(polynomial_system *base, complex_vector v, mpf_t t_
 
     /* apply Newton to w_mid */
     apply_tv_float(base, &F_mid, *t_mid, v);
-    retval = newton_iteration(*w_mid, beta_complex, LU, &rowswaps, &F_mid, *w_mid, pivot_tol, pivot_drop_tol, default_precision);
+    retval = newton_iteration(new_point, beta_complex, LU, &rowswaps, &F_mid, *w_mid, pivot_tol, pivot_drop_tol, default_precision);
     if (retval == ERROR_LU_DECOMP) {
-        char error_string[]= "Invalid LU decomposition\n";
-        print_error(error_string, stderr);
+        mpfr_fprintf(stderr, "singularity suspected at t = %.15Re near point ", *t_mid);
+        print_points_float(stderr, new_point);
+        fprintf(stderr, ERROR_MESSAGE);
         exit(BH_EXIT_OTHER);
     }
 
+    copy_vector(*w_mid, new_point);
+
     if (verbosity > BH_VERBOSE)
-        mpfr_printf("new intervals are [%.Rf, %.Rf] and [%.Rf, %.Rf]\n", t_left, *t_mid, *t_mid, t_right);
+        mpfr_printf("new intervals are [%.15Re, %.15Re] and [%.15Re, %.15Re]\n", t_left, *t_mid, *t_mid, t_right);
 
     mpf_clear(beta);
     mpf_clear(pivot_tol);
@@ -435,6 +442,7 @@ void subdivide_segment_float(polynomial_system *base, complex_vector v, mpf_t t_
     clear_number(beta_complex);
     clear_matrix(LU);
     clear_polynomial_system(&F_mid);
+    clear_vector(new_point);
 
     free(rowswaps);
     rowswaps = NULL;
@@ -472,8 +480,7 @@ void apply_tv_float(polynomial_system *base, polynomial_system *F, mpf_t t, comp
     F->numExponentials = 0;
     F->polynomials = malloc(num_var * sizeof(polynomial));
     if (F->polynomials == NULL) {
-        char error_string[BH_TERMWIDTH];
-        snprintf(error_string, (size_t) BH_TERMWIDTH+1, "Couldn't alloc: %s\n", strerror(errno));
+        snprintf(error_string, (size_t) termwidth, "Couldn't alloc: %s\n", strerror(errno));
         print_error(error_string, stderr);
 
         exit(BH_EXIT_MEMORY);
@@ -497,8 +504,7 @@ void apply_tv_float(polynomial_system *base, polynomial_system *F, mpf_t t, comp
 
         p.exponents = malloc(num_terms * sizeof(int *));
         if (p.exponents == NULL) {
-            char error_string[BH_TERMWIDTH];
-            snprintf(error_string, (size_t) BH_TERMWIDTH+1, "Couldn't alloc: %s\n", strerror(errno));
+            snprintf(error_string, (size_t) termwidth, "Couldn't alloc: %s\n", strerror(errno));
             print_error(error_string, stderr);
 
             exit(BH_EXIT_MEMORY);
@@ -507,8 +513,7 @@ void apply_tv_float(polynomial_system *base, polynomial_system *F, mpf_t t, comp
         for (j = 0; j < num_terms - 1; j++) {
             p.exponents[j] = malloc(num_var * sizeof(int));
             if (p.exponents[j] == NULL) {
-                char error_string[BH_TERMWIDTH];
-                snprintf(error_string, (size_t) BH_TERMWIDTH+1, "Couldn't alloc: %s\n", strerror(errno));
+                snprintf(error_string, (size_t) termwidth, "Couldn't alloc: %s\n", strerror(errno));
                 print_error(error_string, stderr);
 
                 exit(BH_EXIT_MEMORY);
@@ -521,8 +526,7 @@ void apply_tv_float(polynomial_system *base, polynomial_system *F, mpf_t t, comp
         /* add 0's for exponents in last (constant) term */
         p.exponents[j] = malloc(num_var * sizeof(int));
         if (p.exponents[j] == NULL) {
-            char error_string[BH_TERMWIDTH];
-            snprintf(error_string, (size_t) BH_TERMWIDTH+1, "Couldn't alloc: %s\n", strerror(errno));
+            snprintf(error_string, (size_t) termwidth, "Couldn't alloc: %s\n", strerror(errno));
             print_error(error_string, stderr);
 
             exit(BH_EXIT_MEMORY);
@@ -534,8 +538,7 @@ void apply_tv_float(polynomial_system *base, polynomial_system *F, mpf_t t, comp
         /* copy the coefficients */
         p.coeff = malloc(num_terms * sizeof(rational_complex_number));
         if (p.coeff == NULL) {
-            char error_string[BH_TERMWIDTH];
-            snprintf(error_string, (size_t) BH_TERMWIDTH+1, "Couldn't alloc: %s\n", strerror(errno));
+            snprintf(error_string, (size_t) termwidth, "Couldn't alloc: %s\n", strerror(errno));
             print_error(error_string, stderr);
 
             exit(BH_EXIT_MEMORY);
@@ -610,7 +613,7 @@ int compute_abg_float(complex_vector points, polynomial_system *F, mpf_t *alpha,
 /***********************************************************************************
  * test that each w is in the quadratic convergence basin and check for continuity *
  ***********************************************************************************/
-void test_pairwise_float(polynomial_system *system, complex_vector *v, mpf_t t_left, mpf_t t_right, complex_vector w_left, complex_vector w_right, int num_var, int iter, mpf_t **t_final, complex_vector **w_final, int *tested, int *succeeded, int *failed) {
+void test_pairwise_float(polynomial_system *system, complex_vector *v, mpf_t t_left, mpf_t t_right, complex_vector w_left, complex_vector w_right, int num_var, int iter, mpf_t **t_final, complex_vector **w_final, complex_vector **sing, int *tested, int *succeeded, int *failed, int *num_sing, int check_left) {
     int w_left_solution, w_right_solution, seg_continuous;
     polynomial_system F_left, F_right;
     mpf_t alpha_left, beta_left, gamma_left, alpha_right, beta_right, gamma_right, beta_min;
@@ -633,17 +636,21 @@ void test_pairwise_float(polynomial_system *system, complex_vector *v, mpf_t t_l
         *tested += 1;
 
         if (verbosity > BH_LACONIC)
-            mpfr_printf("unsure whether segment [%.Rf, %.Rf] is continuous\n", t_left, t_right);
+            mpfr_printf("unsure whether segment [%.15Re, %.15Re] is continuous\n", t_left, t_right);
         fprint_uncertain_float(t_left, t_right, w_left, w_right, alpha_left, alpha_right, beta_left, beta_right, gamma_left, gamma_right);
 
         /* alert user to singularities */
-        if (mpfr_inf_p(gamma_left)) {
-            mpfr_fprintf(stderr, "singularity on left of interval [%.Rf, %.Rf] at point ", t_left, t_right);
-            print_points_float(stderr, w_left);
+        if (check_left) {
+            if (mpfr_inf_p(gamma_left)) {
+                mpfr_fprintf(stderr, "singularity found for t = %.15Re at point ", t_left);
+                print_points_float(stderr, w_left);
+                *num_sing += 1;
+            }
         }
         if (mpfr_inf_p(gamma_right)) {
-            mpfr_fprintf(stderr, "singularity on right of interval [%.Rf, %.Rf] at point ", t_left, t_right);
+            mpfr_fprintf(stderr, "singularity found for t = %.15Re at point ", t_right);
             print_points_float(stderr, w_right);
+            *num_sing += 1;
         }
 
         return;
@@ -655,8 +662,8 @@ void test_pairwise_float(polynomial_system *system, complex_vector *v, mpf_t t_l
     int newton_counter = 1;
     while (!w_left_solution || !w_right_solution) {
         if (newton_counter == newton_tolerance) {
-            char error_string[] = "Points not in convergence basin; aborting";
-            print_error(error_string, stderr);
+            char err_string[] = "Points not in convergence basin; aborting";
+            print_error(err_string, stderr);
 
             exit(BH_EXIT_OTHER);
         }
@@ -678,7 +685,7 @@ void test_pairwise_float(polynomial_system *system, complex_vector *v, mpf_t t_l
                 else
                     fprintf(stderr, "performing %dth Newton iteration on w_left", newton_counter);
                 
-                mpfr_fprintf(stderr, " (interval: [%.Rf, %.Rf])\n", t_left, t_right);
+                mpfr_fprintf(stderr, " (interval: [%.15Re, %.15Re])\n", t_left, t_right);
             }
 
             mpf_t pivot_tol, pivot_drop_tol;
@@ -694,8 +701,9 @@ void test_pairwise_float(polynomial_system *system, complex_vector *v, mpf_t t_l
 
             retval = newton_iteration(new_point, beta_complex, LU, &rowswaps, &F_left, w_left, pivot_tol, pivot_drop_tol, default_precision);
             if (retval == ERROR_LU_DECOMP) {
-                char error_string[]= "Invalid LU decomposition\n";
-                print_error(error_string, stderr);
+                mpfr_fprintf(stderr, "singularity suspected at t = %.15Re near point ", t_left);
+                print_points_float(stderr, w_left);
+                fprintf(stderr, ERROR_MESSAGE);
                 exit(BH_EXIT_OTHER);
             }
 
@@ -726,7 +734,7 @@ void test_pairwise_float(polynomial_system *system, complex_vector *v, mpf_t t_l
                 else
                     fprintf(stderr, "performing %dth Newton iteration on w_right", newton_counter);
 
-                mpfr_fprintf(stderr, " (interval: [%.Rf, %.Rf])\n", t_left, t_right);
+                mpfr_fprintf(stderr, " (interval: [%.15Re, %.15Re])\n", t_left, t_right);
             }
 
             mpf_t pivot_tol, pivot_drop_tol;
@@ -742,8 +750,9 @@ void test_pairwise_float(polynomial_system *system, complex_vector *v, mpf_t t_l
 
             retval = newton_iteration(new_point, beta_complex, LU, &rowswaps, &F_right, w_right, pivot_tol, pivot_drop_tol, default_precision);
             if (retval == ERROR_LU_DECOMP) {
-                char error_string[]= "Invalid LU decomposition\n";
-                print_error(error_string, stderr);
+                mpfr_fprintf(stderr, "singularity suspected at t = %.15Re near point ", t_right);
+                print_points_float(stderr, w_right);
+                fprintf(stderr, ERROR_MESSAGE);
                 exit(BH_EXIT_OTHER);
             }
 
@@ -766,13 +775,13 @@ void test_pairwise_float(polynomial_system *system, complex_vector *v, mpf_t t_l
     }
 
     if (verbosity > BH_CHATTY)
-        mpfr_printf("testing segment [%.Rf, %.Rf]\n", t_left, t_right);
+        mpfr_printf("testing segment [%.15Re, %.15Re]\n", t_left, t_right);
 
     seg_continuous = test_continuity_float(*v, t_left, t_right, w_left, w_right, F_left, F_right, alpha_left, alpha_right, gamma_left, gamma_right);
 
     if (seg_continuous == 0) {
         if (verbosity > BH_CHATTY)
-            mpfr_printf("unsure whether segment [%.Rf, %.Rf] is continuous\n", t_left, t_right);
+            mpfr_printf("unsure whether segment [%.15Re, %.15Re] is continuous\n", t_left, t_right);
 
         mpf_t t_mid;
         mpf_init(t_mid);
@@ -782,14 +791,14 @@ void test_pairwise_float(polynomial_system *system, complex_vector *v, mpf_t t_l
         subdivide_segment_float(system, *v, t_left, t_right, w_left, w_right, &t_mid, &w_mid, num_var);
 
         /* recurse! */
-        test_pairwise_float(system, v, t_left, t_mid, w_left, w_mid, num_var, iter + 1, t_final, w_final, tested, succeeded, failed);
-        test_pairwise_float(system, v, t_mid, t_right, w_mid, w_right, num_var, iter + 1, t_final, w_final, tested, succeeded, failed);
+        test_pairwise_float(system, v, t_left, t_mid, w_left, w_mid, num_var, iter + 1, t_final, w_final, sing, tested, succeeded, failed, num_sing, 0);
+        test_pairwise_float(system, v, t_mid, t_right, w_mid, w_right, num_var, iter + 1, t_final, w_final, sing, tested, succeeded, failed, num_sing, 0);
 
         mpf_clear(t_mid);
         clear_vector(w_mid);
     } else if (seg_continuous == 1) {
         if (verbosity > BH_LACONIC)
-            mpfr_printf("segment [%.Rf, %.Rf] is continuous\n", t_left, t_right);
+            mpfr_printf("segment [%.15Re, %.15Re] is continuous\n", t_left, t_right);
 
         fprint_continuous_float(t_left, t_right, w_left, w_right, alpha_left, alpha_right, beta_left, beta_right, gamma_left, gamma_right);
 
@@ -797,12 +806,14 @@ void test_pairwise_float(polynomial_system *system, complex_vector *v, mpf_t t_l
         *succeeded += 1;
 
         /* alert user to singularities */
-        if (mpfr_inf_p(gamma_left)) {
-            mpfr_fprintf(stderr, "singularity on left of interval [%.Rf, %.Rf] at point ", t_left, t_right);
-            print_points_float(stderr, w_left);
+        if (check_left) {
+            if (mpfr_inf_p(gamma_left)) {
+                mpfr_fprintf(stderr, "singularity found for t = %.15Re at point ", t_left);
+                print_points_float(stderr, w_left);
+            }
         }
         if (mpfr_inf_p(gamma_right)) {
-            mpfr_fprintf(stderr, "singularity on right of interval [%.Rf, %.Rf] at point ", t_left, t_right);
+            mpfr_fprintf(stderr, "singularity found for t = %.15Re at point ", t_right);
             print_points_float(stderr, w_right);
         }
 
@@ -811,8 +822,7 @@ void test_pairwise_float(polynomial_system *system, complex_vector *v, mpf_t t_l
 
         mpf_t *t_final_tmp = realloc(*t_final, (size_t) (*succeeded + 1) * sizeof(mpf_t));
         if (t_final_tmp == NULL) {
-            char error_string[BH_TERMWIDTH];
-            snprintf(error_string, (size_t) BH_TERMWIDTH+1, "Couldn't realloc: %s\n", strerror(errno));
+            snprintf(error_string, (size_t) termwidth, "Couldn't realloc: %s\n", strerror(errno));
             print_error(error_string, stderr);
             exit(BH_EXIT_MEMORY);
         } else {
@@ -825,8 +835,7 @@ void test_pairwise_float(polynomial_system *system, complex_vector *v, mpf_t t_l
 
         complex_vector *w_final_tmp = realloc(*w_final, (size_t) (*succeeded + 1) * sizeof(complex_vector));
         if (w_final_tmp == NULL) {
-            char error_string[BH_TERMWIDTH];
-            snprintf(error_string, (size_t) BH_TERMWIDTH+1, "Couldn't realloc: %s\n", strerror(errno));
+            snprintf(error_string, (size_t) termwidth, "Couldn't realloc: %s\n", strerror(errno));
             print_error(error_string, stderr);
             exit(BH_EXIT_MEMORY);
         } else {
@@ -836,17 +845,19 @@ void test_pairwise_float(polynomial_system *system, complex_vector *v, mpf_t t_l
         }
     } else {
         if (verbosity > BH_LACONIC)
-            mpfr_printf("segment [%.Rf, %.Rf] is not continuous\n", t_left, t_right);
+            mpfr_printf("segment [%.15Re, %.15Re] is not continuous\n", t_left, t_right);
 
         fprint_discontinuous_float(t_left, t_right, w_left, w_right, alpha_left, alpha_right, beta_left, beta_right, gamma_left, gamma_right);
 
         /* alert user to singularities */
-        if (mpfr_inf_p(gamma_left)) {
-            mpfr_fprintf(stderr, "singularity on left of interval [%.Rf, %.Rf] at point ", t_left, t_right);
-            print_points_float(stderr, w_left);
+        if (check_left) {
+            if (mpfr_inf_p(gamma_left)) {
+                mpfr_fprintf(stderr, "singularity found for t = %.15Re at point ", t_left);
+                print_points_float(stderr, w_left);
+            }
         }
         if (mpfr_inf_p(gamma_right)) {
-            mpfr_fprintf(stderr, "singularity on right of interval [%.Rf, %.Rf] at point ", t_left, t_right);
+            mpfr_fprintf(stderr, "singularity found for t = %.15Re at point ", t_right);
             print_points_float(stderr, w_right);
         }
 
@@ -870,7 +881,7 @@ void test_pairwise_float(polynomial_system *system, complex_vector *v, mpf_t t_l
 /*******************
  * certify H(x, t) *
  *******************/
-void test_system_float(polynomial_system *system, void *v, void *t, void *w, int num_points, void **t_final, void **w_final, int *tested, int *succeeded, int *failed) {
+void test_system_float(polynomial_system *system, void *v, void *t, void *w, int num_points, void **t_final, void **w_final, void **sing, int *tested, int *succeeded, int *failed, int *num_sing) {
     int i, num_var = system->numVariables;
 
     complex_vector *v_float = (complex_vector *) v;
@@ -879,12 +890,12 @@ void test_system_float(polynomial_system *system, void *v, void *t, void *w, int
 
     mpf_t **t_final_float = (mpf_t **) t_final;
     complex_vector **w_final_float = (complex_vector **) w_final;
+    complex_vector **sing_float = (complex_vector **) sing;
 
     /* set up t_final and w_final */
     *t_final_float = malloc(sizeof(mpf_t));
     if (*t_final_float == NULL) {
-        char error_string[BH_TERMWIDTH];
-        snprintf(error_string, (size_t) BH_TERMWIDTH+1, "Couldn't alloc: %s\n", strerror(errno));
+        snprintf(error_string, (size_t) termwidth, "Couldn't alloc: %s\n", strerror(errno));
         print_error(error_string, stderr);
 
         exit(BH_EXIT_MEMORY);
@@ -895,8 +906,7 @@ void test_system_float(polynomial_system *system, void *v, void *t, void *w, int
 
     *w_final_float = malloc(sizeof(complex_vector));
     if (*w_final_float == NULL) {
-        char error_string[BH_TERMWIDTH];
-        snprintf(error_string, (size_t) BH_TERMWIDTH+1, "Couldn't alloc: %s\n", strerror(errno));
+        snprintf(error_string, (size_t) termwidth, "Couldn't alloc: %s\n", strerror(errno));
         print_error(error_string, stderr);
 
         exit(BH_EXIT_MEMORY);
@@ -908,6 +918,6 @@ void test_system_float(polynomial_system *system, void *v, void *t, void *w, int
     /* for each t_i, t_{i+1} */
     /* this is the part that needs to get parallelized */
     for (i = 0; i < num_points - 1; i++) {
-        test_pairwise_float(system, v_float, t_float[i], t_float[i+1], w_float[i], w_float[i+1], num_var, 1, t_final_float, w_final_float, tested, succeeded, failed);
+        test_pairwise_float(system, v_float, t_float[i], t_float[i+1], w_float[i], w_float[i+1], num_var, 1, t_final_float, w_final_float, sing_float, tested, succeeded, failed, num_sing, (i == 0));
     }
 }

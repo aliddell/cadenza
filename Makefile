@@ -1,5 +1,5 @@
-CC=/usr/lib64/ccache/gcc
-MPI=/usr/lib64/mpich2/bin/mpicc
+CC=/usr/bin/gcc
+MPI=/usr/bin/mpicc
 LIB= -lm -lgmp -lmpfr
 OPT= -g -O3 -funroll-loops -fexpensive-optimizations -Wall 
 ARGS=$(OPT) 
@@ -8,10 +8,10 @@ OBJFILES=alphaCertified.o certify_float.o certify_rational.o classify.o classify
 all : $(OBJFILES) $(POBJFILES) blueharvest ;
 
 blueharvest : blueharvest.c $(OBJFILES) ;
-	$(MPI) $(ARGS) -o blueharvest blueharvest.c $(OBJFILES) $(LIB)
+	$(CC) $(ARGS) -o blueharvest blueharvest.c $(OBJFILES) $(LIB)
 
 .c.o : 
-	$(MPI) $(ARGS) -c $*.c 
+	$(CC) $(ARGS) -c $*.c 
 
 clean : 
 	rm -f blueharvest $(OBJFILES)

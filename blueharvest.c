@@ -10,7 +10,12 @@
 #include "blueharvest.h"
 
 int main(int argc, char *argv[]) {
-    int num_var = 0, num_points = 0, tested = 0, succeeded = 0, failed = 0;
+    int num_var = 0, num_points = 0, num_sing = 0, tested = 0, succeeded = 0, failed = 0;
+
+    /* set termwidth for maximum string length */
+    termwidth = set_termwidth();
+
+    error_string = malloc(termwidth * sizeof(char));
 
     /* polynomial system */
     polynomial_system F;
@@ -36,6 +41,9 @@ int main(int argc, char *argv[]) {
     /* final vector w */
     void *w_final = NULL;
 
+    /* singularities array */
+    void *sing = NULL;
+
     /* init random seed */
     srand(time(NULL));
 
@@ -46,7 +54,7 @@ int main(int argc, char *argv[]) {
     fputs("\n", stderr);
     prog_info(stderr);
 
-    /* do this before checking filenames, duh */
+    /* do this before checking filenames */
     if (help_flag) {
         usage();
         exit(BH_EXIT_SUCCESS);
@@ -89,13 +97,13 @@ int main(int argc, char *argv[]) {
     }
 
     initialize_output_files(&F, v, t, w, num_points);
-    test_system(&F, v, t, w, num_points, &t_final, &w_final, &tested, &succeeded, &failed);
+    test_system(&F, v, t, w, num_points, &t_final, &w_final, &sing, &tested, &succeeded, &failed, &num_sing);
 
     /* print an output file only if all intervals certified continuous */
     if (tested == succeeded)
         fprint_solutions(t_final, w_final, succeeded + 1);
     
-    summarize(tested, succeeded, failed);
+    summarize(tested, succeeded, failed, num_sing);
 
     /* clean up */
     clear_polynomial_system(&F);
@@ -104,6 +112,8 @@ int main(int argc, char *argv[]) {
     free_t(t_final, succeeded + 1);
     free_w(w, num_points);
     free_w(w_final, succeeded + 1);
+    free_w(sing, num_sing);
+    free(error_string);
 
     exit(BH_EXIT_SUCCESS);
 }
@@ -226,6 +236,16 @@ void getargs(int argc, char *argv[]) {
         subd_tolerance = BH_SUB_TOLERANCE;
 }
 
+/**************************
+ * set the terminal width *
+ **************************/
+int set_termwidth() {
+    struct winsize w;
+    ioctl(0, TIOCGWINSZ, &w);
+
+    return w.ws_col;
+}
+
 /**********************************************************************************
  * set function pointers to use the proper arithmetic type with a minimum of fuss *
  **********************************************************************************/
@@ -267,9 +287,9 @@ void free_v(void *v) {
     }
 }
 
-/*******************
- * free mp[qf]_t t *
- *******************/
+/********************
+ * free mp[qf]_t *t *
+ ********************/
 void free_t(void *t, int num_points) {
     int i;
 
