@@ -788,6 +788,12 @@ void test_pairwise_float(polynomial_system *system, complex_vector *v, mpf_t t_l
         complex_vector w_mid;
         initialize_vector(w_mid, num_var);
 
+        if (mpfr_cmp(t_left, t_right) == 0) {
+            snprintf(error_string, (size_t) termwidth, "Segment is a point; cannot continue\n");
+            print_error(error_string, stderr);
+            exit(BH_EXIT_MEMORY);
+        }
+
         subdivide_segment_float(system, *v, t_left, t_right, w_left, w_right, &t_mid, &w_mid, num_var);
 
         /* recurse! */

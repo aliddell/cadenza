@@ -48,7 +48,7 @@
 #define BH_FSUMMARY  "summary.out"
 #define BH_FCONT    "continuous.out"
 #define BH_FDISCONT "discontinuous.out"
-#define BH_FUNCERTAIN "uncertain.out"
+#define BH_FUNCERTIFIED "uncertified.out"
 #define BH_FPTSOUT  "points.out"
 
 /* string width and other memory-related constants */
@@ -99,6 +99,7 @@ void usage(); /* displays a helpful message about invocation on stderr */
 void read_config_file(); /* reads in a configuration file */
 void display_config(); /* displays the configuration (arithmetic type, precision, &c) on stderr */
 polynomial parse_polynomial(FILE *sysfh, int num_var);
+void print_system(FILE *outfile, polynomial_system *system);
 void initialize_output_files(polynomial_system *system, void *v, void *t, void *w, int num_points); /* creates empty output files in the working directory */
 void summarize(int tested, int succeeded, int failed, int singularities); /* print a summary to stdout */
 
@@ -110,7 +111,6 @@ void sort_points_rational(mpq_t *t, rational_complex_vector *w, int num_points);
 void read_system_file_rational(polynomial_system *system, void *v);
 int read_points_file_rational(void **t, void **w, int num_var);
 void fprint_input_rational(FILE *outfile, polynomial_system *system, void *v, void *t, void *w, int num_points);
-void print_system_rational(FILE *outfile, polynomial_system *system);
 void print_points_rational(FILE *outfile, rational_complex_vector points);
 void fprint_continuous_rational(mpq_t t_left, mpq_t t_right, rational_complex_vector w_left, rational_complex_vector w_right, mpq_t alpha_sqr_left, mpq_t alpha_sqr_right, mpq_t beta_sqr_left, mpq_t beta_sqr_right, mpq_t gamma_sqr_left, mpq_t gamma_sqr_right);
 void fprint_discontinuous_rational(mpq_t t_left, mpq_t t_right, rational_complex_vector w_left, rational_complex_vector w_right, mpq_t alpha_sqr_left, mpq_t alpha_sqr_right, mpq_t beta_sqr_left, mpq_t beta_sqr_right, mpq_t gamma_sqr_left, mpq_t gamma_sqr_right);
@@ -125,7 +125,6 @@ void sort_points_float(mpf_t *t, complex_vector *w, int num_points);
 void read_system_file_float(polynomial_system *system, void *v); /* see read_system_file(char *, void *) */
 int read_points_file_float(void **t, void **w, int num_var); /* see read_points_file(char *, void **, int) */
 void fprint_input_float(FILE *outfile, polynomial_system *system, void *v, void *t, void *w, int num_points);
-void print_system_float(FILE *outfile, polynomial_system *system);
 void print_points_float(FILE *outfile, complex_vector points);
 void fprint_continuous_float(mpf_t t_left, mpf_t t_right, complex_vector w_left, complex_vector w_right, mpf_t alpha_left, mpf_t alpha_right, mpf_t beta_left, mpf_t beta_right, mpf_t gamma_left, mpf_t gamma_right);
 void fprint_discontinuous_float(mpf_t t_left, mpf_t t_right, complex_vector w_left, complex_vector w_right, mpf_t alpha_left, mpf_t alpha_right, mpf_t beta_left, mpf_t beta_right, mpf_t gamma_left, mpf_t gamma_right);

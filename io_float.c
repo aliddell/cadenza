@@ -352,8 +352,7 @@ void fprint_input_float(FILE *outfile, polynomial_system *system, void *v, void 
     complex_vector *w_float = (complex_vector *) w;
 
     fputs("F:\n", outfile);
-    print_system_rational(outfile, system);
-    //print_system_float(outfile, system);
+    print_system(outfile, system);
 
     fputs("\n", outfile);
 
@@ -392,120 +391,6 @@ void print_points_float(FILE *outfile, complex_vector points) {
         mpfr_fprintf(outfile, "%.15Re + I * %.15Re]\n", points->coord[i]->re, points->coord[i]->im);
 }
 
-/****************************************
- * print a polynomial system to outfile *
- ****************************************/
-void print_system_float(FILE *outfile, polynomial_system *system) {
-    int i, j, k;
-
-    mpf_t re;
-    mpf_t im;
-    mpf_init(re);
-    mpf_init(im);
-
-    for (i = 0; i < system->numPolynomials; i++) {
-        polynomial p = system->polynomials[i];
-        for (j = 0; j < p.numTerms - 1; j++) {
-            /* real part is nonzero */
-            if (mpq_cmp_ui(p.coeff[j]->re, 0, 1) != 0) {
-                /* imaginary part is zero */
-                if (mpq_cmp_ui(p.coeff[j]->im, 0, 1) == 0) {
-                    /* real coefficient is not 1 */
-                    if (mpq_cmp_ui(p.coeff[j]->re, 1, 1) != 0) {
-                        mpf_set_q(re, p.coeff[j]->re);
-                        mpfr_fprintf(outfile, "%.15Re", re);
-                    } else {
-                        mpfr_fprintf(outfile, "1");
-                    }
-                } 
-                /* imaginary part is 1 */
-                else if (mpq_cmp_ui(p.coeff[j]->im, 1, 1) == 1) {
-                    mpf_set_q(re, p.coeff[j]->re);
-                    mpfr_fprintf(outfile, "(%.15Re + i)", re);
-                }
-                /* imaginary part is neither 0 nor 1 */
-                else {
-                    mpf_set_q(re, p.coeff[j]->re);
-                    mpf_set_q(im, p.coeff[j]->im);
-                    mpfr_fprintf(outfile, "(%.15Re + I * %.15Re)", re, im);
-                }
-            }
-            /* real part is zero */
-            else {
-                /* imaginary part is zero too */
-                if (mpq_cmp_ui(p.coeff[j]->im, 0, 1) == 0)
-                    continue;
-                /* imaginary part is 1 */
-                else if (mpq_cmp_ui(p.coeff[j]->im, 1, 1) == 0)
-                    fprintf(outfile, "i");
-                /* imaginary part is neither 0 nor 1 */
-                else {
-                    mpf_set_q(im, p.coeff[j]->im);
-                    mpfr_fprintf(outfile, "I * %.15Re", im);
-                }
-            }
-
-            for (k = 0; k < p.numVariables; k++) {
-                if (p.exponents[j][k] == 1)
-                    fprintf(outfile, "(x_%d)", k);
-                else if (p.exponents[j][k] != 0)
-                    fprintf(outfile, "(x_%d)^%d", k, p.exponents[j][k]);
-            }
-            fprintf(outfile, " + ");
-        }
-
-        /* last term */
-        if (mpq_cmp_ui(p.coeff[j]->re, 0, 1) != 0) {
-            /* imaginary part is zero */
-            if (mpq_cmp_ui(p.coeff[j]->im, 0, 1) == 0) {
-                /* real coefficient is not 1 */
-                if (mpq_cmp_ui(p.coeff[j]->re, 1, 1) != 0) {
-                    mpf_set_q(re, p.coeff[j]->re);
-                    mpfr_fprintf(outfile, "%.15Re", re);
-                } else {
-                    mpfr_fprintf(outfile, "1");
-                }
-            } 
-            /* imaginary part is 1 */
-            else if (mpq_cmp_ui(p.coeff[j]->im, 1, 1) == 1) {
-                mpf_set_q(re, p.coeff[j]->re);
-                mpfr_fprintf(outfile, "(%.15Re + i)", re);
-            }
-            /* imaginary part is neither 0 nor 1 */
-            else {
-                mpf_set_q(re, p.coeff[j]->re);
-                mpf_set_q(im, p.coeff[j]->im);
-                mpfr_fprintf(outfile, "(%.15Re + I * %.15Re)", re, im);
-            }
-        }
-        /* real part is zero */
-        else {
-            /* imaginary part is zero too */
-            if (mpq_cmp_ui(p.coeff[j]->im, 0, 1) == 0)
-                fprintf(outfile, "0");
-            /* imaginary part is 1 */
-            else if (mpq_cmp_ui(p.coeff[j]->im, 1, 1) == 0)
-                fprintf(outfile, "i");
-            /* imaginary part is neither 0 nor 1 */
-            else {
-                mpf_set_q(im, p.coeff[j]->im);
-                mpfr_fprintf(outfile, "I * %.15Re", im);
-            }
-        }
-
-        for (k = 0; k < p.numVariables; k++) {
-            if (p.exponents[j][k] == 1)
-                fprintf(outfile, "(x_%d)", k);
-            else if (p.exponents[j][k] != 0)
-                fprintf(outfile, "(x_%d)^%d", k, p.exponents[j][k]);
-        }
-        fputs("\n", outfile);
-    }
-
-    mpf_clear(re);
-    mpf_clear(im);
-}
-
 /*****************************************
  * print interval information to outfile *
  *****************************************/
@@ -539,40 +424,23 @@ void fprint_continuous_float(mpf_t t_left, mpf_t t_right, complex_vector w_left,
     int res;
 
     errno = 0;
-    FILE *contfh = fopen(BH_FCONT, "a");
-    FILE *sumfh = fopen(BH_FSUMMARY, "a");
+    FILE *fh = fopen(BH_FCONT, "a");
 
-    if (contfh == NULL) {
+    if (fh == NULL) {
         snprintf(error_string, (size_t) termwidth, "Couldn't open output file `%s': %s", BH_FCONT, strerror(errno));
 
         print_error(error_string, stderr);
         exit(BH_EXIT_BADFILE);
     }
 
-    if (sumfh == NULL) {
-        snprintf(error_string, (size_t) termwidth, "Couldn't open output file `%s': %s", BH_FSUMMARY, strerror(errno));
-
-        print_error(error_string, stderr);
-        exit(BH_EXIT_BADFILE);
-    }
-
-    fprintf(sumfh, "Continuous interval:\n");
-    fprint_interval_float(sumfh, t_left, t_right, w_left, w_right, alpha_left, alpha_right, beta_left, beta_right, gamma_left, gamma_right);
-    fprint_interval_float(contfh, t_left, t_right, w_left, w_right, alpha_left, alpha_right, beta_left, beta_right, gamma_left, gamma_right);
-    fputs("\n", sumfh);
+    fprint_interval_float(fh, t_left, t_right, w_left, w_right, alpha_left, alpha_right, beta_left, beta_right, gamma_left, gamma_right);
 
     errno = 0;
-    res = fclose(contfh);
+
+    res = fclose(fh);
 
     if (res == EOF) {
         snprintf(error_string, (size_t) termwidth, "Couldn't close `%s': %s", BH_FCONT, strerror(errno));
-        exit(BH_EXIT_BADREAD);
-    }
-
-    res = fclose(sumfh);
-
-    if (res == EOF) {
-        snprintf(error_string, (size_t) termwidth, "Couldn't close `%s': %s", BH_FSUMMARY, strerror(errno));
         exit(BH_EXIT_BADREAD);
     }
 }
@@ -584,40 +452,23 @@ void fprint_discontinuous_float(mpf_t t_left, mpf_t t_right, complex_vector w_le
     int res;
 
     errno = 0;
-    FILE *discfh = fopen(BH_FDISCONT, "a");
-    FILE *sumfh = fopen(BH_FSUMMARY, "a");
+    FILE *fh = fopen(BH_FDISCONT, "a");
 
-    if (discfh == NULL) {
+    if (fh == NULL) {
         snprintf(error_string, (size_t) termwidth, "Couldn't open output file `%s': %s", BH_FDISCONT, strerror(errno));
 
         print_error(error_string, stderr);
         exit(BH_EXIT_BADFILE);
     }
 
-    if (sumfh == NULL) {
-        snprintf(error_string, (size_t) termwidth, "Couldn't open output file `%s': %s", BH_FSUMMARY, strerror(errno));
-
-        print_error(error_string, stderr);
-        exit(BH_EXIT_BADFILE);
-    }
-
-    fprintf(sumfh, "Discontinuous interval:\n");
-    fprint_interval_float(sumfh, t_left, t_right, w_left, w_right, alpha_left, alpha_right, beta_left, beta_right, gamma_left, gamma_right);
-    fprint_interval_float(discfh, t_left, t_right, w_left, w_right, alpha_left, alpha_right, beta_left, beta_right, gamma_left, gamma_right);
-    fputs("\n", sumfh);
+    fprint_interval_float(fh, t_left, t_right, w_left, w_right, alpha_left, alpha_right, beta_left, beta_right, gamma_left, gamma_right);
 
     errno = 0;
-    res = fclose(discfh);
+
+    res = fclose(fh);
 
     if (res == EOF) {
         snprintf(error_string, (size_t) termwidth, "Couldn't close `%s': %s", BH_FDISCONT, strerror(errno));
-        exit(BH_EXIT_BADREAD);
-    }
-
-    res = fclose(sumfh);
-
-    if (res == EOF) {
-        snprintf(error_string, (size_t) termwidth, "Couldn't close `%s': %s", BH_FSUMMARY, strerror(errno));
         exit(BH_EXIT_BADREAD);
     }
 }
@@ -629,24 +480,25 @@ void fprint_uncertain_float(mpf_t t_left, mpf_t t_right, complex_vector w_left, 
     int res;
 
     errno = 0;
-    FILE *sumfh = fopen(BH_FSUMMARY, "a");
+    FILE *fh = fopen(BH_FUNCERTIFIED, "a");
 
-    if (sumfh == NULL) {
-        snprintf(error_string, (size_t) termwidth, "Couldn't open output file `%s': %s", BH_FSUMMARY, strerror(errno));
+    if (fh == NULL) {
+        snprintf(error_string, (size_t) termwidth, "Couldn't open output file `%s': %s", BH_FUNCERTIFIED, strerror(errno));
 
         print_error(error_string, stderr);
         exit(BH_EXIT_BADFILE);
     }
 
-    fprintf(sumfh, "Uncertain of interval:\n");
-    fprint_interval_float(sumfh, t_left, t_right, w_left, w_right, alpha_left, alpha_right, beta_left, beta_right, gamma_left, gamma_right);
-    fputs("\n", sumfh);
+    fprintf(fh, "Uncertain of interval:\n");
+    fprint_interval_float(fh, t_left, t_right, w_left, w_right, alpha_left, alpha_right, beta_left, beta_right, gamma_left, gamma_right);
+    fputs("\n", fh);
 
     errno = 0;
-    res = fclose(sumfh);
+
+    res = fclose(fh);
 
     if (res == EOF) {
-        snprintf(error_string, (size_t) termwidth, "Couldn't close `%s': %s", BH_FSUMMARY, strerror(errno));
+        snprintf(error_string, (size_t) termwidth, "Couldn't close `%s': %s", BH_FUNCERTIFIED, strerror(errno));
         exit(BH_EXIT_BADREAD);
     }
 }

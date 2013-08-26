@@ -316,7 +316,7 @@ void fprint_input_rational(FILE *outfile, polynomial_system *system, void *v, vo
     rational_complex_vector *w_rational = (rational_complex_vector *) w;
 
     fputs("F:\n", outfile);
-    print_system_rational(outfile, system);
+    print_system(outfile, system);
 
     fputs("\n", outfile);
 
@@ -355,98 +355,6 @@ void print_points_rational(FILE *outfile, rational_complex_vector points) {
         gmp_fprintf(outfile, "%Qd + I * %Qd]\n", points->coord[i]->re, points->coord[i]->im);
 }
 
-/****************************************
- * print a polynomial system to outfile *
- ****************************************/
-void print_system_rational(FILE *outfile, polynomial_system *system) {
-    int i, j, k;
-
-    for (i = 0; i < system->numPolynomials; i++) {
-        polynomial p = system->polynomials[i];
-        for (j = 0; j < p.numTerms - 1; j++) {
-            /* real part is nonzero */
-            if (mpq_cmp_ui(p.coeff[j]->re, 0, 1) != 0) {
-                /* imaginary part is zero */
-                if (mpq_cmp_ui(p.coeff[j]->im, 0, 1) == 0) {
-                    /* real coefficient is not 1 */
-                    if (mpq_cmp_ui(p.coeff[j]->re, 1, 1) != 0)
-                        gmp_fprintf(outfile, "%Qd", p.coeff[j]->re);
-                    else
-                        gmp_fprintf(outfile, "1");
-                } 
-                /* imaginary part is 1 */
-                else if (mpq_cmp_ui(p.coeff[j]->im, 1, 1) == 1) {
-                    gmp_fprintf(outfile, "(%Qd + i)", p.coeff[j]->re);
-                }
-                /* imaginary part is neither 0 nor 1 */
-                else {
-                    gmp_fprintf(outfile, "(%Qd + I * %Qd)", p.coeff[j]->re, p.coeff[j]->im);
-                }
-            }
-            /* real part is zero */
-            else {
-                /* imaginary part is zero too */
-                if (mpq_cmp_ui(p.coeff[j]->im, 0, 1) == 0)
-                    continue;
-                /* imaginary part is 1 */
-                else if (mpq_cmp_ui(p.coeff[j]->im, 1, 1) == 0)
-                    fprintf(outfile, "i");
-                /* imaginary part is neither 0 nor 1 */
-                else
-                    gmp_fprintf(outfile, "I * %Qd", p.coeff[j]->im);
-            }
-
-            for (k = 0; k < p.numVariables; k++) {
-                if (p.exponents[j][k] == 1)
-                    fprintf(outfile, "(x_%d)", k);
-                else if (p.exponents[j][k] != 0)
-                    fprintf(outfile, "(x_%d)^%d", k, p.exponents[j][k]);
-            }
-            fprintf(outfile, " + ");
-        }
-
-        /* last term */
-        if (mpq_cmp_ui(p.coeff[j]->re, 0, 1) != 0) {
-            /* imaginary part is zero */
-            if (mpq_cmp_ui(p.coeff[j]->im, 0, 1) == 0) {
-                /* real coefficient is not 1 */
-                if (mpq_cmp_ui(p.coeff[j]->re, 1, 1) != 0)
-                    gmp_fprintf(outfile, "%Qd", p.coeff[j]->re);
-                else
-                    gmp_fprintf(outfile, "1");
-            } 
-            /* imaginary part is 1 */
-            else if (mpq_cmp_ui(p.coeff[j]->im, 1, 1) == 1) {
-                gmp_fprintf(outfile, "(%Qd + i)", p.coeff[j]->re);
-            }
-            /* imaginary part is neither 0 nor 1 */
-            else {
-                gmp_fprintf(outfile, "(%Qd + I * %Qd)", p.coeff[j]->re, p.coeff[j]->im);
-            }
-        }
-        /* real part is zero */
-        else {
-            /* imaginary part is zero too */
-            if (mpq_cmp_ui(p.coeff[j]->im, 0, 1) == 0)
-                fprintf(outfile, "0");
-            /* imaginary part is 1 */
-            else if (mpq_cmp_ui(p.coeff[j]->im, 1, 1) == 0)
-                fprintf(outfile, "i");
-            /* imaginary part is neither 0 nor 1 */
-            else
-                gmp_fprintf(outfile, "I * %Qd", p.coeff[j]->im);
-        }
-
-        for (k = 0; k < p.numVariables; k++) {
-            if (p.exponents[j][k] == 1)
-                fprintf(outfile, "(x_%d)", k);
-            else if (p.exponents[j][k] != 0)
-                fprintf(outfile, "(x_%d)^%d", k, p.exponents[j][k]);
-        }
-        fputs("\n", outfile);
-    }
-}
-
 /*****************************************
  * print interval information to outfile *
  *****************************************/
@@ -481,41 +389,23 @@ void fprint_continuous_rational(mpq_t t_left, mpq_t t_right, rational_complex_ve
 
     errno = 0;
 
-    FILE *contfh = fopen(BH_FCONT, "a");
-    FILE *sumfh = fopen(BH_FSUMMARY, "a");
+    FILE *fh = fopen(BH_FCONT, "a");
 
-    if (contfh == NULL) {
+    if (fh == NULL) {
         snprintf(error_string, (size_t) termwidth, "Couldn't open output file `%s': %s", BH_FCONT, strerror(errno));
 
         print_error(error_string, stderr);
         exit(BH_EXIT_BADFILE);
     }
 
-    if (sumfh == NULL) {
-        snprintf(error_string, (size_t) termwidth, "Couldn't open output file `%s': %s", BH_FSUMMARY, strerror(errno));
-
-        print_error(error_string, stderr);
-        exit(BH_EXIT_BADFILE);
-    }
-
-    fprintf(sumfh, "Continuous interval\n");
-    fprint_interval_rational(sumfh, t_left, t_right, w_left, w_right, alpha_sqr_left, alpha_sqr_right, beta_sqr_left, beta_sqr_right, gamma_sqr_left, gamma_sqr_right);
-    fprint_interval_rational(contfh, t_left, t_right, w_left, w_right, alpha_sqr_left, alpha_sqr_right, beta_sqr_left, beta_sqr_right, gamma_sqr_left, gamma_sqr_right);
-    fputs("\n", sumfh);
+    fprint_interval_rational(fh, t_left, t_right, w_left, w_right, alpha_sqr_left, alpha_sqr_right, beta_sqr_left, beta_sqr_right, gamma_sqr_left, gamma_sqr_right);
 
     errno = 0;
 
-    res = fclose(contfh);
+    res = fclose(fh);
 
     if (res == EOF) {
         snprintf(error_string, (size_t) termwidth, "Couldn't close `%s': %s", BH_FCONT, strerror(errno));
-        exit(BH_EXIT_BADREAD);
-    }
-
-    res = fclose(sumfh);
-
-    if (res == EOF) {
-        snprintf(error_string, (size_t) termwidth, "Couldn't close `%s': %s", BH_FSUMMARY, strerror(errno));
         exit(BH_EXIT_BADREAD);
     }
 }
@@ -528,41 +418,23 @@ void fprint_discontinuous_rational(mpq_t t_left, mpq_t t_right, rational_complex
 
     errno = 0;
 
-    FILE *discfh = fopen(BH_FDISCONT, "a");
-    FILE *sumfh = fopen(BH_FSUMMARY, "a");
+    FILE *fh = fopen(BH_FDISCONT, "a");
 
-    if (discfh == NULL) {
+    if (fh == NULL) {
         snprintf(error_string, (size_t) termwidth, "Couldn't open output file `%s': %s", BH_FDISCONT, strerror(errno));
 
         print_error(error_string, stderr);
         exit(BH_EXIT_BADFILE);
     }
 
-    if (sumfh == NULL) {
-        snprintf(error_string, (size_t) termwidth, "Couldn't open output file `%s': %s", BH_FSUMMARY, strerror(errno));
-
-        print_error(error_string, stderr);
-        exit(BH_EXIT_BADFILE);
-    }
-
-    fprintf(sumfh, "Discontinuous interval\n");
-    fprint_interval_rational(sumfh, t_left, t_right, w_left, w_right, alpha_sqr_left, alpha_sqr_right, beta_sqr_left, beta_sqr_right, gamma_sqr_left, gamma_sqr_right);
-    fprint_interval_rational(discfh, t_left, t_right, w_left, w_right, alpha_sqr_left, alpha_sqr_right, beta_sqr_left, beta_sqr_right, gamma_sqr_left, gamma_sqr_right);
-    fputs("\n", sumfh);
+    fprint_interval_rational(fh, t_left, t_right, w_left, w_right, alpha_sqr_left, alpha_sqr_right, beta_sqr_left, beta_sqr_right, gamma_sqr_left, gamma_sqr_right);
 
     errno = 0;
 
-    res = fclose(discfh);
+    res = fclose(fh);
 
     if (res == EOF) {
         snprintf(error_string, (size_t) termwidth, "Couldn't close `%s': %s", BH_FDISCONT, strerror(errno));
-        exit(BH_EXIT_BADREAD);
-    }
-
-    res = fclose(sumfh);
-
-    if (res == EOF) {
-        snprintf(error_string, (size_t) termwidth, "Couldn't close `%s': %s", BH_FSUMMARY, strerror(errno));
         exit(BH_EXIT_BADREAD);
     }
 }
@@ -574,24 +446,23 @@ void fprint_uncertain_rational(mpq_t t_left, mpq_t t_right, rational_complex_vec
     int res;
 
     errno = 0;
-    FILE *sumfh = fopen(BH_FSUMMARY, "a");
+    FILE *fh = fopen(BH_FUNCERTIFIED, "a");
 
-    if (sumfh == NULL) {
-        snprintf(error_string, (size_t) termwidth, "Couldn't open output file `%s': %s", BH_FSUMMARY, strerror(errno));
+    if (fh == NULL) {
+        snprintf(error_string, (size_t) termwidth, "Couldn't open output file `%s': %s", BH_FUNCERTIFIED, strerror(errno));
 
         print_error(error_string, stderr);
         exit(BH_EXIT_BADFILE);
     }
 
-    fprintf(sumfh, "Uncertain of interval:\n");
-    fprint_interval_rational(sumfh, t_left, t_right, w_left, w_right, alpha_sqr_left, alpha_sqr_right, beta_sqr_left, beta_sqr_right, gamma_sqr_left, gamma_sqr_right);
-    fputs("\n", sumfh);
+    fprint_interval_rational(fh, t_left, t_right, w_left, w_right, alpha_sqr_left, alpha_sqr_right, beta_sqr_left, beta_sqr_right, gamma_sqr_left, gamma_sqr_right);
 
     errno = 0;
-    res = fclose(sumfh);
+
+    res = fclose(fh);
 
     if (res == EOF) {
-        snprintf(error_string, (size_t) termwidth, "Couldn't close `%s': %s", BH_FSUMMARY, strerror(errno));
+        snprintf(error_string, (size_t) termwidth, "Couldn't close `%s': %s", BH_FUNCERTIFIED, strerror(errno));
         exit(BH_EXIT_BADREAD);
     }
 }
