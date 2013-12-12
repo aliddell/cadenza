@@ -1,5 +1,5 @@
 /*
- * Blue Harvest (working title)
+ * Cadenza
  *
  * Jonathan Hauenstein <jdhauens@ncsu.edu>
  * Alan Liddell <acliddel@ncsu.edu>
@@ -7,7 +7,7 @@
  *
  * certify_rational.c: Rational-valued functions related to certification
  */
-#include "blueharvest.h"
+#include "cadenza.h"
 
 /*********************************************************************
  * takes X^2, Y^2, Z^2, returns 1 if X + Y <= Z (where X, Y, Z >= 0) *

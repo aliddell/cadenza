@@ -1,19 +1,19 @@
 /*
- * Blue Harvest (working title)
+ * Cadenza
  *
  * Jonathan Hauenstein <jdhauens@ncsu.edu>
  * Alan Liddell <acliddel@ncsu.edu>
  * Ian Haywood <ithaywoo@ncsu.edu>
  *
- * io.c: Generic input/output functions for Blue Harvest
+ * io.c: Generic input/output functions for Cadenza
  */
-#include "blueharvest.h"
+#include "cadenza.h"
 
 /********************************************************
  * print a helpful message about command-line arguments *
  ********************************************************/
 void usage() {
-    fputs("usage: blueharvest [-h|--help] [-v|--verbose] [-f|--float] [-q|--rational] [--precision INT] [--config FILENAME] --system FILENAME --points FILENAME\n", stderr);
+    fputs("usage: cadenza [-h|--help] [-v|--verbose] [-f|--float] [-q|--rational] [--precision INT] [--config FILENAME] --system FILENAME --points FILENAME\n", stderr);
 }
 
 /*****************************************

@@ -1,13 +1,13 @@
 /*
- * Blue Harvest (working title)
+ * Cadenza
  *
  * Jonathan Hauenstein <jdhauens@ncsu.edu>
  * Alan Liddell <acliddel@ncsu.edu>
  * Ian Haywood <ithaywoo@ncsu.edu>
  *
- * blueharvest.c: Main file for Blue Harvest
+ * cadenza.c: Main file for Cadenza
  */
-#include "blueharvest.h"
+#include "cadenza.h"
 
 int main(int argc, char *argv[]) {
     int num_var = 0, num_points = 0, num_sing = 0, tested = 0, succeeded = 0, failed = 0;

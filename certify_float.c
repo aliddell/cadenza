@@ -1,5 +1,5 @@
 /*
- * Blue Harvest (working title)
+ * Cadenza
  *
  * Jonathan Hauenstein <jdhauens@ncsu.edu>
  * Alan Liddell <acliddel@ncsu.edu>
@@ -7,7 +7,7 @@
  *
  * certify_float.c: Floating-point functions related to certification
  */
-#include "blueharvest.h"
+#include "cadenza.h"
 
 /****************************
  * get an mpq_t from mpfr_t *

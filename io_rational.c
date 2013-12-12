@@ -1,5 +1,5 @@
 /*
- * Blue Harvest (working title)
+ * Cadenza
  *
  * Jonathan Hauenstein <jdhauens@ncsu.edu>
  * Alan Liddell <acliddel@ncsu.edu>
@@ -7,7 +7,7 @@
  *
  * io_rational.c: Process system and points file using rational arithmetic
  */
-#include "blueharvest.h"
+#include "cadenza.h"
 
 /**********************************************
  * function to compare mpq_t needed for qsort *

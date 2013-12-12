@@ -1,5 +1,5 @@
 /*
- * Blue Harvest (working title)
+ * Cadenza
  *
  * Jonathan Hauenstein <jdhauens@ncsu.edu>
  * Alan Liddell <acliddel@ncsu.edu>
@@ -7,7 +7,7 @@
  *
  * io_float.c: Process system and points file using floating-point arithmetic
  */
-#include "blueharvest.h"
+#include "cadenza.h"
 
 /**********************************************
  * function to compare mpf_t needed for qsort *

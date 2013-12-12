@@ -5,15 +5,15 @@ OPT= -g -O3 -funroll-loops -fexpensive-optimizations -Wall
 ARGS=$(OPT) 
 OBJFILES=alphaCertified.o certify_float.o certify_rational.o classify.o classify_over.o eval.o io.o io_float.o io_rational.o loadSettings.o LUdecomp.o misc.o newton.o newtonOnly.o norm.o output.o refine.o sqrt.o
 
-all : $(OBJFILES) $(POBJFILES) blueharvest ;
+all : $(OBJFILES) $(POBJFILES) cadenza ;
 
-blueharvest : blueharvest.c $(OBJFILES) ;
-	$(CC) $(ARGS) -o blueharvest blueharvest.c $(OBJFILES) $(LIB)
+cadenza : cadenza.c $(OBJFILES) ;
+	$(CC) $(ARGS) -o cadenza cadenza.c $(OBJFILES) $(LIB)
 
 .c.o : 
 	$(CC) $(ARGS) -c $*.c 
 
 clean : 
-	rm -f blueharvest $(OBJFILES)
+	rm -f cadenza $(OBJFILES)
 reset :
 	rm -f approxSolns constantValues distinctSolns isApproxSoln isDistinctSoln isRealSoln nonrealDistinctSolns realDistinctSolns redundantSolns refinedPoints unknownPoints summary

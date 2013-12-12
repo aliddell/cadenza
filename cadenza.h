@@ -1,11 +1,11 @@
 /*
- * Blue Harvest (working title)
+ * Cadenza
  *
  * Jonathan Hauenstein <jdhauens@ncsu.edu>
  * Alan Liddell <acliddel@ncsu.edu>
  * Ian Haywood <ithaywoo@ncsu.edu>
  *
- * blueharvest.h: header file for Blue Harvest
+ * cadenza.h: header file for Cadenza
  */
 
 #ifndef _BLUE_HARVEST_H
@@ -21,7 +21,7 @@
 #include "alphaCertified.h"
 
 /******************************
- * constants for Blue Harvest *
+ * constants for Cadenza *
  *****************************/
 #define BH_UNSET -1
 #define BH_USE_RATIONAL 0
@@ -39,7 +39,7 @@
 #define BH_LOQUACIOUS 3
 
 /* meta constants */
-#define BH_PROGRAM_NAME "Blue Harvest"
+#define BH_PROGRAM_NAME "Cadenza"
 #define BH_AUTHORS "Jonathan D. Hauenstein, Alan C. Liddell, Jr., and Ian T. Haywood"
 #define BH_VERSION "0.1.0"
 #define BH_BUILD_DATE "Aug 19, 2013"
@@ -66,7 +66,7 @@
 #define BH_EXIT_OTHER 7 /* something else */
 
 /**************************************
- * global variables for blueharvest.c *
+ * global variables for cadenza.c *
  **************************************/
 int verbosity, help_flag, ver_flag, default_precision, arithmetic_type, newton_tolerance, subd_tolerance, termwidth;
 char pointsfile[BH_MAX_FILENAME], sysfile[BH_MAX_FILENAME], configfile[BH_MAX_FILENAME], *error_string;
@@ -81,7 +81,7 @@ void (*test_system)(polynomial_system *system, void *v, void *t, void *w, int nu
 void (*fprint_solutions)(void *t, void *w, int num_points); /* print solutions to H(x, t) in a program-readable format */
 
 /*******************************************
- * function declarations for blueharvest.c *
+ * function declarations for cadenza.c *
  *******************************************/
 void getargs(int argc, char *argv[]); /* get command-line arguments, set flags and filenames */
 int set_termwidth(); /* set the terminal width */
