@@ -27,17 +27,12 @@ void print_error(char *msg, FILE *outfile) {
  * print a helpful message about this program to outfile *
  *****************************************************/
 void prog_info(FILE *outfile) {
-    char compile_date[BH_MAX_DATECHAR];
     time_t rawtime;
     struct tm* timeinfo;
     time(&rawtime);
     timeinfo = localtime(&rawtime);
 
-    size_t res = strftime(compile_date, (size_t) BH_MAX_DATECHAR + 1, "%b %d, %Y", timeinfo);
-    if (res == 0)
-        strcpy(compile_date, "Jan 1, 1970");
-
-    fprintf(outfile, "%s v%s (built %s) (compiled %s)\n", BH_PROGRAM_NAME, BH_VERSION, BH_BUILD_DATE, compile_date);
+    fprintf(outfile, "%s v%s (built %s) (compiled %s)\n", BH_PROGRAM_NAME, BH_VERSION, BH_BUILD_DATE, __DATE__);
     fprintf(outfile, "%s\n", BH_AUTHORS);
     fprintf(outfile, "GMP v%d.%d.%d & MPFR v%s\n\n", __GNU_MP_VERSION, __GNU_MP_VERSION_MINOR, __GNU_MP_VERSION_PATCHLEVEL, mpfr_get_version());
 }
@@ -433,8 +428,8 @@ void summarize(int tested, int continuous, int discontinuous, int singularities)
     if (tested == continuous)
         printf("%s:\t\tAn updated points file\n", BH_FPTSOUT);
 
-    /* no intervals were continous; this should never happen */
-    if (discontinuous == 0) {
+    /* no intervals were continuous; this should never happen */
+    if (continuous == 0) {
         FILE *fh = fopen(BH_FCONT, "a");
         fputs("\nNo intervals were certified continuous\n", fh);
         fclose(fh);

@@ -1,5 +1,7 @@
 = TO-DO =
 
+* find segfault on system file read for more vars than expecting
+
 * clean up stuff on premature exit
 
 * parallelize!
