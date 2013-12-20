@@ -2,6 +2,8 @@
 
 * find segfault on system file read for more vars than expecting
 
+* specify output filenames in config
+
 * clean up stuff on premature exit
 
 * parallelize!

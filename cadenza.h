@@ -41,8 +41,8 @@
 /* meta constants */
 #define BH_PROGRAM_NAME "Cadenza"
 #define BH_AUTHORS "Jonathan D. Hauenstein, Ian T. Haywood, and Alan C. Liddell, Jr."
-#define BH_VERSION "0.1.0"
-#define BH_BUILD_DATE "Aug 19 2013"
+#define BH_VERSION "0.1.1"
+#define BH_BUILD_DATE "Dec 19 2013"
 
 /* filenames */
 #define BH_FSUMMARY  "summary.out"
