@@ -2,7 +2,11 @@
 
 * find segfault on system file read for more vars than expecting
 
+* allow rational input with float computation
+
 * specify output filenames in config
+
+* support floating point computation with rational input
 
 * clean up stuff on premature exit
 

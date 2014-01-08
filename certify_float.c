@@ -133,8 +133,12 @@ int is_continuous_float(complex_vector v, mpf_t t_left, mpf_t t_right, complex_v
     mpf_init(alpha_star);
     mpf_init(t_dist);
 
+    /*
     mpf_set_ui(alpha_star, 163473);
     mpf_div_ui(alpha_star, alpha_star, 4000000);
+    */
+
+    mpf_set_str(alpha_star, "0.04", 10);
 
     mpf_sub(t_dist, t_right, t_left); /* t_2 -t_1 */
 
@@ -178,11 +182,11 @@ int is_continuous_float(complex_vector v, mpf_t t_left, mpf_t t_right, complex_v
     else {
         mpf_t gamma_inv;
         mpf_t points_dist;
-        mpf_t magic_number;
+        mpf_t u0;
 
         mpf_init(gamma_inv);
         mpf_init(points_dist);
-        mpf_init(magic_number);
+        mpf_init(u0);
 
         complex_vector points_dist_vector;
         initialize_vector(points_dist_vector, w_left->size);
@@ -197,22 +201,20 @@ int is_continuous_float(complex_vector v, mpf_t t_left, mpf_t t_right, complex_v
             mpf_ui_div(gamma_inv, 1, gamma_right); /* set gamma to 1/gamma */
         }
 
-        /* magic number is now to be 71/(1000*gamma) */
-        mpf_set_ui(magic_number, 71);
-        mpf_div_ui(magic_number, magic_number, 1000);
-        mpf_mul(magic_number, magic_number, gamma_inv);
+        /* magic number is now to be 0.079 */
+        mpf_set_str(u0, "0.079", 10);
 
         subtract_vector(points_dist_vector, w_left, w_right);
         norm_vector(points_dist, points_dist_vector); /* ||x_1 - x_2|| */
 
-        if (mpf_cmp(points_dist, magic_number) <= 0) {
+        if (mpf_cmp(points_dist, u0) <= 0) {
             retval = 1;
         } else {
             retval = 0;
         }
 
         mpf_clear(points_dist);
-        mpf_clear(magic_number);
+        mpf_clear(u0);
         mpf_clear(gamma_inv);
 
         clear_vector(points_dist_vector);
@@ -240,8 +242,12 @@ int is_not_continuous_float(complex_vector v, mpf_t t_left, mpf_t t_right, compl
     mpf_init(alpha_star);
     mpf_init(t_dist);
 
+    /*
     mpf_set_ui(alpha_star, 163473);
     mpf_div_ui(alpha_star, alpha_star, 4000000);
+    */
+
+    mpf_set_str(alpha_star, "0.04", 10);
 
     mpf_sub(t_dist, t_right, t_left); /* t_2 -t_1 */
 
@@ -388,7 +394,7 @@ void subdivide_segment_float(polynomial_system *base, complex_vector v, mpf_t t_
     complex_number beta_complex;
     initialize_number(beta_complex);
 
-    mpf_set_d(one_half_complex->re, 0.5);
+    mpf_set_str(one_half_complex->re, "0.5", 10);
     mpf_set_ui(one_half_complex->im, 0);
 
     mpf_set(beta_complex->re, beta);
