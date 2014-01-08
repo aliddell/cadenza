@@ -133,8 +133,8 @@ int is_continuous_float(complex_vector v, mpf_t t_left, mpf_t t_right, complex_v
     mpf_init(alpha_star);
     mpf_init(t_dist);
 
-    mpf_set_ui(alpha_star, 163473);
-    mpf_div_ui(alpha_star, alpha_star, 4000000);
+    mpf_set_ui(alpha_star, 4);
+    mpf_div_ui(alpha_star, alpha_star, 100);
 
     mpf_sub(t_dist, t_right, t_left); /* t_2 -t_1 */
 
@@ -197,8 +197,8 @@ int is_continuous_float(complex_vector v, mpf_t t_left, mpf_t t_right, complex_v
             mpf_ui_div(gamma_inv, 1, gamma_right); /* set gamma to 1/gamma */
         }
 
-        /* magic number is now to be 71/(1000*gamma) */
-        mpf_set_ui(magic_number, 71);
+        /* magic number is now to be 79/(1000*gamma) */
+        mpf_set_ui(magic_number, 79);
         mpf_div_ui(magic_number, magic_number, 1000);
         mpf_mul(magic_number, magic_number, gamma_inv);
 
@@ -240,8 +240,8 @@ int is_not_continuous_float(complex_vector v, mpf_t t_left, mpf_t t_right, compl
     mpf_init(alpha_star);
     mpf_init(t_dist);
 
-    mpf_set_ui(alpha_star, 163473);
-    mpf_div_ui(alpha_star, alpha_star, 4000000);
+    mpf_set_ui(alpha_star, 4);
+    mpf_div_ui(alpha_star, alpha_star, 100);
 
     mpf_sub(t_dist, t_right, t_left); /* t_2 -t_1 */
 

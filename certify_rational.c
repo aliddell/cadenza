@@ -112,7 +112,7 @@ int is_continuous_rational(rational_complex_vector v, mpq_t t_left, mpq_t t_righ
     mpq_init(alpha_star_sqr);
     mpq_init(t_dist_sqr);
 
-    mpq_set_ui(alpha_star_sqr, 163473, 4000000);
+    mpq_set_ui(alpha_star_sqr, 4, 100);
     mpq_mul(alpha_star_sqr, alpha_star_sqr, alpha_star_sqr);
 
     mpq_sub(t_dist_sqr, t_right, t_left); /* t_2 -t_1 */
@@ -190,10 +190,10 @@ int is_continuous_rational(rational_complex_vector v, mpq_t t_left, mpq_t t_righ
             mpq_inv(gamma_sqr_inv, gamma_sqr_right); 
         }
 
-        /* magic number is now to be 71/(1000*gamma) */
-        mpq_set_ui(magic_number_sqr, 71, 1000);
-        mpq_mul(magic_number_sqr, magic_number_sqr, magic_number_sqr); /* (71 / 1000)^2 */
-        mpq_mul(magic_number_sqr, magic_number_sqr, gamma_sqr_inv); /* (71 / (1000 * gamma))^2 */
+        /* magic number is now to be 79/(1000*gamma) */
+        mpq_set_ui(magic_number_sqr, 79, 1000);
+        mpq_mul(magic_number_sqr, magic_number_sqr, magic_number_sqr); /* (79 / 1000)^2 */
+        mpq_mul(magic_number_sqr, magic_number_sqr, gamma_sqr_inv); /* (79 / (1000 * gamma))^2 */
 
         subtract_rational_vector(points_dist, w_left, w_right);
         norm_sqr_rational_vector(points_dist_sqr, points_dist); /* ||x_1 - x_2||^2 */
@@ -233,7 +233,7 @@ int is_not_continuous_rational(rational_complex_vector v, mpq_t t_left, mpq_t t_
     mpq_init(alpha_star_sqr);
     mpq_init(t_dist_sqr);
 
-    mpq_set_ui(alpha_star_sqr, 163473, 4000000);
+    mpq_set_ui(alpha_star_sqr, 4, 100);
     mpq_mul(alpha_star_sqr, alpha_star_sqr, alpha_star_sqr);
 
     mpq_sub(t_dist_sqr, t_right, t_left); /* t_2 -t_1 */
