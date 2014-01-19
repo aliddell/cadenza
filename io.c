@@ -13,7 +13,18 @@
  * print a helpful message about command-line arguments *
  ********************************************************/
 void usage() {
-    fputs("usage: cadenza [-h|--help] [-v|--verbose] [-f|--float] [-q|--rational] [--precision INT] [--config FILENAME] --system FILENAME --points FILENAME\n", stderr);
+    fputs("usage: cadenza ARGS\n", stderr);
+    fputs("\nif you do not specify a config file with `-c FILENAME', the mandatory arguments are:\n", stderr);
+    fputs("\t-s || --system FILENAME (designates FILENAME as system file)\n", stderr);
+    fputs("\t-p || --points FILENAME (designates FILENAME as points file)\n", stderr);
+    fputs("\noptional arguments are:\n", stderr);
+    fputs("\t-h || --help (displays this help dialog)\n", stderr);
+    fputs("\t-f || --float (use floating point arithmetic (default is rational))\n", stderr);
+    fputs("\t-a || --ascending (certify intervals from t=0 to t=1 (default is descending))\n", stderr);
+    fputs("\t-c || --config FILENAME (use options in FILENAME (command-line arguments override))\n", stderr);
+    fputs("\t-m || --precision INT (sets floating-point precision to INT (default is 32))\n", stderr);
+    fputs("\t-n || --newtons INT (sets maximum number of Newton iterations to INT (default is 20))\n", stderr);
+    fputs("\t-d || --subdivisions INT (sets maximum number of segment subdivisions to INT (default is 100))\n", stderr);
 }
 
 /*****************************************
@@ -63,10 +74,10 @@ void display_config(FILE *outfile) {
  * read the configuration file, if given, and apply settings *
  *************************************************************/
 void read_config_file() {
-    int verb = BH_LACONIC, arith_type = BH_USE_RATIONAL, def_prec = MPFR_PREC_MIN,  newtol = BH_NEWT_TOLERANCE, subtol = BH_SUB_TOLERANCE;
+    int verb = BH_LACONIC, arith_type = BH_USE_RATIONAL, def_prec = BH_PREC_MIN,  newtol = BH_NEWT_TOLERANCE, subtol = BH_SUB_TOLERANCE;
     char sysf[BH_MAX_FILENAME] = "";
     char pointsf[BH_MAX_FILENAME] = "";
-    char line[BH_TERMWIDTH];
+    char line[BH_MAX_FILENAME];
 
     FILE *config = fopen(configfile, "r");
     if (config == NULL) {
@@ -107,8 +118,11 @@ void read_config_file() {
             
             def_prec = (int) strtol(val, NULL, 10);
 
-            if (errno == ERANGE || def_prec < MPFR_PREC_MIN)
+            if (errno == ERANGE) {
+                def_prec = BH_PREC_MIN;
+            } else if (def_prec < MPFR_PREC_MIN) {
                 def_prec = MPFR_PREC_MIN;
+            }
         } else if (strcmp(key, "newtons") == 0) {
             errno = 0;
             
@@ -127,6 +141,10 @@ void read_config_file() {
             strcpy(sysf, val);
         } else if (strcmp(key, "pointsfile") == 0) {
             strcpy(pointsf, val);
+        } else if (strcmp(key, "sort") == 0) {
+            if (strcmp(val, "ascending") == 0) {
+                sort_order = BH_ASCENDING;
+            }
         }
     }
 

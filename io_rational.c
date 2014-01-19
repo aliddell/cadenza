@@ -16,11 +16,14 @@ int compare_mpq(const void *a, const void *b) {
     const mpq_t *qa = (const mpq_t *) a;
     const mpq_t *qb = (const mpq_t *) b;
 
-    return (int) mpq_cmp(*qa, *qb);
+    if (sort_order == BH_ASCENDING)
+        return (int) mpq_cmp(*qa, *qb);
+    else
+        return (int) mpq_cmp(*qb, *qa);
 }
 
 /********************************************************************
- * sort the t array from lowest to highest and adjust w accordingly *
+ * sort the t array from highest to lowest and adjust w accordingly *
  ********************************************************************/
 void sort_points_rational(mpq_t *t, rational_complex_vector *w, int num_points) {
     int i, j, k, *indices = malloc(num_points * sizeof(int));
@@ -241,7 +244,7 @@ int read_points_file_rational(void **t, void **w, int num_var) {
             print_error(error_string, stderr);
             exit(BH_EXIT_BADREAD);
         } else if (res == 0) {
-            snprintf(error_string, (size_t) termwidth, "Error reading `%s': %s", pointsfile, strerror(errno));
+            snprintf(error_string, (size_t) termwidth, "Error reading `%s': are you using floating point input?", pointsfile);
 
             print_error(error_string, stderr);
             exit(BH_EXIT_BADREAD);
@@ -254,7 +257,7 @@ int read_points_file_rational(void **t, void **w, int num_var) {
 
         mpq_canonicalize(t_rational[i]);
 
-        /* check if 0 < t < 1 */
+        /* check if 0 <= t <= 1 */
         if (mpq_cmp_ui(t_rational[i], 0, 1) < 0 || mpq_cmp_ui(t_rational[i], 1, 1) > 0) {
             gmp_snprintf(error_string, (size_t) termwidth, "Value for t not between 0 and 1: %Qd", t_rational[i]);
 
@@ -263,6 +266,7 @@ int read_points_file_rational(void **t, void **w, int num_var) {
         }
 
         for (j = 0; j < num_var; j++) {
+            errno = 0;
             /* get real and imag points */
             res = gmp_fscanf(pointsfh, "%Qd %Qd", w_rational[i]->coord[j]->re, w_rational[i]->coord[j]->im);
 
@@ -272,7 +276,7 @@ int read_points_file_rational(void **t, void **w, int num_var) {
                 print_error(error_string, stderr);
                 exit(BH_EXIT_BADREAD);
             } else if (res == 0) {
-                snprintf(error_string, (size_t) termwidth, "Error reading `%s': %s", pointsfile, strerror(errno));
+                snprintf(error_string, (size_t) termwidth, "Error reading `%s': are you using floating point input?", pointsfile);
 
                 print_error(error_string, stderr);
                 exit(BH_EXIT_BADREAD);

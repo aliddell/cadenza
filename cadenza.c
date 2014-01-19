@@ -129,6 +129,7 @@ void getargs(int argc, char *argv[]) {
     default_precision = BH_UNSET;
     newton_tolerance = BH_UNSET;
     subd_tolerance = BH_UNSET;
+    sort_order = BH_DESCENDING;
     strcpy(sysfile, "");
     strcpy(pointsfile, "");
     strcpy(configfile, "");
@@ -145,6 +146,7 @@ void getargs(int argc, char *argv[]) {
             {"help",       no_argument, &help_flag, 1},
             {"float",      no_argument, &arithmetic_type, BH_USE_FLOAT},
             {"rational",   no_argument, &arithmetic_type, BH_USE_RATIONAL},
+            {"ascending",  no_argument, &sort_order, BH_ASCENDING},
             /* These options set a global */
             {"points",       required_argument, 0, 'p'},
             {"system",       required_argument, 0, 's'},
@@ -158,7 +160,7 @@ void getargs(int argc, char *argv[]) {
         /* getopt_long stores the option index here. */
         int option_index = 0;
 
-        c = getopt_long (argc, argv, "hvfqp:s:m:n:d:c:", long_options, &option_index);
+        c = getopt_long (argc, argv, "ahvfqp:s:m:n:d:c:", long_options, &option_index);
         if (c == -1) break;
 
         switch (c) {
@@ -171,6 +173,10 @@ void getargs(int argc, char *argv[]) {
                 if (optarg) printf (" with arg %s", optarg);
 
                 puts("\n");
+                break;
+
+            case 'a':
+                sort_order = BH_ASCENDING;
                 break;
 
             case 'c':
@@ -229,7 +235,7 @@ void getargs(int argc, char *argv[]) {
     if (arithmetic_type == BH_UNSET)
         arithmetic_type = BH_USE_RATIONAL;
     if (default_precision == BH_UNSET)
-        default_precision = MPFR_PREC_MIN;
+        default_precision = BH_PREC_MIN;
     if (newton_tolerance == BH_UNSET)
         newton_tolerance = BH_NEWT_TOLERANCE;
     if (subd_tolerance == BH_UNSET)

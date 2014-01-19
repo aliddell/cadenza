@@ -16,11 +16,14 @@ int compare_mpf(const void *a, const void *b) {
     const mpf_t *fa = (const mpf_t *) a;
     const mpf_t *fb = (const mpf_t *) b;
 
-    return (int) mpf_cmp(*fa, *fb);
+    if (sort_order == BH_ASCENDING)
+        return (int) mpf_cmp(*fa, *fb);
+    else
+        return (int) mpf_cmp(*fb, *fa);
 }
 
 /********************************************************************
- * sort the t array from lowest to highest and adjust w accordingly *
+ * sort the t array from highest to lowest and adjust w accordingly *
  ********************************************************************/
 void sort_points_float(mpf_t *t, complex_vector *w, int num_points) {
     int i, j, k, *indices = malloc(num_points * sizeof(int));
@@ -261,7 +264,7 @@ int read_points_file_float(void **t, void **w, int num_var) {
             print_error(error_string, stderr);
             exit(BH_EXIT_BADREAD);
         } else if (res == 0) {
-            snprintf(error_string, (size_t) termwidth, "Error reading `%s': %s", pointsfile, strerror(errno));
+            snprintf(error_string, (size_t) termwidth, "Error reading `%s': are you using rational input?", pointsfile);
 
             print_error(error_string, stderr);
             exit(BH_EXIT_BADREAD);
@@ -291,7 +294,7 @@ int read_points_file_float(void **t, void **w, int num_var) {
                 print_error(error_string, stderr);
                 exit(BH_EXIT_BADREAD);
             } else if (res == 0) {
-                snprintf(error_string, (size_t) termwidth, "Error reading `%s': %s", pointsfile, strerror(errno));
+                snprintf(error_string, (size_t) termwidth, "Error reading `%s': are you using rational input?", pointsfile);
 
                 print_error(error_string, stderr);
                 exit(BH_EXIT_BADREAD);
@@ -311,7 +314,7 @@ int read_points_file_float(void **t, void **w, int num_var) {
                 print_error(error_string, stderr);
                 exit(BH_EXIT_BADREAD);
             } else if (res == 0) {
-                snprintf(error_string, (size_t) termwidth, "Error reading `%s': %s", pointsfile, strerror(errno));
+                snprintf(error_string, (size_t) termwidth, "Error reading `%s': are you using rational input?", pointsfile);
 
                 print_error(error_string, stderr);
                 exit(BH_EXIT_BADREAD);

@@ -31,6 +31,9 @@
 #define BH_DISCONTINUOUS -1
 #define BH_CONTUNKNOWN 0
 #define BH_CONTINUOUS 1
+#define BH_PREC_MIN 32
+#define BH_DESCENDING 1
+#define BH_ASCENDING -1
 
 /* verbosity flags */
 #define BH_LACONIC 0
@@ -68,7 +71,7 @@
 /**************************************
  * global variables for cadenza.c *
  **************************************/
-int verbosity, help_flag, ver_flag, default_precision, arithmetic_type, newton_tolerance, subd_tolerance, termwidth;
+int verbosity, help_flag, ver_flag, default_precision, arithmetic_type, newton_tolerance, subd_tolerance, termwidth, sort_order;
 char pointsfile[BH_MAX_FILENAME], sysfile[BH_MAX_FILENAME], configfile[BH_MAX_FILENAME], *error_string;
 
 /*********************
