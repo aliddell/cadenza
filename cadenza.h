@@ -57,6 +57,7 @@
 /* string width and other memory-related constants */
 #define BH_MAX_DATECHAR 25
 #define BH_MAX_FILENAME 1000
+#define BH_MAX_STRING   1000
 #define BH_TERMWIDTH    80
 
 /* exit codes */
@@ -71,7 +72,7 @@
 /**************************************
  * global variables for cadenza.c *
  **************************************/
-int verbosity, help_flag, ver_flag, default_precision, arithmetic_type, newton_tolerance, subd_tolerance, termwidth, sort_order;
+int verbosity, help_flag, ver_flag, default_precision, arithmetic_type, newton_tolerance, subd_tolerance, termwidth, sort_order, sigdig;
 char pointsfile[BH_MAX_FILENAME], sysfile[BH_MAX_FILENAME], configfile[BH_MAX_FILENAME], *error_string;
 
 /*********************

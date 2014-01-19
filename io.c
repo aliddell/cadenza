@@ -267,96 +267,116 @@ polynomial parse_polynomial(FILE *sysfh, int num_var) {
     return p;
 }
 
+/**********************************************************
+ * sum the exponents, return 1 if sum is 0 or 0 otherwise *
+ **********************************************************/
+int is_constant(int *exponents, int num_var) {
+    int i, sum = 0;
+    for (i = 0; i < num_var; i++) {
+        sum += exponents[i];
+    }
+
+    return (sum == 0);
+}
+
+void fprint_monomial(FILE *outfile, int *exponents, int num_var) {
+    int i, first_term = 1;
+
+    for (i = 0; i < num_var; i++) {
+        if (exponents[i] > 1) {
+            if (first_term) {
+                fprintf(outfile, "x%d^%d", i, exponents[i]);
+                first_term = 0;
+            } else
+                fprintf(outfile, " * x%d^%d", i, exponents[i]);
+        } else if (exponents[i] > 0) {
+            if (first_term) {
+                fprintf(outfile, "x%d", i);
+                first_term = 0;
+            } else
+                fprintf(outfile, " * x%d", i);
+        }
+    }
+}
+
 /****************************************
  * print a polynomial system to outfile *
  ****************************************/
 void print_system(FILE *outfile, polynomial_system *system) {
-    int i, j, k;
+    int i, j, ccount = 0;
+    mpz_t r_num, r_denom, i_num, i_denom;
+    mpz_init(r_num);
+    mpz_init(r_denom);
+    mpz_init(i_num);
+    mpz_init(i_denom);
 
     for (i = 0; i < system->numPolynomials; i++) {
         polynomial p = system->polynomials[i];
-        for (j = 0; j < p.numTerms - 1; j++) {
-            /* real part is nonzero */
-            if (mpq_cmp_ui(p.coeff[j]->re, 0, 1) != 0) {
-                /* imaginary part is zero */
-                if (mpq_cmp_ui(p.coeff[j]->im, 0, 1) == 0) {
-                    /* real coefficient is not 1 */
-                    if (mpq_cmp_ui(p.coeff[j]->re, 1, 1) != 0)
-                        gmp_fprintf(outfile, "%Qd", p.coeff[j]->re);
-                    else
-                        gmp_fprintf(outfile, "1");
-                } 
-                /* imaginary part is 1 */
-                else if (mpq_cmp_ui(p.coeff[j]->im, 1, 1) == 1) {
-                    gmp_fprintf(outfile, "(%Qd + i)", p.coeff[j]->re);
-                }
-                /* imaginary part is neither 0 nor 1 */
-                else {
-                    gmp_fprintf(outfile, "(%Qd + I * %Qd)", p.coeff[j]->re, p.coeff[j]->im);
-                }
-            }
-            /* real part is zero */
-            else {
-                /* imaginary part is zero too */
-                if (mpq_cmp_ui(p.coeff[j]->im, 0, 1) == 0)
+        for (j = 0; j < p.numTerms; j++) {
+            mpq_get_num(r_num, p.coeff[j]->re);
+            mpq_get_den(r_denom, p.coeff[j]->re);
+            mpq_get_num(i_num, p.coeff[j]->im);
+            mpq_get_den(i_denom, p.coeff[j]->im);
+
+            /* term is zero; this shouldn't normally happen */
+            if (mpq_cmp_ui(p.coeff[j]->re, 0, 1) == 0 && mpq_cmp_ui(p.coeff[j]->im, 0, 1) == 0) {
+                if (j == p.numTerms - 1)
+                    gmp_fprintf(outfile, "0");
+                else
                     continue;
-                /* imaginary part is 1 */
-                else if (mpq_cmp_ui(p.coeff[j]->im, 1, 1) == 0)
-                    fprintf(outfile, "i");
-                /* imaginary part is neither 0 nor 1 */
-                else
-                    gmp_fprintf(outfile, "I * %Qd", p.coeff[j]->im);
             }
-
-            for (k = 0; k < p.numVariables; k++) {
-                if (p.exponents[j][k] == 1)
-                    fprintf(outfile, "(x_%d)", k);
-                else if (p.exponents[j][k] != 0)
-                    fprintf(outfile, "(x_%d)^%d", k, p.exponents[j][k]);
-            }
-            fprintf(outfile, " + ");
-        }
-
-        /* last term */
-        if (mpq_cmp_ui(p.coeff[j]->re, 0, 1) != 0) {
-            /* imaginary part is zero */
-            if (mpq_cmp_ui(p.coeff[j]->im, 0, 1) == 0) {
-                /* real coefficient is not 1 */
-                if (mpq_cmp_ui(p.coeff[j]->re, 1, 1) != 0)
+            /* constant term */
+            else if (is_constant(p.exponents[j], p.numVariables)) {
+                if (mpq_cmp_ui(p.coeff[j]->im, 0, 1) == 0)
                     gmp_fprintf(outfile, "%Qd", p.coeff[j]->re);
-                else
-                    gmp_fprintf(outfile, "1");
-            } 
-            /* imaginary part is 1 */
-            else if (mpq_cmp_ui(p.coeff[j]->im, 1, 1) == 1) {
-                gmp_fprintf(outfile, "(%Qd + i)", p.coeff[j]->re);
+                else if (mpq_cmp_ui(p.coeff[j]->re, 0, 1) == 0)
+                    gmp_fprintf(outfile, "I * %Qd", p.coeff[j]->im);
+                else 
+                    gmp_fprintf(outfile, "%Qd + I * %Qd", p.coeff[j]->re, p.coeff[j]->im);
             }
-            /* imaginary part is neither 0 nor 1 */
+            /* coefficient is one */
+            else if (mpq_cmp_ui(p.coeff[j]->re, 1, 1) == 0 && mpq_cmp_ui(p.coeff[j]->im, 0, 1) == 0) {
+                fprint_monomial(outfile, p.exponents[j], p.numVariables);
+            }
+            /* coefficient is an integer */
+            else if (mpq_cmp_ui(p.coeff[j]->im, 0, 1) == 0 && mpz_cmp_ui(r_denom, 1) == 0) {
+                gmp_fprintf(outfile, "%Zd * ", r_num);
+                fprint_monomial(outfile, p.exponents[j], p.numVariables);
+            }
+            /* coefficient is rational */
+            else if (mpq_cmp_ui(p.coeff[j]->im, 0, 1) == 0 && mpz_cmp_ui(r_denom, 1) != 0) {
+                gmp_fprintf(outfile, "(%Zd * ", r_num);
+                fprint_monomial(outfile, p.exponents[j], p.numVariables);
+                gmp_fprintf(outfile, ")/%Zd", r_denom);
+            }
+            /* coefficient is a Gaussian integer with no real part */
+            else if (mpq_cmp_ui(p.coeff[j]->re, 0, 1) == 0 && mpz_cmp_ui(i_denom, 1) == 0) {
+                gmp_fprintf(outfile, "I * %Zd * ", r_num);
+                fprint_monomial(outfile, p.exponents[j], p.numVariables);
+            }
+            /* coefficient is a complex rational with no real part */
+            else if (mpq_cmp_ui(p.coeff[j]->im, 0, 1) == 0 && mpz_cmp_ui(r_denom, 1) != 0) {
+                gmp_fprintf(outfile, "I * (%Zd * ", r_num);
+                fprint_monomial(outfile, p.exponents[j], p.numVariables);
+                gmp_fprintf(outfile, ")/%Zd", r_denom);
+            }
+            /* anything else */
             else {
-                gmp_fprintf(outfile, "(%Qd + I * %Qd)", p.coeff[j]->re, p.coeff[j]->im);
+                gmp_fprintf(outfile, "(%Qd + I * %Qd) * ", p.coeff[j]->re, p.coeff[j]->im);
+                fprint_monomial(outfile, p.exponents[j], p.numVariables);
             }
-        }
-        /* real part is zero */
-        else {
-            /* imaginary part is zero too */
-            if (mpq_cmp_ui(p.coeff[j]->im, 0, 1) == 0)
-                fprintf(outfile, "0");
-            /* imaginary part is 1 */
-            else if (mpq_cmp_ui(p.coeff[j]->im, 1, 1) == 0)
-                fprintf(outfile, "i");
-            /* imaginary part is neither 0 nor 1 */
-            else
-                gmp_fprintf(outfile, "I * %Qd", p.coeff[j]->im);
-        }
 
-        for (k = 0; k < p.numVariables; k++) {
-            if (p.exponents[j][k] == 1)
-                fprintf(outfile, "(x_%d)", k);
-            else if (p.exponents[j][k] != 0)
-                fprintf(outfile, "(x_%d)^%d", k, p.exponents[j][k]);
+            if (j < p.numTerms - 1)
+                fprintf(outfile, " + ");
+            else
+                fprintf(outfile, "\n");
         }
-        fputs("\n", outfile);
     }
+
+    mpz_clear(r_num);
+    mpz_clear(r_denom);
+    mpz_clear(i_num);
+    mpz_clear(i_denom);
 }
 
 /*********************************

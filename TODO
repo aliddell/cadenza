@@ -4,8 +4,6 @@
 
 * allow floating-point computation with rational point input
 
-* allow user to specify significant digits
-
 * specify output filenames in config
 
 * clean up stuff on premature exit

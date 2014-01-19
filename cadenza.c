@@ -240,6 +240,12 @@ void getargs(int argc, char *argv[]) {
         newton_tolerance = BH_NEWT_TOLERANCE;
     if (subd_tolerance == BH_UNSET)
         subd_tolerance = BH_SUB_TOLERANCE;
+
+    /* set significant digits */
+    if (default_precision < 32)
+        sigdig = 15;
+    else
+        sigdig = default_precision / 3;
 }
 
 /**************************

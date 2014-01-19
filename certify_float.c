@@ -424,7 +424,9 @@ void subdivide_segment_float(polynomial_system *base, complex_vector v, mpf_t t_
     apply_tv_float(base, &F_mid, *t_mid, v);
     retval = newton_iteration(new_point, beta_complex, LU, &rowswaps, &F_mid, *w_mid, pivot_tol, pivot_drop_tol, default_precision);
     if (retval == ERROR_LU_DECOMP) {
-        mpfr_fprintf(stderr, "singularity suspected at t = %.15Re near point ", *t_mid);
+        char msg[BH_MAX_STRING];
+        snprintf(msg, (size_t) BH_MAX_STRING, "singularity suspected at t = %%.%dRe near point ", sigdig);
+        mpfr_fprintf(stderr, msg, *t_mid);
         print_points_float(stderr, new_point);
         fprintf(stderr, ERROR_MESSAGE);
         exit(BH_EXIT_OTHER);
@@ -432,8 +434,11 @@ void subdivide_segment_float(polynomial_system *base, complex_vector v, mpf_t t_
 
     copy_vector(*w_mid, new_point);
 
-    if (verbosity > BH_VERBOSE)
-        mpfr_printf("new intervals are [%.15Re, %.15Re] and [%.15Re, %.15Re]\n", t_left, *t_mid, *t_mid, t_right);
+    if (verbosity > BH_VERBOSE) {
+        char msg[BH_MAX_STRING];
+        snprintf(msg, (size_t) BH_MAX_STRING, "new intervals are [%%.%dRe, %%.%dRe] and [%%.%dRe, %%.%dRe]\n", sigdig, sigdig, sigdig, sigdig);
+        mpfr_printf(msg, t_left, *t_mid, *t_mid, t_right);
+    }
 
     mpf_clear(beta);
     mpf_clear(pivot_tol);
@@ -635,20 +640,27 @@ void test_pairwise_float(polynomial_system *system, complex_vector *v, mpf_t t_l
     if (iter > subd_tolerance) {
         *tested += 1;
 
-        if (verbosity > BH_LACONIC)
-            mpfr_printf("unsure whether segment [%.15Re, %.15Re] is continuous\n", t_left, t_right);
+        if (verbosity > BH_LACONIC) {
+            char msg[BH_MAX_STRING];
+            snprintf(msg, (size_t) BH_MAX_STRING, "unsure whether segment [%%.%dRe, %%.%dRe] is continuous\n", sigdig, sigdig);
+            mpfr_printf(msg, t_left, t_right);
+        }
         fprint_uncertain_float(t_left, t_right, w_left, w_right, alpha_left, alpha_right, beta_left, beta_right, gamma_left, gamma_right);
 
         /* alert user to singularities */
         if (check_left) {
             if (mpfr_inf_p(gamma_left)) {
-                mpfr_fprintf(stderr, "singularity found for t = %.15Re at point ", t_left);
+                char msg[BH_MAX_STRING];
+                snprintf(msg, (size_t) BH_MAX_STRING, "singularity found for t = %%.%dRe at point ", sigdig);
+                mpfr_fprintf(stderr, msg, t_left);
                 print_points_float(stderr, w_left);
                 *num_sing += 1;
             }
         }
         if (mpfr_inf_p(gamma_right)) {
-            mpfr_fprintf(stderr, "singularity found for t = %.15Re at point ", t_right);
+            char msg[BH_MAX_STRING];
+            snprintf(msg, (size_t) BH_MAX_STRING, "singularity found for t = %%.%dRe at point ", sigdig);
+            mpfr_fprintf(stderr, msg, t_right);
             print_points_float(stderr, w_right);
             *num_sing += 1;
         }
@@ -685,7 +697,9 @@ void test_pairwise_float(polynomial_system *system, complex_vector *v, mpf_t t_l
                 else
                     fprintf(stderr, "performing %dth Newton iteration on w_left", newton_counter);
                 
-                mpfr_fprintf(stderr, " (interval: [%.15Re, %.15Re])\n", t_left, t_right);
+                char msg[BH_MAX_STRING];
+                snprintf(msg, (size_t) BH_MAX_STRING, " (interval: [%%.%dRe, %%.%dRe])\n", sigdig, sigdig);
+                mpfr_fprintf(stderr, msg, t_left, t_right);
             }
 
             mpf_t pivot_tol, pivot_drop_tol;
@@ -701,7 +715,9 @@ void test_pairwise_float(polynomial_system *system, complex_vector *v, mpf_t t_l
 
             retval = newton_iteration(new_point, beta_complex, LU, &rowswaps, &F_left, w_left, pivot_tol, pivot_drop_tol, default_precision);
             if (retval == ERROR_LU_DECOMP) {
-                mpfr_fprintf(stderr, "singularity suspected at t = %.15Re near point ", t_left);
+                char msg[BH_MAX_STRING];
+                snprintf(msg, (size_t) BH_MAX_STRING, "singularity suspected at t = %%.%dRe near point ", sigdig);
+                mpfr_fprintf(stderr, msg, t_left);
                 print_points_float(stderr, w_left);
                 fprintf(stderr, ERROR_MESSAGE);
                 exit(BH_EXIT_OTHER);
@@ -734,7 +750,9 @@ void test_pairwise_float(polynomial_system *system, complex_vector *v, mpf_t t_l
                 else
                     fprintf(stderr, "performing %dth Newton iteration on w_right", newton_counter);
 
-                mpfr_fprintf(stderr, " (interval: [%.15Re, %.15Re])\n", t_left, t_right);
+                char msg[BH_MAX_STRING];
+                snprintf(msg, (size_t) BH_MAX_STRING, " (interval: [%%.%dRe, %%.%dRe])\n", sigdig, sigdig);
+                mpfr_fprintf(stderr, msg, t_left, t_right);
             }
 
             mpf_t pivot_tol, pivot_drop_tol;
@@ -750,7 +768,9 @@ void test_pairwise_float(polynomial_system *system, complex_vector *v, mpf_t t_l
 
             retval = newton_iteration(new_point, beta_complex, LU, &rowswaps, &F_right, w_right, pivot_tol, pivot_drop_tol, default_precision);
             if (retval == ERROR_LU_DECOMP) {
-                mpfr_fprintf(stderr, "singularity suspected at t = %.15Re near point ", t_right);
+                char msg[BH_MAX_STRING];
+                snprintf(msg, (size_t) BH_MAX_STRING, "singularity suspected at t = %%.%dRe near point ", sigdig);
+                mpfr_fprintf(stderr, msg, t_right);
                 print_points_float(stderr, w_right);
                 fprintf(stderr, ERROR_MESSAGE);
                 exit(BH_EXIT_OTHER);
@@ -774,14 +794,20 @@ void test_pairwise_float(polynomial_system *system, complex_vector *v, mpf_t t_l
         newton_counter++;
     }
 
-    if (verbosity > BH_CHATTY)
-        mpfr_printf("testing segment [%.15Re, %.15Re]\n", t_left, t_right);
+    if (verbosity > BH_CHATTY) {
+        char msg[BH_MAX_STRING];
+        snprintf(msg, (size_t) BH_MAX_STRING, "testing segment [%%.%dRe, %%.%dRe]\n", sigdig, sigdig);
+        mpfr_printf(msg, t_left, t_right);
+    }
 
     seg_continuous = test_continuity_float(*v, t_left, t_right, w_left, w_right, F_left, F_right, alpha_left, alpha_right, gamma_left, gamma_right);
 
     if (seg_continuous == 0) {
-        if (verbosity > BH_CHATTY)
-            mpfr_printf("unsure whether segment [%.15Re, %.15Re] is continuous\n", t_left, t_right);
+        if (verbosity > BH_CHATTY) {
+            char msg[BH_MAX_STRING];
+            snprintf(msg, (size_t) BH_MAX_STRING, "unsure whether segment [%%.%dRe, %%.%dRe] is continuous\n", sigdig, sigdig);
+            mpfr_printf(msg, t_left, t_right);
+        }
 
         mpf_t t_mid;
         mpf_init(t_mid);
@@ -803,8 +829,11 @@ void test_pairwise_float(polynomial_system *system, complex_vector *v, mpf_t t_l
         mpf_clear(t_mid);
         clear_vector(w_mid);
     } else if (seg_continuous == 1) {
-        if (verbosity > BH_LACONIC)
-            mpfr_printf("segment [%.15Re, %.15Re] is continuous\n", t_left, t_right);
+        if (verbosity > BH_LACONIC) {
+            char msg[BH_MAX_STRING];
+            snprintf(msg, (size_t) BH_MAX_STRING, "segment [%%.%dRe, %%.%dRe] is continuous\n", sigdig, sigdig);
+            mpfr_printf(msg, t_left, t_right);
+        }
 
         fprint_continuous_float(t_left, t_right, w_left, w_right, alpha_left, alpha_right, beta_left, beta_right, gamma_left, gamma_right);
 
@@ -814,12 +843,16 @@ void test_pairwise_float(polynomial_system *system, complex_vector *v, mpf_t t_l
         /* alert user to singularities */
         if (check_left) {
             if (mpfr_inf_p(gamma_left)) {
-                mpfr_fprintf(stderr, "singularity found for t = %.15Re at point ", t_left);
+                char msg[BH_MAX_STRING];
+                snprintf(msg, (size_t) BH_MAX_STRING, "singularity found for t = %%.%dRe at point ", sigdig);
+                mpfr_fprintf(stderr, msg, t_left);
                 print_points_float(stderr, w_left);
             }
         }
         if (mpfr_inf_p(gamma_right)) {
-            mpfr_fprintf(stderr, "singularity found for t = %.15Re at point ", t_right);
+            char msg[BH_MAX_STRING];
+            snprintf(msg, (size_t) BH_MAX_STRING, "singularity found for t = %%.%dRe at point ", sigdig);
+            mpfr_fprintf(stderr, msg, t_right);
             print_points_float(stderr, w_right);
         }
 
@@ -850,20 +883,27 @@ void test_pairwise_float(polynomial_system *system, complex_vector *v, mpf_t t_l
             copy_vector((*w_final)[*succeeded], w_right);
         }
     } else {
-        if (verbosity > BH_LACONIC)
-            mpfr_printf("segment [%.15Re, %.15Re] is not continuous\n", t_left, t_right);
+        if (verbosity > BH_LACONIC) {
+            char msg[BH_MAX_STRING];
+            snprintf(msg, (size_t) BH_MAX_STRING, "segment [%%.%dRe, %%.%dRe] is not continuous\n", sigdig, sigdig);
+            mpfr_printf(msg, t_left, t_right);
+        }
 
         fprint_discontinuous_float(t_left, t_right, w_left, w_right, alpha_left, alpha_right, beta_left, beta_right, gamma_left, gamma_right);
 
         /* alert user to singularities */
         if (check_left) {
             if (mpfr_inf_p(gamma_left)) {
-                mpfr_fprintf(stderr, "singularity found for t = %.15Re at point ", t_left);
+                char msg[BH_MAX_STRING];
+                snprintf(msg, (size_t) BH_MAX_STRING, "singularity found for t = %%.%dRe at point ", sigdig);
+                mpfr_fprintf(stderr, msg, t_left);
                 print_points_float(stderr, w_left);
             }
         }
         if (mpfr_inf_p(gamma_right)) {
-            mpfr_fprintf(stderr, "singularity found for t = %.15Re at point ", t_right);
+            char msg[BH_MAX_STRING];
+            snprintf(msg, (size_t) BH_MAX_STRING, "singularity found for t = %%.%dRe at point ", sigdig);
+            mpfr_fprintf(stderr, msg, t_right);
             print_points_float(stderr, w_right);
         }
 

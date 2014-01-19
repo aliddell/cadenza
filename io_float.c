@@ -277,7 +277,9 @@ int read_points_file_float(void **t, void **w, int num_var) {
 
         /* check if 0 < t < 1 */
         if (mpf_cmp_ui(t_float[i], 0) < 0 || mpf_cmp_ui(t_float[i], 1) > 0) {
-            mpfr_snprintf(error_string, (size_t) termwidth, "Value for t not between 0 and 1: %.15Re", t_float[i]);
+            char msg[BH_MAX_STRING];
+            snprintf(msg, (size_t) BH_MAX_STRING, "Value for t not between 0 and 1: %%.%dRe", sigdig);
+            mpfr_snprintf(error_string, (size_t) termwidth, msg, t_float[i]);
 
             print_error(error_string, stderr);
             exit(BH_EXIT_BADDEF);
@@ -362,15 +364,21 @@ void fprint_input_float(FILE *outfile, polynomial_system *system, void *v, void 
     fputs("v:\n", outfile);
     fprintf(outfile, "[");
     for (i = 0; i < num_var - 1; i++) {
-        mpfr_fprintf(outfile, "%.15Re + I * %.15Re, ", (*v_float)->coord[i]->re, (*v_float)->coord[i]->im);
+        char msg[BH_MAX_STRING];
+        snprintf(msg, (size_t) BH_MAX_STRING, "%%.%dRe + I * %%.%dRe, ", sigdig, sigdig);
+        mpfr_fprintf(outfile, msg, (*v_float)->coord[i]->re, (*v_float)->coord[i]->im);
     }
-    mpfr_fprintf(outfile, "%.15Re + I * %.15Re]\n", (*v_float)->coord[i]->re, (*v_float)->coord[i]->im);
+    char msg[BH_MAX_STRING];
+    snprintf(msg, (size_t) BH_MAX_STRING, "%%.%dRe + I * %%.%dRe]\n", sigdig, sigdig);
+    mpfr_fprintf(outfile, msg, (*v_float)->coord[i]->re, (*v_float)->coord[i]->im);
 
     fputs("\n", outfile);
 
     fputs("(t_i, w_i)\n", outfile);
     for (i = 0; i < num_points; i++) {
-        mpfr_fprintf(outfile, "%.15Re, ", t_float[i]);
+        char msg[BH_MAX_STRING];
+        snprintf(msg, (size_t) BH_MAX_STRING, "%%.%dRe, ", sigdig);
+        mpfr_fprintf(outfile, msg, t_float[i]);
         print_points_float(outfile, w_float[i]);
     }
 }
@@ -383,15 +391,27 @@ void print_points_float(FILE *outfile, complex_vector points) {
 
     fprintf(outfile, "[");
     for (i = 0; i < num_var - 1; i++) {
-        if (mpf_cmp_ui(points->coord[i]->im, 0) == 0)
-            mpfr_fprintf(outfile, "%.15Re, ", points->coord[i]->re);
-        else
-            mpfr_fprintf(outfile, "%.15Re + I * %.15Re, ", points->coord[i]->re, points->coord[i]->im);
+        if (mpf_cmp_ui(points->coord[i]->im, 0) == 0) {
+            char msg[BH_MAX_STRING];
+            snprintf(msg, (size_t) BH_MAX_STRING, "%%.%dRe, ", sigdig);
+            mpfr_fprintf(outfile, msg, points->coord[i]->re);
+        }
+        else {
+            char msg[BH_MAX_STRING];
+            snprintf(msg, (size_t) BH_MAX_STRING, "%%.%dRe + I * %%.%dRe, ", sigdig, sigdig);
+            mpfr_fprintf(outfile, msg, points->coord[i]->re, points->coord[i]->im);
+        }
     }
-    if (mpf_cmp_ui(points->coord[i]->im, 0) == 0)
-        mpfr_fprintf(outfile, "%.15Re]\n", points->coord[i]->re);
-    else
-        mpfr_fprintf(outfile, "%.15Re + I * %.15Re]\n", points->coord[i]->re, points->coord[i]->im);
+    if (mpf_cmp_ui(points->coord[i]->im, 0) == 0) {
+        char msg[BH_MAX_STRING];
+        snprintf(msg, (size_t) BH_MAX_STRING, "%%.%dRe]\n", sigdig);
+        mpfr_fprintf(outfile, msg, points->coord[i]->re);
+    }
+    else {
+        char msg[BH_MAX_STRING];
+        snprintf(msg, (size_t) BH_MAX_STRING, "%%.%dRe + I * %%.%dRe]\n", sigdig, sigdig);
+        mpfr_fprintf(outfile, msg, points->coord[i]->re, points->coord[i]->im);
+    }
 }
 
 /*****************************************
@@ -399,25 +419,34 @@ void print_points_float(FILE *outfile, complex_vector points) {
  *****************************************/
 void fprint_interval_float(FILE *outfile, mpf_t t_left, mpf_t t_right, complex_vector w_left, complex_vector w_right, mpf_t alpha_left, mpf_t alpha_right, mpf_t beta_left, mpf_t beta_right, mpf_t gamma_left, mpf_t gamma_right) {
     int i;
+    
+    char msg[BH_MAX_STRING];
 
     for (i = 0; i < BH_TERMWIDTH; i++)
         fprintf(outfile, "=");
 
     fprintf(outfile, "\n");
-    mpfr_fprintf(outfile, "t interval: [%.15Re, %.15Re]\n", t_left, t_right);
+    snprintf(msg, (size_t) BH_MAX_STRING, "t interval: [%%.%dRe, %%.%dRe]\n", sigdig, sigdig);
+    mpfr_fprintf(outfile, msg, t_left, t_right);
     mpfr_fprintf(outfile, "x_left: ");
     print_points_float(outfile, w_left);
 
-    mpfr_fprintf(outfile, "alpha (x_left): %.15Re\n", alpha_left);
-    mpfr_fprintf(outfile, "beta (x_left): %.15Re\n", beta_left);
-    mpfr_fprintf(outfile, "gamma (x_left): %.15Re\n", gamma_left);
+    snprintf(msg, (size_t) BH_MAX_STRING, "alpha (x_left): %%.%dRe\n", sigdig);
+    mpfr_fprintf(outfile, msg, alpha_left);
+    snprintf(msg, (size_t) BH_MAX_STRING, "beta (x_left): %%.%dRe\n", sigdig);
+    mpfr_fprintf(outfile, msg, beta_left);
+    snprintf(msg, (size_t) BH_MAX_STRING, "gamma (x_left): %%.%dRe\n", sigdig);
+    mpfr_fprintf(outfile, msg, gamma_left);
 
     mpfr_fprintf(outfile, "x_right: ");
     print_points_float(outfile, w_right);
 
-    mpfr_fprintf(outfile, "alpha (x_right): %.15Re\n", alpha_right);
-    mpfr_fprintf(outfile, "beta (x_right): %.15Re\n", beta_right);
-    mpfr_fprintf(outfile, "gamma (x_right): %.15Re\n", gamma_right);
+    snprintf(msg, (size_t) BH_MAX_STRING, "alpha (x_right): %%.%dRe\n", sigdig);
+    mpfr_fprintf(outfile, msg, alpha_right);
+    snprintf(msg, (size_t) BH_MAX_STRING, "beta (x_right): %%.%dRe\n", sigdig);
+    mpfr_fprintf(outfile, msg, beta_right);
+    snprintf(msg, (size_t) BH_MAX_STRING, "gamma (x_right): %%.%dRe\n", sigdig);
+    mpfr_fprintf(outfile, msg, gamma_right);
 }
 
 /**************************************
@@ -528,10 +557,14 @@ void fprint_solutions_float(void *t, void *w, int num_points) {
     fprintf(outfile, "%d\n", num_points);
 
     for (i = 0; i < num_points; i++) {
-        mpfr_fprintf(outfile, "%.15Re\n", t_float[i]);
+        char msg[BH_MAX_STRING];
+        snprintf(msg, (size_t) BH_MAX_STRING, "%%.%dRe\n", sigdig);
+        mpfr_fprintf(outfile, msg, t_float[i]);
 
-        for (j = 0; j < w_float[i]->size; j++)
-            mpfr_fprintf(outfile, "%.15Re\t%.15Re\n", w_float[i]->coord[j]->re, w_float[i]->coord[j]->im);
+        for (j = 0; j < w_float[i]->size; j++) {
+            snprintf(msg, (size_t) BH_MAX_STRING, "%%.%dRe\t%%.%dRe\n", sigdig, sigdig);
+            mpfr_fprintf(outfile, msg, w_float[i]->coord[j]->re, w_float[i]->coord[j]->im);
+        }
     }
 
     errno = 0;
