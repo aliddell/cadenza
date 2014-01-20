@@ -33,13 +33,13 @@ int main(int argc, char *argv[]) {
     /* final vector t */
     void *t_final = NULL;
 
-    /* initial vector w */
-    rational_complex_vector *w_rational = NULL;
-    complex_vector *w_float = NULL;
-    void *w = NULL;
+    /* initial vector x */
+    rational_complex_vector *x_rational = NULL;
+    complex_vector *x_float = NULL;
+    void *x = NULL;
 
-    /* final vector w */
-    void *w_final = NULL;
+    /* final vector x */
+    void *x_final = NULL;
 
     /* singularities array */
     void *sing = NULL;
@@ -89,19 +89,19 @@ int main(int argc, char *argv[]) {
     read_system_file(&F, v);
     num_var = F.numVariables;
 
-    num_points = read_points_file(&t, &w, num_var);
+    num_points = read_points_file(&t, &x, num_var);
 
     /* print out the system, vector and points */
     if (verbosity > BH_CHATTY) {
-        fprint_input(stdout, &F, v, t, w, num_points);
+        fprint_input(stdout, &F, v, t, x, num_points);
     }
 
-    initialize_output_files(&F, v, t, w, num_points);
-    test_system(&F, v, t, w, num_points, &t_final, &w_final, &sing, &tested, &succeeded, &failed, &num_sing);
+    initialize_output_files(&F, v, t, x, num_points);
+    test_system(&F, v, t, x, num_points, &t_final, &x_final, &sing, &tested, &succeeded, &failed, &num_sing);
 
     /* print an output file only if all intervals certified continuous */
     if (tested == succeeded)
-        fprint_solutions(t_final, w_final, succeeded + 1);
+        fprint_solutions(t_final, x_final, succeeded + 1);
     
     summarize(tested, succeeded, failed, num_sing);
 
@@ -110,9 +110,9 @@ int main(int argc, char *argv[]) {
     free_v(v);
     free_t(t, num_points);
     free_t(t_final, succeeded + 1);
-    free_w(w, num_points);
-    free_w(w_final, succeeded + 1);
-    free_w(sing, num_sing);
+    free_x(x, num_points);
+    free_x(x_final, succeeded + 1);
+    free_x(sing, num_sing);
     free(error_string);
 
     exit(BH_EXIT_SUCCESS);
@@ -327,28 +327,28 @@ void free_t(void *t, int num_points) {
 }
 
 /*************************************
- * free [rational_]complex_vector *w *
+ * free [rational_]complex_vector *x *
  *************************************/
-void free_w(void *w, int num_points) {
+void free_x(void *x, int num_points) {
     int i;
 
     if (arithmetic_type == BH_USE_FLOAT) {
-        complex_vector *w_float = (complex_vector *) w;
+        complex_vector *x_float = (complex_vector *) x;
 
         for (i = 0; i < num_points; i++)
-            clear_vector(w_float[i]);
+            clear_vector(x_float[i]);
 
-        free(w_float);
-        w_float = NULL;
-        w = NULL;
+        free(x_float);
+        x_float = NULL;
+        x = NULL;
     } else {
-        rational_complex_vector *w_rational = (rational_complex_vector *) w;
+        rational_complex_vector *x_rational = (rational_complex_vector *) x;
 
         for (i = 0; i < num_points; i++)
-            clear_rational_vector(w_rational[i]);
+            clear_rational_vector(x_rational[i]);
 
-        free(w_rational);
-        w_rational = NULL;
-        w = NULL;
+        free(x_rational);
+        x_rational = NULL;
+        x = NULL;
     }
 }

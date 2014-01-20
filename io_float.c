@@ -23,20 +23,20 @@ int compare_mpf(const void *a, const void *b) {
 }
 
 /********************************************************************
- * sort the t array from highest to lowest and adjust w accordingly *
+ * sort the t array from highest to lowest and adjust x accordingly *
  ********************************************************************/
-void sort_points_float(mpf_t *t, complex_vector *w, int num_points) {
+void sort_points_float(mpf_t *t, complex_vector *x, int num_points) {
     int i, j, k, *indices = malloc(num_points * sizeof(int));
     mpf_t *t_cpy = malloc(num_points * sizeof(mpf_t));
-    complex_vector *w_cpy = malloc(num_points * sizeof(complex_vector));
+    complex_vector *x_cpy = malloc(num_points * sizeof(complex_vector));
 
-    /* make copies of t and w */
+    /* make copies of t and x */
     for (i = 0; i < num_points; i++) {
         mpf_init(t_cpy[i]);
         mpf_set(t_cpy[i], t[i]);
 
-        initialize_vector(w_cpy[i], w[i]->size);
-        copy_vector(w_cpy[i], w[i]);
+        initialize_vector(x_cpy[i], x[i]->size);
+        copy_vector(x_cpy[i], x[i]);
     }
 
     /* sort t, leave t_cpy intact */
@@ -58,26 +58,26 @@ void sort_points_float(mpf_t *t, complex_vector *w, int num_points) {
         }
     }
 
-    /* make a `sorted' copy of w */
+    /* make a `sorted' copy of x */
     for (i = 0; i < num_points; i++)
-        copy_vector(w_cpy[i], w[indices[i]]);
+        copy_vector(x_cpy[i], x[indices[i]]);
 
-    /* copy the sorted copy back into w */
+    /* copy the sorted copy back into x */
     for (i = 0; i < num_points; i++)
-        copy_vector(w[i], w_cpy[i]);
+        copy_vector(x[i], x_cpy[i]);
 
     /* clean up */
     for (i = 0; i < num_points; i++) {
         mpf_clear(t_cpy[i]);
-        clear_vector(w_cpy[i]);
+        clear_vector(x_cpy[i]);
     }
 
     free(indices);
     indices = NULL;
     free(t_cpy);
     t_cpy = NULL;
-    free(w_cpy);
-    w_cpy = NULL;
+    free(x_cpy);
+    x_cpy = NULL;
 }
 
 /***********************************
@@ -200,12 +200,12 @@ void read_system_file_float(polynomial_system *system, void *v) {
 /********************
  * read points file *
  ********************/
-int read_points_file_float(void **t, void **w, int num_var) {
+int read_points_file_float(void **t, void **x, int num_var) {
     int i, j, num_points, res, base = 10;
 
     mpf_t *t_float;
 
-    complex_vector *w_float;
+    complex_vector *x_float;
 
     /* sanity-check the points file */
     errno = 0;
@@ -248,12 +248,12 @@ int read_points_file_float(void **t, void **w, int num_var) {
     }
 
     t_float = malloc(num_points * sizeof(mpf_t));
-    w_float = malloc(num_points * sizeof(complex_vector));
+    x_float = malloc(num_points * sizeof(complex_vector));
 
     for (i = 0; i < num_points; i++) {
         /* read in each t */
         mpf_init(t_float[i]);
-        initialize_vector(w_float[i], num_var);
+        initialize_vector(x_float[i], num_var);
 
         errno = 0;
         res = mpf_inp_str(t_float[i], pointsfh, base);
@@ -288,7 +288,7 @@ int read_points_file_float(void **t, void **w, int num_var) {
         /* get real and imag points */
         for (j = 0; j < num_var; j++) {
             errno = 0;
-            res = mpf_inp_str(w_float[i]->coord[j]->re, pointsfh, base);
+            res = mpf_inp_str(x_float[i]->coord[j]->re, pointsfh, base);
 
             if (res == EOF) {
                 snprintf(error_string, (size_t) termwidth, "Error reading `%s': unexpected EOF", pointsfile);
@@ -308,7 +308,7 @@ int read_points_file_float(void **t, void **w, int num_var) {
             }
 
             errno = 0;
-            res = mpf_inp_str(w_float[i]->coord[j]->im, pointsfh, base);
+            res = mpf_inp_str(x_float[i]->coord[j]->im, pointsfh, base);
 
             if (res == EOF) {
                 snprintf(error_string, (size_t) termwidth, "Error reading `%s': unexpected EOF", pointsfile);
@@ -338,9 +338,9 @@ int read_points_file_float(void **t, void **w, int num_var) {
         exit(BH_EXIT_BADREAD);
     }
 
-    sort_points_float(t_float, w_float, num_points);
+    sort_points_float(t_float, x_float, num_points);
 
-    *w = (void *) w_float;
+    *x = (void *) x_float;
     *t = (void *) t_float;
 
     return num_points;
@@ -349,12 +349,12 @@ int read_points_file_float(void **t, void **w, int num_var) {
 /**************************************************************
  * print the file input back to stdout for debugging purposes *
  **************************************************************/
-void fprint_input_float(FILE *outfile, polynomial_system *system, void *v, void *t, void *w, int num_points) {
+void fprint_input_float(FILE *outfile, polynomial_system *system, void *v, void *t, void *x, int num_points) {
     int i, num_var = system->numVariables;
 
     complex_vector *v_float = (complex_vector *) v;
     mpf_t *t_float = (mpf_t *) t;
-    complex_vector *w_float = (complex_vector *) w;
+    complex_vector *x_float = (complex_vector *) x;
 
     fputs("F:\n", outfile);
     print_system(outfile, system);
@@ -374,12 +374,12 @@ void fprint_input_float(FILE *outfile, polynomial_system *system, void *v, void 
 
     fputs("\n", outfile);
 
-    fputs("(t_i, w_i)\n", outfile);
+    fputs("(t, x)\n", outfile);
     for (i = 0; i < num_points; i++) {
         char msg[BH_MAX_STRING];
         snprintf(msg, (size_t) BH_MAX_STRING, "%%.%dRe, ", sigdig);
         mpfr_fprintf(outfile, msg, t_float[i]);
-        print_points_float(outfile, w_float[i]);
+        print_points_float(outfile, x_float[i]);
     }
 }
 
@@ -417,7 +417,7 @@ void print_points_float(FILE *outfile, complex_vector points) {
 /*****************************************
  * print interval information to outfile *
  *****************************************/
-void fprint_interval_float(FILE *outfile, mpf_t t_left, mpf_t t_right, complex_vector w_left, complex_vector w_right, mpf_t alpha_left, mpf_t alpha_right, mpf_t beta_left, mpf_t beta_right, mpf_t gamma_left, mpf_t gamma_right) {
+void fprint_interval_float(FILE *outfile, mpf_t t_left, mpf_t t_right, complex_vector x_left, complex_vector x_right, mpf_t alpha_left, mpf_t alpha_right, mpf_t beta_left, mpf_t beta_right, mpf_t gamma_left, mpf_t gamma_right) {
     int i;
     
     char msg[BH_MAX_STRING];
@@ -429,7 +429,7 @@ void fprint_interval_float(FILE *outfile, mpf_t t_left, mpf_t t_right, complex_v
     snprintf(msg, (size_t) BH_MAX_STRING, "t interval: [%%.%dRe, %%.%dRe]\n", sigdig, sigdig);
     mpfr_fprintf(outfile, msg, t_left, t_right);
     mpfr_fprintf(outfile, "x_left: ");
-    print_points_float(outfile, w_left);
+    print_points_float(outfile, x_left);
 
     snprintf(msg, (size_t) BH_MAX_STRING, "alpha (x_left): %%.%dRe\n", sigdig);
     mpfr_fprintf(outfile, msg, alpha_left);
@@ -439,7 +439,7 @@ void fprint_interval_float(FILE *outfile, mpf_t t_left, mpf_t t_right, complex_v
     mpfr_fprintf(outfile, msg, gamma_left);
 
     mpfr_fprintf(outfile, "x_right: ");
-    print_points_float(outfile, w_right);
+    print_points_float(outfile, x_right);
 
     snprintf(msg, (size_t) BH_MAX_STRING, "alpha (x_right): %%.%dRe\n", sigdig);
     mpfr_fprintf(outfile, msg, alpha_right);
@@ -452,7 +452,7 @@ void fprint_interval_float(FILE *outfile, mpf_t t_left, mpf_t t_right, complex_v
 /**************************************
  * print continuous intervals to file *
  **************************************/
-void fprint_continuous_float(mpf_t t_left, mpf_t t_right, complex_vector w_left, complex_vector w_right, mpf_t alpha_left, mpf_t alpha_right, mpf_t beta_left, mpf_t beta_right, mpf_t gamma_left, mpf_t gamma_right) {
+void fprint_continuous_float(mpf_t t_left, mpf_t t_right, complex_vector x_left, complex_vector x_right, mpf_t alpha_left, mpf_t alpha_right, mpf_t beta_left, mpf_t beta_right, mpf_t gamma_left, mpf_t gamma_right) {
     int res;
 
     errno = 0;
@@ -465,7 +465,7 @@ void fprint_continuous_float(mpf_t t_left, mpf_t t_right, complex_vector w_left,
         exit(BH_EXIT_BADFILE);
     }
 
-    fprint_interval_float(fh, t_left, t_right, w_left, w_right, alpha_left, alpha_right, beta_left, beta_right, gamma_left, gamma_right);
+    fprint_interval_float(fh, t_left, t_right, x_left, x_right, alpha_left, alpha_right, beta_left, beta_right, gamma_left, gamma_right);
 
     errno = 0;
 
@@ -480,7 +480,7 @@ void fprint_continuous_float(mpf_t t_left, mpf_t t_right, complex_vector w_left,
 /*****************************************
  * print discontinuous intervals to file *
  *****************************************/
-void fprint_discontinuous_float(mpf_t t_left, mpf_t t_right, complex_vector w_left, complex_vector w_right, mpf_t alpha_left, mpf_t alpha_right, mpf_t beta_left, mpf_t beta_right, mpf_t gamma_left, mpf_t gamma_right) {
+void fprint_discontinuous_float(mpf_t t_left, mpf_t t_right, complex_vector x_left, complex_vector x_right, mpf_t alpha_left, mpf_t alpha_right, mpf_t beta_left, mpf_t beta_right, mpf_t gamma_left, mpf_t gamma_right) {
     int res;
 
     errno = 0;
@@ -493,7 +493,7 @@ void fprint_discontinuous_float(mpf_t t_left, mpf_t t_right, complex_vector w_le
         exit(BH_EXIT_BADFILE);
     }
 
-    fprint_interval_float(fh, t_left, t_right, w_left, w_right, alpha_left, alpha_right, beta_left, beta_right, gamma_left, gamma_right);
+    fprint_interval_float(fh, t_left, t_right, x_left, x_right, alpha_left, alpha_right, beta_left, beta_right, gamma_left, gamma_right);
 
     errno = 0;
 
@@ -508,7 +508,7 @@ void fprint_discontinuous_float(mpf_t t_left, mpf_t t_right, complex_vector w_le
 /*********************************************
  * print uncertain intervals to summary file *
  *********************************************/
-void fprint_uncertain_float(mpf_t t_left, mpf_t t_right, complex_vector w_left, complex_vector w_right, mpf_t alpha_left, mpf_t alpha_right, mpf_t beta_left, mpf_t beta_right, mpf_t gamma_left, mpf_t gamma_right) {
+void fprint_uncertain_float(mpf_t t_left, mpf_t t_right, complex_vector x_left, complex_vector x_right, mpf_t alpha_left, mpf_t alpha_right, mpf_t beta_left, mpf_t beta_right, mpf_t gamma_left, mpf_t gamma_right) {
     int res;
 
     errno = 0;
@@ -522,7 +522,7 @@ void fprint_uncertain_float(mpf_t t_left, mpf_t t_right, complex_vector w_left, 
     }
 
     fprintf(fh, "Uncertain of interval:\n");
-    fprint_interval_float(fh, t_left, t_right, w_left, w_right, alpha_left, alpha_right, beta_left, beta_right, gamma_left, gamma_right);
+    fprint_interval_float(fh, t_left, t_right, x_left, x_right, alpha_left, alpha_right, beta_left, beta_right, gamma_left, gamma_right);
     fputs("\n", fh);
 
     errno = 0;
@@ -538,11 +538,11 @@ void fprint_uncertain_float(mpf_t t_left, mpf_t t_right, complex_vector w_left, 
 /*****************************************************
  * print solutions in input format to an output file *
  *****************************************************/
-void fprint_solutions_float(void *t, void *w, int num_points) {
+void fprint_solutions_float(void *t, void *x, int num_points) {
     int i, j, res;
 
     mpf_t *t_float = (mpf_t *) t;
-    complex_vector *w_float = (complex_vector *) w;
+    complex_vector *x_float = (complex_vector *) x;
 
     errno = 0;
     FILE *outfile = fopen(BH_FPTSOUT, "w");
@@ -561,9 +561,9 @@ void fprint_solutions_float(void *t, void *w, int num_points) {
         snprintf(msg, (size_t) BH_MAX_STRING, "%%.%dRe\n", sigdig);
         mpfr_fprintf(outfile, msg, t_float[i]);
 
-        for (j = 0; j < w_float[i]->size; j++) {
+        for (j = 0; j < x_float[i]->size; j++) {
             snprintf(msg, (size_t) BH_MAX_STRING, "%%.%dRe\t%%.%dRe\n", sigdig, sigdig);
-            mpfr_fprintf(outfile, msg, w_float[i]->coord[j]->re, w_float[i]->coord[j]->im);
+            mpfr_fprintf(outfile, msg, x_float[i]->coord[j]->re, x_float[i]->coord[j]->im);
         }
     }
 

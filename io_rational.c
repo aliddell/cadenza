@@ -25,18 +25,18 @@ int compare_mpq(const void *a, const void *b) {
 /********************************************************************
  * sort the t array from highest to lowest and adjust w accordingly *
  ********************************************************************/
-void sort_points_rational(mpq_t *t, rational_complex_vector *w, int num_points) {
+void sort_points_rational(mpq_t *t, rational_complex_vector *x, int num_points) {
     int i, j, k, *indices = malloc(num_points * sizeof(int));
     mpq_t *t_cpy = malloc(num_points * sizeof(mpq_t));
-    rational_complex_vector *w_cpy = malloc(num_points * sizeof(rational_complex_vector));
+    rational_complex_vector *x_cpy = malloc(num_points * sizeof(rational_complex_vector));
 
     /* make copies of t and w */
     for (i = 0; i < num_points; i++) {
         mpq_init(t_cpy[i]);
         mpq_set(t_cpy[i], t[i]);
 
-        initialize_rational_vector(w_cpy[i], w[i]->size);
-        copy_rational_vector(w_cpy[i], w[i]);
+        initialize_rational_vector(x_cpy[i], x[i]->size);
+        copy_rational_vector(x_cpy[i], x[i]);
     }
 
     /* sort t, leave t_cpy intact */
@@ -60,24 +60,24 @@ void sort_points_rational(mpq_t *t, rational_complex_vector *w, int num_points) 
 
     /* make a `sorted' copy of w */
     for (i = 0; i < num_points; i++)
-        copy_rational_vector(w_cpy[i], w[indices[i]]);
+        copy_rational_vector(x_cpy[i], x[indices[i]]);
 
     /* copy the sorted copy back into w */
     for (i = 0; i < num_points; i++)
-        copy_rational_vector(w[i], w_cpy[i]);
+        copy_rational_vector(x[i], x_cpy[i]);
 
     /* clean up */
     for (i = 0; i < num_points; i++) {
         mpq_clear(t_cpy[i]);
-        clear_rational_vector(w_cpy[i]);
+        clear_rational_vector(x_cpy[i]);
     }
 
     free(indices);
     indices = NULL;
     free(t_cpy);
     t_cpy = NULL;
-    free(w_cpy);
-    w_cpy = NULL;
+    free(x_cpy);
+    x_cpy = NULL;
 }
 
 /***********************************
@@ -182,10 +182,10 @@ void read_system_file_rational(polynomial_system *system, void *v) {
 /********************
  * read points file *
  ********************/
-int read_points_file_rational(void **t, void **w, int num_var) {
+int read_points_file_rational(void **t, void **x, int num_var) {
     int i, j, num_points, res;
     mpq_t *t_rational;
-    rational_complex_vector *w_rational;
+    rational_complex_vector *x_rational;
 
     /* sanity-check the points file */
     errno = 0;
@@ -228,12 +228,12 @@ int read_points_file_rational(void **t, void **w, int num_var) {
     }
 
     t_rational = malloc(num_points * sizeof(mpq_t));
-    w_rational = malloc(num_points * sizeof(rational_complex_vector));
+    x_rational = malloc(num_points * sizeof(rational_complex_vector));
 
     for (i = 0; i < num_points; i++) {
         /* read in each t */
         mpq_init(t_rational[i]);
-        initialize_rational_vector(w_rational[i], num_var);
+        initialize_rational_vector(x_rational[i], num_var);
 
         errno = 0;
         res = gmp_fscanf(pointsfh, "%Qd", t_rational[i]);
@@ -268,7 +268,7 @@ int read_points_file_rational(void **t, void **w, int num_var) {
         for (j = 0; j < num_var; j++) {
             errno = 0;
             /* get real and imag points */
-            res = gmp_fscanf(pointsfh, "%Qd %Qd", w_rational[i]->coord[j]->re, w_rational[i]->coord[j]->im);
+            res = gmp_fscanf(pointsfh, "%Qd %Qd", x_rational[i]->coord[j]->re, x_rational[i]->coord[j]->im);
 
             if (res == EOF) {
                 snprintf(error_string, (size_t) termwidth, "Error reading `%s': unexpected EOF", pointsfile);
@@ -287,8 +287,8 @@ int read_points_file_rational(void **t, void **w, int num_var) {
                 exit(BH_EXIT_BADPARSE);
             }
 
-            mpq_canonicalize(w_rational[i]->coord[j]->re);
-            mpq_canonicalize(w_rational[i]->coord[j]->im);
+            mpq_canonicalize(x_rational[i]->coord[j]->re);
+            mpq_canonicalize(x_rational[i]->coord[j]->im);
         }
     }
 
@@ -301,9 +301,9 @@ int read_points_file_rational(void **t, void **w, int num_var) {
         exit(BH_EXIT_BADREAD);
     }
 
-    sort_points_rational(t_rational, w_rational, num_points);
+    sort_points_rational(t_rational, x_rational, num_points);
 
-    *w = (void *) w_rational;
+    *x = (void *) x_rational;
     *t = (void *) t_rational;
 
     return num_points;
@@ -312,12 +312,12 @@ int read_points_file_rational(void **t, void **w, int num_var) {
 /**************************************************************
  * print the file input back to stdout for debugging purposes *
  **************************************************************/
-void fprint_input_rational(FILE *outfile, polynomial_system *system, void *v, void *t, void *w, int num_points) {
+void fprint_input_rational(FILE *outfile, polynomial_system *system, void *v, void *t, void *x, int num_points) {
     int i, num_var = system->numVariables;
 
     rational_complex_vector *v_rational = (rational_complex_vector *) v;
     mpq_t *t_rational = (mpq_t *) t;
-    rational_complex_vector *w_rational = (rational_complex_vector *) w;
+    rational_complex_vector *x_rational = (rational_complex_vector *) x;
 
     fputs("F:\n", outfile);
     print_system(outfile, system);
@@ -333,10 +333,10 @@ void fprint_input_rational(FILE *outfile, polynomial_system *system, void *v, vo
 
     fputs("\n", outfile);
 
-    fputs("(t_i, w_i)\n", outfile);
+    fputs("(t, x)\n", outfile);
     for (i = 0; i < num_points; i++) {
         gmp_fprintf(outfile, "%Qd, ", t_rational[i]);
-        print_points_rational(outfile, w_rational[i]);
+        print_points_rational(outfile, x_rational[i]);
     }
 }
 
@@ -362,7 +362,7 @@ void print_points_rational(FILE *outfile, rational_complex_vector points) {
 /*****************************************
  * print interval information to outfile *
  *****************************************/
-void fprint_interval_rational(FILE *outfile, mpq_t t_left, mpq_t t_right, rational_complex_vector w_left, rational_complex_vector w_right, mpq_t alpha_sqr_left, mpq_t alpha_sqr_right, mpq_t beta_sqr_left, mpq_t beta_sqr_right, mpq_t gamma_sqr_left, mpq_t gamma_sqr_right) {
+void fprint_interval_rational(FILE *outfile, mpq_t t_left, mpq_t t_right, rational_complex_vector x_left, rational_complex_vector x_right, mpq_t alpha_sqr_left, mpq_t alpha_sqr_right, mpq_t beta_sqr_left, mpq_t beta_sqr_right, mpq_t gamma_sqr_left, mpq_t gamma_sqr_right) {
     int i;
 
     for (i = 0; i < BH_TERMWIDTH; i++)
@@ -371,14 +371,14 @@ void fprint_interval_rational(FILE *outfile, mpq_t t_left, mpq_t t_right, ration
     fprintf(outfile, "\n");
     gmp_fprintf(outfile, "t interval: [%Qd, %Qd]\n", t_left, t_right);
     gmp_fprintf(outfile, "x_left: ");
-    print_points_rational(outfile, w_left);
+    print_points_rational(outfile, x_left);
 
     gmp_fprintf(outfile, "alpha^2 (x_left): %Qd\n", alpha_sqr_left);
     gmp_fprintf(outfile, "beta^2 (x_left): %Qd\n", beta_sqr_left);
     gmp_fprintf(outfile, "gamma^2 (x_left): %Qd\n", gamma_sqr_left);
 
     gmp_fprintf(outfile, "x_right: ");
-    print_points_rational(outfile, w_right);
+    print_points_rational(outfile, x_right);
 
     gmp_fprintf(outfile, "alpha^2 (x_right): %Qd\n", alpha_sqr_right);
     gmp_fprintf(outfile, "beta^2 (x_right): %Qd\n", beta_sqr_right);
@@ -388,7 +388,7 @@ void fprint_interval_rational(FILE *outfile, mpq_t t_left, mpq_t t_right, ration
 /**************************************
  * print continuous intervals to file *
  **************************************/
-void fprint_continuous_rational(mpq_t t_left, mpq_t t_right, rational_complex_vector w_left, rational_complex_vector w_right, mpq_t alpha_sqr_left, mpq_t alpha_sqr_right, mpq_t beta_sqr_left, mpq_t beta_sqr_right, mpq_t gamma_sqr_left, mpq_t gamma_sqr_right) {
+void fprint_continuous_rational(mpq_t t_left, mpq_t t_right, rational_complex_vector x_left, rational_complex_vector x_right, mpq_t alpha_sqr_left, mpq_t alpha_sqr_right, mpq_t beta_sqr_left, mpq_t beta_sqr_right, mpq_t gamma_sqr_left, mpq_t gamma_sqr_right) {
     int res;
 
     errno = 0;
@@ -402,7 +402,7 @@ void fprint_continuous_rational(mpq_t t_left, mpq_t t_right, rational_complex_ve
         exit(BH_EXIT_BADFILE);
     }
 
-    fprint_interval_rational(fh, t_left, t_right, w_left, w_right, alpha_sqr_left, alpha_sqr_right, beta_sqr_left, beta_sqr_right, gamma_sqr_left, gamma_sqr_right);
+    fprint_interval_rational(fh, t_left, t_right, x_left, x_right, alpha_sqr_left, alpha_sqr_right, beta_sqr_left, beta_sqr_right, gamma_sqr_left, gamma_sqr_right);
 
     errno = 0;
 
@@ -417,7 +417,7 @@ void fprint_continuous_rational(mpq_t t_left, mpq_t t_right, rational_complex_ve
 /*****************************************
  * print discontinuous intervals to file *
  *****************************************/
-void fprint_discontinuous_rational(mpq_t t_left, mpq_t t_right, rational_complex_vector w_left, rational_complex_vector w_right, mpq_t alpha_sqr_left, mpq_t alpha_sqr_right, mpq_t beta_sqr_left, mpq_t beta_sqr_right, mpq_t gamma_sqr_left, mpq_t gamma_sqr_right) {
+void fprint_discontinuous_rational(mpq_t t_left, mpq_t t_right, rational_complex_vector x_left, rational_complex_vector x_right, mpq_t alpha_sqr_left, mpq_t alpha_sqr_right, mpq_t beta_sqr_left, mpq_t beta_sqr_right, mpq_t gamma_sqr_left, mpq_t gamma_sqr_right) {
     int res;
 
     errno = 0;
@@ -431,7 +431,7 @@ void fprint_discontinuous_rational(mpq_t t_left, mpq_t t_right, rational_complex
         exit(BH_EXIT_BADFILE);
     }
 
-    fprint_interval_rational(fh, t_left, t_right, w_left, w_right, alpha_sqr_left, alpha_sqr_right, beta_sqr_left, beta_sqr_right, gamma_sqr_left, gamma_sqr_right);
+    fprint_interval_rational(fh, t_left, t_right, x_left, x_right, alpha_sqr_left, alpha_sqr_right, beta_sqr_left, beta_sqr_right, gamma_sqr_left, gamma_sqr_right);
 
     errno = 0;
 
@@ -446,7 +446,7 @@ void fprint_discontinuous_rational(mpq_t t_left, mpq_t t_right, rational_complex
 /*********************************************
  * print uncertain intervals to summary file *
  *********************************************/
-void fprint_uncertain_rational(mpq_t t_left, mpq_t t_right, rational_complex_vector w_left, rational_complex_vector w_right, mpq_t alpha_sqr_left, mpq_t alpha_sqr_right, mpq_t beta_sqr_left, mpq_t beta_sqr_right, mpq_t gamma_sqr_left, mpq_t gamma_sqr_right) {
+void fprint_uncertain_rational(mpq_t t_left, mpq_t t_right, rational_complex_vector x_left, rational_complex_vector x_right, mpq_t alpha_sqr_left, mpq_t alpha_sqr_right, mpq_t beta_sqr_left, mpq_t beta_sqr_right, mpq_t gamma_sqr_left, mpq_t gamma_sqr_right) {
     int res;
 
     errno = 0;
@@ -459,7 +459,7 @@ void fprint_uncertain_rational(mpq_t t_left, mpq_t t_right, rational_complex_vec
         exit(BH_EXIT_BADFILE);
     }
 
-    fprint_interval_rational(fh, t_left, t_right, w_left, w_right, alpha_sqr_left, alpha_sqr_right, beta_sqr_left, beta_sqr_right, gamma_sqr_left, gamma_sqr_right);
+    fprint_interval_rational(fh, t_left, t_right, x_left, x_right, alpha_sqr_left, alpha_sqr_right, beta_sqr_left, beta_sqr_right, gamma_sqr_left, gamma_sqr_right);
 
     errno = 0;
 
@@ -474,11 +474,11 @@ void fprint_uncertain_rational(mpq_t t_left, mpq_t t_right, rational_complex_vec
 /*****************************************************
  * print solutions in input format to an output file *
  *****************************************************/
-void fprint_solutions_rational(void *t, void *w, int num_points) {
+void fprint_solutions_rational(void *t, void *x, int num_points) {
     int i, j, res;
 
     mpq_t *t_rational = (mpq_t *) t;
-    rational_complex_vector *w_rational = (rational_complex_vector *) w;
+    rational_complex_vector *x_rational = (rational_complex_vector *) x;
 
     FILE *outfile = fopen(BH_FPTSOUT, "w");
 
@@ -496,8 +496,8 @@ void fprint_solutions_rational(void *t, void *w, int num_points) {
     for (i = 0; i < num_points; i++) {
         gmp_fprintf(outfile, "%Qd\n", t_rational[i]);
 
-        for (j = 0; j < w_rational[i]->size; j++)
-            gmp_fprintf(outfile, "%Qd\t%Qd\n", w_rational[i]->coord[j]->re, w_rational[i]->coord[j]->im);
+        for (j = 0; j < x_rational[i]->size; j++)
+            gmp_fprintf(outfile, "%Qd\t%Qd\n", x_rational[i]->coord[j]->re, x_rational[i]->coord[j]->im);
     }
 
     errno = 0;

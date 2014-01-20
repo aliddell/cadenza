@@ -303,7 +303,7 @@ void fprint_monomial(FILE *outfile, int *exponents, int num_var) {
  * print a polynomial system to outfile *
  ****************************************/
 void print_system(FILE *outfile, polynomial_system *system) {
-    int i, j, ccount = 0;
+    int i, j;
     mpz_t r_num, r_denom, i_num, i_denom;
     mpz_init(r_num);
     mpz_init(r_denom);

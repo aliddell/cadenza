@@ -63,7 +63,7 @@ int lte_sqr_rational(mpq_t X_sqr, mpq_t Y_sqr, mpq_t Z_sqr) {
 /*****************************
  * compute ||J(f)^-1 * v||^2 *
  *****************************/
-void compute_norm_sqr_Jv_rational(polynomial_system *F, rational_complex_vector v, rational_complex_vector w, mpq_t *norm_sqr_Jv) {
+void compute_norm_sqr_Jv_rational(polynomial_system *F, rational_complex_vector v, rational_complex_vector x, mpq_t *norm_sqr_Jv) {
     int retval = 0, *rowswaps = NULL;
 
     rational_complex_vector f;
@@ -79,7 +79,7 @@ void compute_norm_sqr_Jv_rational(polynomial_system *F, rational_complex_vector 
     initialize_rational_matrix(J, 0, 0);
     initialize_rational_matrix(LU, 0, 0);
 
-    eval_polynomial_system_rational(f, J, F, w);
+    eval_polynomial_system_rational(f, J, F, x);
 
     retval = LUdecomp_rational(LU, &rowswaps, J);
 
@@ -103,7 +103,7 @@ void compute_norm_sqr_Jv_rational(polynomial_system *F, rational_complex_vector 
 /*********************************************
  * return 1 if interval certifies continuous *
  *********************************************/
-int is_continuous_rational(rational_complex_vector v, mpq_t t_left, mpq_t t_right, rational_complex_vector w_left, rational_complex_vector w_right, polynomial_system F_left, polynomial_system F_right, mpq_t alpha_sqr_left, mpq_t alpha_sqr_right, mpq_t gamma_sqr_left, mpq_t gamma_sqr_right) {
+int is_continuous_rational(rational_complex_vector v, mpq_t t_left, mpq_t t_right, rational_complex_vector x_left, rational_complex_vector x_right, polynomial_system F_left, polynomial_system F_right, mpq_t alpha_sqr_left, mpq_t alpha_sqr_right, mpq_t gamma_sqr_left, mpq_t gamma_sqr_right) {
     int retval = 0, left_success = 0, right_success = 0;
 
     mpq_t alpha_star_sqr;
@@ -129,8 +129,8 @@ int is_continuous_rational(rational_complex_vector v, mpq_t t_left, mpq_t t_righ
     mpq_init(magic_number_right);
     mpq_init(norm_sqr_Jv_right);
 
-    compute_norm_sqr_Jv_rational(&F_left, v, w_left, &norm_sqr_Jv_left);
-    compute_norm_sqr_Jv_rational(&F_right, v, w_right, &norm_sqr_Jv_right);
+    compute_norm_sqr_Jv_rational(&F_left, v, x_left, &norm_sqr_Jv_left);
+    compute_norm_sqr_Jv_rational(&F_right, v, x_right, &norm_sqr_Jv_right);
 
     /* ||J^-1 * v||^2 */
     mpq_set(magic_number_left, norm_sqr_Jv_left);
@@ -161,7 +161,7 @@ int is_continuous_rational(rational_complex_vector v, mpq_t t_left, mpq_t t_righ
         mpq_init(magic_number_sqr);
 
         rational_complex_vector points_dist;
-        initialize_rational_vector(points_dist, w_left->size);
+        initialize_rational_vector(points_dist, x_left->size);
 
         /* test succeeds for both left and right */
         if (left_success && right_success) {
@@ -195,7 +195,7 @@ int is_continuous_rational(rational_complex_vector v, mpq_t t_left, mpq_t t_righ
         mpq_mul(magic_number_sqr, magic_number_sqr, magic_number_sqr); /* (79 / 1000)^2 */
         mpq_mul(magic_number_sqr, magic_number_sqr, gamma_sqr_inv); /* (79 / (1000 * gamma))^2 */
 
-        subtract_rational_vector(points_dist, w_left, w_right);
+        subtract_rational_vector(points_dist, x_left, x_right);
         norm_sqr_rational_vector(points_dist_sqr, points_dist); /* ||x_1 - x_2||^2 */
 
         if (mpq_cmp(points_dist_sqr, magic_number_sqr) <= 0) {
@@ -224,7 +224,7 @@ int is_continuous_rational(rational_complex_vector v, mpq_t t_left, mpq_t t_righ
 /************************************************
  * return 1 if interval certifies discontinuous *
  ************************************************/
-int is_not_continuous_rational(rational_complex_vector v, mpq_t t_left, mpq_t t_right, rational_complex_vector w_left, rational_complex_vector w_right, polynomial_system F_left, polynomial_system F_right, mpq_t alpha_sqr_left, mpq_t alpha_sqr_right, mpq_t gamma_sqr_left, mpq_t gamma_sqr_right) {
+int is_not_continuous_rational(rational_complex_vector v, mpq_t t_left, mpq_t t_right, rational_complex_vector x_left, rational_complex_vector x_right, polynomial_system F_left, polynomial_system F_right, mpq_t alpha_sqr_left, mpq_t alpha_sqr_right, mpq_t gamma_sqr_left, mpq_t gamma_sqr_right) {
     int retval = 0, beta_retval = 0, left_success = 0, right_success = 0;
 
     mpq_t alpha_star_sqr;
@@ -250,8 +250,8 @@ int is_not_continuous_rational(rational_complex_vector v, mpq_t t_left, mpq_t t_
     mpq_init(magic_number_right);
     mpq_init(norm_sqr_Jv_right);
 
-    compute_norm_sqr_Jv_rational(&F_left, v, w_left, &norm_sqr_Jv_left);
-    compute_norm_sqr_Jv_rational(&F_right, v, w_right, &norm_sqr_Jv_right);
+    compute_norm_sqr_Jv_rational(&F_left, v, x_left, &norm_sqr_Jv_left);
+    compute_norm_sqr_Jv_rational(&F_right, v, x_right, &norm_sqr_Jv_right);
 
     /* ||J^-1 * v||^2 */
     mpq_set(magic_number_left, norm_sqr_Jv_left);
@@ -293,22 +293,22 @@ int is_not_continuous_rational(rational_complex_vector v, mpq_t t_left, mpq_t t_
 
         /* test succeeds for at least left (possibly right, but use left anyway) */
         if (left_success) {
-            beta_retval = compute_beta_sqr_rational(beta_sqr_complex1, &F_left, w_left);
+            beta_retval = compute_beta_sqr_rational(beta_sqr_complex1, &F_left, x_left);
 
             if (!beta_retval)
                 mpq_set(beta_sqr1, beta_sqr_complex1->re);
 
-            beta_retval = compute_beta_sqr_rational(beta_sqr_complex2, &F_left, w_right);
+            beta_retval = compute_beta_sqr_rational(beta_sqr_complex2, &F_left, x_right);
 
             if (!beta_retval)
                 mpq_set(beta_sqr2, beta_sqr_complex2->re);
         } else { /* test succeeds for right only */
-            beta_retval = compute_beta_sqr_rational(beta_sqr_complex1, &F_right, w_left);
+            beta_retval = compute_beta_sqr_rational(beta_sqr_complex1, &F_right, x_left);
 
             if (!beta_retval)
                 mpq_set(beta_sqr1, beta_sqr_complex1->re);
 
-            beta_retval = compute_beta_sqr_rational(beta_sqr_complex2, &F_right, w_right);
+            beta_retval = compute_beta_sqr_rational(beta_sqr_complex2, &F_right, x_right);
 
             if (!beta_retval)
                 mpq_set(beta_sqr2, beta_sqr_complex2->re);
@@ -319,9 +319,9 @@ int is_not_continuous_rational(rational_complex_vector v, mpq_t t_left, mpq_t t_
         mpq_mul(beta_sqr2, four, beta_sqr2);
 
         rational_complex_vector points_dist;
-        initialize_rational_vector(points_dist, w_left->size);
+        initialize_rational_vector(points_dist, x_left->size);
 
-        subtract_rational_vector(points_dist, w_left, w_right);
+        subtract_rational_vector(points_dist, x_left, x_right);
         norm_sqr_rational_vector(points_dist_sqr, points_dist); /* ||x_1 - x_2||^2 */
 
         if (lte_sqr_rational(beta_sqr1, beta_sqr2, points_dist_sqr))
@@ -353,10 +353,10 @@ int is_not_continuous_rational(rational_complex_vector v, mpq_t t_left, mpq_t t_
 /**********************************************
  * test for the continuity of a given segment *
  **********************************************/
-int test_continuity_rational(rational_complex_vector v, mpq_t t_left, mpq_t t_right, rational_complex_vector w_left, rational_complex_vector w_right, polynomial_system F_left, polynomial_system F_right, mpq_t alpha_sqr_left, mpq_t alpha_sqr_right, mpq_t gamma_sqr_left, mpq_t gamma_sqr_right) {
-    if (is_continuous_rational(v, t_left, t_right, w_left, w_right, F_left, F_right, alpha_sqr_left, alpha_sqr_right, gamma_sqr_left, gamma_sqr_right))
+int test_continuity_rational(rational_complex_vector v, mpq_t t_left, mpq_t t_right, rational_complex_vector x_left, rational_complex_vector x_right, polynomial_system F_left, polynomial_system F_right, mpq_t alpha_sqr_left, mpq_t alpha_sqr_right, mpq_t gamma_sqr_left, mpq_t gamma_sqr_right) {
+    if (is_continuous_rational(v, t_left, t_right, x_left, x_right, F_left, F_right, alpha_sqr_left, alpha_sqr_right, gamma_sqr_left, gamma_sqr_right))
         return 1;
-    else if (is_not_continuous_rational(v, t_left, t_right, w_left, w_right, F_left, F_right, alpha_sqr_left, alpha_sqr_right, gamma_sqr_left, gamma_sqr_right))
+    else if (is_not_continuous_rational(v, t_left, t_right, x_left, x_right, F_left, F_right, alpha_sqr_left, alpha_sqr_right, gamma_sqr_left, gamma_sqr_right))
         return -1;
 
     return 0;
@@ -365,7 +365,7 @@ int test_continuity_rational(rational_complex_vector v, mpq_t t_left, mpq_t t_ri
 /**************************************************************************************
  * subdivide a segment (t_1, w_1) <=> (t_2, w_2) for ((t_1 + t_2)/2, (w_1 + w_2) / 2) *
  **************************************************************************************/
-void subdivide_segment_rational(polynomial_system *base, rational_complex_vector v, mpq_t t_left, mpq_t t_right, rational_complex_vector w_left, rational_complex_vector w_right, mpq_t *t_mid, rational_complex_vector *w_mid, int num_var) {
+void subdivide_segment_rational(polynomial_system *base, rational_complex_vector v, mpq_t t_left, mpq_t t_right, rational_complex_vector x_left, rational_complex_vector x_right, mpq_t *t_mid, rational_complex_vector *x_mid, int num_var) {
     if (verbosity > BH_VERBOSE)
         printf("subdividing... ");
 
@@ -403,15 +403,15 @@ void subdivide_segment_rational(polynomial_system *base, rational_complex_vector
     mpq_add(*t_mid, t_left, t_right);
     mpq_mul(*t_mid, *t_mid, one_half_rational);
 
-    /* w_mid */
+    /* x_mid */
     for (i = 0; i < num_var; i++) {
-        add_rational((*w_mid)->coord[i], w_left->coord[i], w_right->coord[i]);
-        multiply_rational((*w_mid)->coord[i], (*w_mid)->coord[i], one_half_complex);
+        add_rational((*x_mid)->coord[i], x_left->coord[i], x_right->coord[i]);
+        multiply_rational((*x_mid)->coord[i], (*x_mid)->coord[i], one_half_complex);
     }
 
-    /* apply Newton to w_mid */
+    /* apply Newton to x_mid */
     apply_tv_rational(base, &F_mid, *t_mid, v);
-    retval = newton_iteration_rational(new_point, beta_sqr_complex, LU, &rowswaps, &F_mid, *w_mid);
+    retval = newton_iteration_rational(new_point, beta_sqr_complex, LU, &rowswaps, &F_mid, *x_mid);
     if (retval == ERROR_LU_DECOMP) {
         fprintf(stderr, "singularity suspected near point ");
         print_points_rational(stderr, new_point);
@@ -419,7 +419,7 @@ void subdivide_segment_rational(polynomial_system *base, rational_complex_vector
         exit(BH_EXIT_OTHER);
     }
 
-    copy_rational_vector(*w_mid, new_point);
+    copy_rational_vector(*x_mid, new_point);
 
     if (verbosity > BH_VERBOSE)
         gmp_printf("new intervals are [%Qd, %Qd] and [%Qd, %Qd]\n", t_left, *t_mid, *t_mid, t_right);
@@ -585,8 +585,8 @@ int compute_abg_sqr_rational(rational_complex_vector points, polynomial_system *
 /***********************************************************************************
  * test that each w is in the quadratic convergence basin and check for continuity *
  ***********************************************************************************/
-void test_pairwise_rational(polynomial_system *system, rational_complex_vector *v, mpq_t t_left, mpq_t t_right, rational_complex_vector w_left, rational_complex_vector w_right, int num_var, int iter, mpq_t **t_final, rational_complex_vector **w_final, rational_complex_vector **sing, int *tested, int *succeeded, int *failed, int *num_sing, int check_left) {
-    int w_left_solution, w_right_solution, seg_continuous;
+void test_pairwise_rational(polynomial_system *system, rational_complex_vector *v, mpq_t t_left, mpq_t t_right, rational_complex_vector x_left, rational_complex_vector x_right, int num_var, int iter, mpq_t **t_final, rational_complex_vector **x_final, rational_complex_vector **sing, int *tested, int *succeeded, int *failed, int *num_sing, int check_left) {
+    int x_left_solution, x_right_solution, seg_continuous;
     polynomial_system F_left, F_right;
     mpq_t alpha_sqr_left, beta_sqr_left, gamma_sqr_left, alpha_sqr_right, beta_sqr_right, gamma_sqr_right, beta_sqr_min;
     mpq_init(alpha_sqr_left);
@@ -600,8 +600,8 @@ void test_pairwise_rational(polynomial_system *system, rational_complex_vector *
     apply_tv_rational(system, &F_left, t_left, *v);
     apply_tv_rational(system, &F_right, t_right, *v);
 
-    w_left_solution = compute_abg_sqr_rational(w_left, &F_left, &alpha_sqr_left, &beta_sqr_left, &gamma_sqr_left);
-    w_right_solution = compute_abg_sqr_rational(w_right, &F_right, &alpha_sqr_right, &beta_sqr_right, &gamma_sqr_right);
+    x_left_solution = compute_abg_sqr_rational(x_left, &F_left, &alpha_sqr_left, &beta_sqr_left, &gamma_sqr_left);
+    x_right_solution = compute_abg_sqr_rational(x_right, &F_right, &alpha_sqr_right, &beta_sqr_right, &gamma_sqr_right);
 
     /* test if we've been through too many times */
     if (iter > subd_tolerance) {
@@ -609,7 +609,7 @@ void test_pairwise_rational(polynomial_system *system, rational_complex_vector *
 
         if (verbosity > BH_LACONIC)
             gmp_printf("unsure whether segment [%Qd, %Qd] is continuous\n", t_left, t_right);
-        fprint_uncertain_rational(t_left, t_right, w_left, w_right, alpha_sqr_left, alpha_sqr_right, beta_sqr_left, beta_sqr_right, gamma_sqr_left, gamma_sqr_right);
+        fprint_uncertain_rational(t_left, t_right, x_left, x_right, alpha_sqr_left, alpha_sqr_right, beta_sqr_left, beta_sqr_right, gamma_sqr_left, gamma_sqr_right);
 
         /* alert user to singularities */
         mpz_t denom;
@@ -619,13 +619,13 @@ void test_pairwise_rational(polynomial_system *system, rational_complex_vector *
             mpq_get_den(denom, gamma_sqr_left);
             if (mpz_cmp_ui(denom, 0) == 0) {
                 gmp_fprintf(stderr, "singularity found for t = %Qd at point ", t_left);
-                print_points_rational(stderr, w_left);
+                print_points_rational(stderr, x_left);
             }
         }
         mpq_get_den(denom, gamma_sqr_right);
         if (mpz_cmp_ui(denom, 0) == 0) {
             gmp_fprintf(stderr, "singularity found for t = %Qd at point ", t_right);
-            print_points_rational(stderr, w_right);
+            print_points_rational(stderr, x_right);
         }
 
         mpz_clear(denom);
@@ -637,7 +637,7 @@ void test_pairwise_rational(polynomial_system *system, rational_complex_vector *
 
     /* perform Newton iterations on non-compliant points */
     int newton_counter = 1;
-    while (!w_left_solution || !w_right_solution) {
+    while (!x_left_solution || !x_right_solution) {
         if (newton_counter == newton_tolerance) {
             char err_string[] = "Points not in convergence basin; aborting";
             print_error(err_string, stderr);
@@ -650,17 +650,17 @@ void test_pairwise_rational(polynomial_system *system, rational_complex_vector *
         rational_complex_vector new_point;
         rational_complex_matrix LU;
 
-        /* perform Newton iterations if w_left is not a solution */
-        if (!w_left_solution) {
+        /* perform Newton iterations if x_left is not a solution */
+        if (!x_left_solution) {
             if (verbosity > BH_VERBOSE) {
                 if (newton_counter % 10 == 1 && newton_counter % 100 != 11)
-                    fprintf(stderr, "performing %dst Newton iteration on w_left", newton_counter);
+                    fprintf(stderr, "performing %dst Newton iteration on x_left", newton_counter);
                 else if (newton_counter % 10 == 2 && newton_counter % 100 != 12)
-                    fprintf(stderr, "performing %dnd Newton iteration on w_left", newton_counter);
+                    fprintf(stderr, "performing %dnd Newton iteration on x_left", newton_counter);
                 else if (newton_counter % 10 == 3 && newton_counter % 100 != 13)
-                    fprintf(stderr, "performing %drd Newton iteration on w_left", newton_counter);
+                    fprintf(stderr, "performing %drd Newton iteration on x_left", newton_counter);
                 else
-                    fprintf(stderr, "performing %dth Newton iteration on w_left", newton_counter);
+                    fprintf(stderr, "performing %dth Newton iteration on x_left", newton_counter);
                 
                 gmp_fprintf(stderr, " (interval: [%Qd, %Qd])\n", t_left, t_right);
             }
@@ -669,7 +669,7 @@ void test_pairwise_rational(polynomial_system *system, rational_complex_vector *
             initialize_rational_vector(new_point, num_var);
             initialize_rational_matrix(LU, 0, 0);
 
-            retval = newton_iteration_rational(new_point, beta_sqr_complex, LU, &rowswaps, &F_left, w_left);
+            retval = newton_iteration_rational(new_point, beta_sqr_complex, LU, &rowswaps, &F_left, x_left);
             if (retval == ERROR_LU_DECOMP) {
                 fprintf(stderr, "singularity suspected near point ");
                 print_points_rational(stderr, new_point);
@@ -677,9 +677,9 @@ void test_pairwise_rational(polynomial_system *system, rational_complex_vector *
                 exit(BH_EXIT_OTHER);
             }
 
-            copy_rational_vector(w_left, new_point);
+            copy_rational_vector(x_left, new_point);
 
-            w_left_solution = compute_abg_sqr_rational(w_left, &F_left, &alpha_sqr_left, &beta_sqr_left, &gamma_sqr_left);
+            x_left_solution = compute_abg_sqr_rational(x_left, &F_left, &alpha_sqr_left, &beta_sqr_left, &gamma_sqr_left);
 
             clear_rational_number(beta_sqr_complex);
             clear_rational_vector(new_point);
@@ -689,17 +689,17 @@ void test_pairwise_rational(polynomial_system *system, rational_complex_vector *
             rowswaps = NULL;
         }
 
-        /* perform Newton iterations if w_right is not a solution */
-        if (!w_right_solution) {
+        /* perform Newton iterations if x_right is not a solution */
+        if (!x_right_solution) {
             if (verbosity > BH_VERBOSE) {
                 if (newton_counter % 10 == 1 && newton_counter % 100 != 11)
-                    fprintf(stderr, "performing %dst Newton iteration on w_right", newton_counter);
+                    fprintf(stderr, "performing %dst Newton iteration on x_right", newton_counter);
                 else if (newton_counter % 10 == 2 && newton_counter % 100 != 12)
-                    fprintf(stderr, "performing %dnd Newton iteration on w_right", newton_counter);
+                    fprintf(stderr, "performing %dnd Newton iteration on x_right", newton_counter);
                 else if (newton_counter % 10 == 3 && newton_counter % 100 != 13)
-                    fprintf(stderr, "performing %drd Newton iteration on w_right", newton_counter);
+                    fprintf(stderr, "performing %drd Newton iteration on x_right", newton_counter);
                 else
-                    fprintf(stderr, "performing %dth Newton iteration on w_right", newton_counter);
+                    fprintf(stderr, "performing %dth Newton iteration on x_right", newton_counter);
 
                 gmp_fprintf(stderr, " (interval: [%Qd, %Qd])\n", t_left, t_right);
             }
@@ -708,7 +708,7 @@ void test_pairwise_rational(polynomial_system *system, rational_complex_vector *
             initialize_rational_vector(new_point, num_var);
             initialize_rational_matrix(LU, 0, 0);
 
-            retval = newton_iteration_rational(new_point, beta_sqr_complex, LU, &rowswaps, &F_right, w_right);
+            retval = newton_iteration_rational(new_point, beta_sqr_complex, LU, &rowswaps, &F_right, x_right);
             if (retval == ERROR_LU_DECOMP) {
                 fprintf(stderr, "singularity suspected near point ");
                 print_points_rational(stderr, new_point);
@@ -716,9 +716,9 @@ void test_pairwise_rational(polynomial_system *system, rational_complex_vector *
                 exit(BH_EXIT_OTHER);
             }
 
-            copy_rational_vector(w_right, new_point);
+            copy_rational_vector(x_right, new_point);
 
-            w_right_solution = compute_abg_sqr_rational(w_right, &F_right, &alpha_sqr_right, &beta_sqr_right, &gamma_sqr_right);
+            x_right_solution = compute_abg_sqr_rational(x_right, &F_right, &alpha_sqr_right, &beta_sqr_right, &gamma_sqr_right);
 
             clear_rational_number(beta_sqr_complex);
             clear_rational_vector(new_point);
@@ -734,25 +734,25 @@ void test_pairwise_rational(polynomial_system *system, rational_complex_vector *
     if (verbosity > BH_CHATTY)
         gmp_printf("testing segment [%Qd, %Qd]\n", t_left, t_right);
 
-    seg_continuous = test_continuity_rational(*v, t_left, t_right, w_left, w_right, F_left, F_right, alpha_sqr_left, alpha_sqr_right, gamma_sqr_left, gamma_sqr_right);
+    seg_continuous = test_continuity_rational(*v, t_left, t_right, x_left, x_right, F_left, F_right, alpha_sqr_left, alpha_sqr_right, gamma_sqr_left, gamma_sqr_right);
 
     if (seg_continuous == 0) {
         mpq_t t_mid;
         mpq_init(t_mid);
-        rational_complex_vector w_mid;
-        initialize_rational_vector(w_mid, num_var);
+        rational_complex_vector x_mid;
+        initialize_rational_vector(x_mid, num_var);
 
-        subdivide_segment_rational(system, *v, t_left, t_right, w_left, w_right, &t_mid, &w_mid, num_var);
+        subdivide_segment_rational(system, *v, t_left, t_right, x_left, x_right, &t_mid, &x_mid, num_var);
 
         /* recurse! */
-        test_pairwise_rational(system, v, t_left, t_mid, w_left, w_mid, num_var, iter + 1, t_final, w_final, sing, tested, succeeded, failed, num_sing, 0);
-        test_pairwise_rational(system, v, t_mid, t_right, w_mid, w_right, num_var, iter + 1, t_final, w_final, sing, tested, succeeded, failed, num_sing, 0);
+        test_pairwise_rational(system, v, t_left, t_mid, x_left, x_mid, num_var, iter + 1, t_final, x_final, sing, tested, succeeded, failed, num_sing, 0);
+        test_pairwise_rational(system, v, t_mid, t_right, x_mid, x_right, num_var, iter + 1, t_final, x_final, sing, tested, succeeded, failed, num_sing, 0);
         mpq_clear(t_mid);
-        clear_rational_vector(w_mid);
+        clear_rational_vector(x_mid);
     } else if (seg_continuous == 1) {
         if (verbosity > BH_LACONIC)
             gmp_printf("segment [%Qd, %Qd] is continuous\n", t_left, t_right);
-        fprint_continuous_rational(t_left, t_right, w_left, w_right, alpha_sqr_left, alpha_sqr_right, beta_sqr_left, beta_sqr_right, gamma_sqr_left, gamma_sqr_right);
+        fprint_continuous_rational(t_left, t_right, x_left, x_right, alpha_sqr_left, alpha_sqr_right, beta_sqr_left, beta_sqr_right, gamma_sqr_left, gamma_sqr_right);
         *tested += 1;
         *succeeded += 1;
 
@@ -764,18 +764,18 @@ void test_pairwise_rational(polynomial_system *system, rational_complex_vector *
             mpq_get_den(denom, gamma_sqr_left);
             if (mpz_cmp_ui(denom, 0) == 0) {
                 gmp_fprintf(stderr, "singularity found for t = %Qd at point ", t_left);
-                print_points_rational(stderr, w_left);
+                print_points_rational(stderr, x_left);
             }
         }
         mpq_get_den(denom, gamma_sqr_right);
         if (mpz_cmp_ui(denom, 0) == 0) {
             gmp_fprintf(stderr, "singularity found for t = %Qd at point ", t_right);
-            print_points_rational(stderr, w_right);
+            print_points_rational(stderr, x_right);
         }
 
         mpz_clear(denom);
 
-        /* copy t and w values into t_final and w_final respectively */
+        /* copy t and w values into t_final and x_final respectively */
         errno = 0;
 
         mpq_t *t_final_tmp = realloc(*t_final, (size_t) (*succeeded + 1) * sizeof(mpq_t));
@@ -791,20 +791,20 @@ void test_pairwise_rational(polynomial_system *system, rational_complex_vector *
 
         errno = 0;
 
-        rational_complex_vector *w_final_tmp = realloc(*w_final, (size_t) (*succeeded + 1) * sizeof(rational_complex_vector));
-        if (w_final_tmp == NULL) {
+        rational_complex_vector *x_final_tmp = realloc(*x_final, (size_t) (*succeeded + 1) * sizeof(rational_complex_vector));
+        if (x_final_tmp == NULL) {
             snprintf(error_string, (size_t) termwidth, "Couldn't realloc: %s\n", strerror(errno));
             print_error(error_string, stderr);
             exit(BH_EXIT_MEMORY);
         } else {
-            *w_final = w_final_tmp;
-            initialize_rational_vector((*w_final)[*succeeded], w_right->size);
-            copy_rational_vector((*w_final)[*succeeded], w_right);
+            *x_final = x_final_tmp;
+            initialize_rational_vector((*x_final)[*succeeded], x_right->size);
+            copy_rational_vector((*x_final)[*succeeded], x_right);
         }
     } else {
         if (verbosity > BH_LACONIC)
             gmp_printf("segment [%Qd, %Qd] is not continuous\n", t_left, t_right);
-        fprint_discontinuous_rational(t_left, t_right, w_left, w_right, alpha_sqr_left, alpha_sqr_right, beta_sqr_left, beta_sqr_right, gamma_sqr_left, gamma_sqr_right);
+        fprint_discontinuous_rational(t_left, t_right, x_left, x_right, alpha_sqr_left, alpha_sqr_right, beta_sqr_left, beta_sqr_right, gamma_sqr_left, gamma_sqr_right);
 
         /* alert user to singularities */
         mpz_t denom;
@@ -814,13 +814,13 @@ void test_pairwise_rational(polynomial_system *system, rational_complex_vector *
             mpq_get_den(denom, gamma_sqr_left);
             if (mpz_cmp_ui(denom, 0) == 0) {
                 gmp_fprintf(stderr, "singularity found for t = %Qd at point ", t_left);
-                print_points_rational(stderr, w_left);
+                print_points_rational(stderr, x_left);
             }
         }
         mpq_get_den(denom, gamma_sqr_right);
         if (mpz_cmp_ui(denom, 0) == 0) {
             gmp_fprintf(stderr, "singularity found for t = %Qd at point ", t_right);
-            print_points_rational(stderr, w_right);
+            print_points_rational(stderr, x_right);
         }
 
         mpz_clear(denom);
@@ -845,18 +845,18 @@ void test_pairwise_rational(polynomial_system *system, rational_complex_vector *
 /*******************
  * certify H(x, t) *
  *******************/
-void test_system_rational(polynomial_system *system, void *v, void *t, void *w, int num_points, void **t_final, void **w_final, void **sing, int *tested, int *succeeded, int *failed, int *num_sing) {
+void test_system_rational(polynomial_system *system, void *v, void *t, void *x, int num_points, void **t_final, void **x_final, void **sing, int *tested, int *succeeded, int *failed, int *num_sing) {
     int i, num_var = system->numVariables;
 
     rational_complex_vector *v_rational = (rational_complex_vector *) v;
     mpq_t *t_rational = (mpq_t *) t;
-    rational_complex_vector *w_rational = (rational_complex_vector *) w;
+    rational_complex_vector *x_rational = (rational_complex_vector *) x;
 
     mpq_t **t_final_rational = (mpq_t **) t_final;
-    rational_complex_vector **w_final_rational = (rational_complex_vector **) w_final;
+    rational_complex_vector **x_final_rational = (rational_complex_vector **) x_final;
     rational_complex_vector **sing_rational = (rational_complex_vector **) sing;
 
-    /* set up t_final and w_final */
+    /* set up t_final and x_final */
     *t_final_rational = malloc(sizeof(mpq_t));
     if (*t_final_rational == NULL) {
         snprintf(error_string, (size_t) termwidth, "Couldn't alloc: %s\n", strerror(errno));
@@ -868,20 +868,20 @@ void test_system_rational(polynomial_system *system, void *v, void *t, void *w, 
     mpq_init((*t_final_rational)[0]);
     mpq_set((*t_final_rational)[0], t_rational[0]);
 
-        *w_final_rational = malloc(sizeof(rational_complex_vector));
-    if (*w_final_rational == NULL) {
+        *x_final_rational = malloc(sizeof(rational_complex_vector));
+    if (*x_final_rational == NULL) {
         snprintf(error_string, (size_t) termwidth, "Couldn't alloc: %s\n", strerror(errno));
         print_error(error_string, stderr);
 
         exit(BH_EXIT_MEMORY);
     }
 
-    initialize_rational_vector((*w_final_rational)[0], w_rational[0]->size);
-    copy_rational_vector((*w_final_rational)[0], w_rational[0]);
+    initialize_rational_vector((*x_final_rational)[0], x_rational[0]->size);
+    copy_rational_vector((*x_final_rational)[0], x_rational[0]);
 
     /* for each t_i, t_{i+1} */
     /* this is the part that needs to get parallelized */
     for (i = 0; i < num_points - 1; i++) {
-        test_pairwise_rational(system, v_rational, t_rational[i], t_rational[i+1], w_rational[i], w_rational[i+1], num_var, 1, t_final_rational, w_final_rational, sing_rational, tested, succeeded, failed, num_sing, (i == 0));
+        test_pairwise_rational(system, v_rational, t_rational[i], t_rational[i+1], x_rational[i], x_rational[i+1], num_var, 1, t_final_rational, x_final_rational, sing_rational, tested, succeeded, failed, num_sing, (i == 0));
     }
 }

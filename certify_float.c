@@ -76,7 +76,7 @@ void mpq_set_r(mpq_t *q, mpfr_t  r) {
 /*****************************
  * compute ||J(f)^-1 * v||^2 *
  *****************************/
-void compute_norm_Jv_float(polynomial_system *F, complex_vector v, complex_vector w, mpf_t *norm_Jv) {
+void compute_norm_Jv_float(polynomial_system *F, complex_vector v, complex_vector x, mpf_t *norm_Jv) {
     int retval = 0, *rowswaps = NULL;
 
     mpf_t pivot_tol, pivot_drop_tol;
@@ -98,7 +98,7 @@ void compute_norm_Jv_float(polynomial_system *F, complex_vector v, complex_vecto
     initialize_matrix(J, 0, 0);
     initialize_matrix(LU, 0, 0);
 
-    eval_polynomial_system(f, J, F, w, default_precision);
+    eval_polynomial_system(f, J, F, x, default_precision);
 
     retval = LUdecomp(LU, &rowswaps, J, pivot_tol, pivot_drop_tol, default_precision);
 
@@ -124,7 +124,7 @@ void compute_norm_Jv_float(polynomial_system *F, complex_vector v, complex_vecto
 /*********************************************
  * return 1 if interval certifies continuous *
  *********************************************/
-int is_continuous_float(complex_vector v, mpf_t t_left, mpf_t t_right, complex_vector w_left, complex_vector w_right, polynomial_system F_left, polynomial_system F_right, mpf_t alpha_left, mpf_t alpha_right, mpf_t gamma_left, mpf_t gamma_right) {
+int is_continuous_float(complex_vector v, mpf_t t_left, mpf_t t_right, complex_vector x_left, complex_vector x_right, polynomial_system F_left, polynomial_system F_right, mpf_t alpha_left, mpf_t alpha_right, mpf_t gamma_left, mpf_t gamma_right) {
     int retval = 0, left_success = 0, right_success = 0;
 
     mpf_t alpha_star;
@@ -149,8 +149,8 @@ int is_continuous_float(complex_vector v, mpf_t t_left, mpf_t t_right, complex_v
     mpf_init(magic_number_right);
     mpf_init(norm_Jv_right);
 
-    compute_norm_Jv_float(&F_left, v, w_left, &norm_Jv_left);
-    compute_norm_Jv_float(&F_right, v, w_right, &norm_Jv_right);
+    compute_norm_Jv_float(&F_left, v, x_left, &norm_Jv_left);
+    compute_norm_Jv_float(&F_right, v, x_right, &norm_Jv_right);
 
     /* ||J^-1 * v|| */
     mpf_set(magic_number_left, norm_Jv_left);
@@ -185,7 +185,7 @@ int is_continuous_float(complex_vector v, mpf_t t_left, mpf_t t_right, complex_v
         mpf_init(magic_number);
 
         complex_vector points_dist_vector;
-        initialize_vector(points_dist_vector, w_left->size);
+        initialize_vector(points_dist_vector, x_left->size);
 
         /* test succeeds for both left and right */
         if (left_success && right_success) {
@@ -202,7 +202,7 @@ int is_continuous_float(complex_vector v, mpf_t t_left, mpf_t t_right, complex_v
         mpf_div_ui(magic_number, magic_number, 1000);
         mpf_mul(magic_number, magic_number, gamma_inv);
 
-        subtract_vector(points_dist_vector, w_left, w_right);
+        subtract_vector(points_dist_vector, x_left, x_right);
         norm_vector(points_dist, points_dist_vector); /* ||x_1 - x_2|| */
 
         if (mpf_cmp(points_dist, magic_number) <= 0) {
@@ -231,7 +231,7 @@ int is_continuous_float(complex_vector v, mpf_t t_left, mpf_t t_right, complex_v
 /************************************************
  * return 1 if interval certifies discontinuous *
  ************************************************/
-int is_not_continuous_float(complex_vector v, mpf_t t_left, mpf_t t_right, complex_vector w_left, complex_vector w_right, polynomial_system F_left, polynomial_system F_right, mpf_t alpha_left, mpf_t alpha_right, mpf_t gamma_left, mpf_t gamma_right) {
+int is_not_continuous_float(complex_vector v, mpf_t t_left, mpf_t t_right, complex_vector x_left, complex_vector x_right, polynomial_system F_left, polynomial_system F_right, mpf_t alpha_left, mpf_t alpha_right, mpf_t gamma_left, mpf_t gamma_right) {
     int retval = 0, beta_retval = 0, left_success = 0, right_success = 0;
 
     mpf_t alpha_star;
@@ -256,8 +256,8 @@ int is_not_continuous_float(complex_vector v, mpf_t t_left, mpf_t t_right, compl
     mpf_init(magic_number_right);
     mpf_init(norm_Jv_right);
 
-    compute_norm_Jv_float(&F_left, v, w_left, &norm_Jv_left);
-    compute_norm_Jv_float(&F_right, v, w_right, &norm_Jv_right);
+    compute_norm_Jv_float(&F_left, v, x_left, &norm_Jv_left);
+    compute_norm_Jv_float(&F_right, v, x_right, &norm_Jv_right);
 
     /* ||J^-1 * v|| */
     mpf_set(magic_number_left, norm_Jv_left);
@@ -301,22 +301,22 @@ int is_not_continuous_float(complex_vector v, mpf_t t_left, mpf_t t_right, compl
 
         /* test succeeds for at least left (possibly right, but use left anyway) */
         if (left_success) {
-            beta_retval = compute_beta(beta_complex1, &F_left, w_left, default_precision);
+            beta_retval = compute_beta(beta_complex1, &F_left, x_left, default_precision);
 
             if (!beta_retval)
                 mpf_set(beta1, beta_complex1->re);
 
-            beta_retval = compute_beta(beta_complex2, &F_left, w_right, default_precision);
+            beta_retval = compute_beta(beta_complex2, &F_left, x_right, default_precision);
 
             if (!beta_retval)
                 mpf_set(beta2, beta_complex2->re);
         } else { /* test succeeds for right only */
-            beta_retval = compute_beta(beta_complex1, &F_right, w_left, default_precision);
+            beta_retval = compute_beta(beta_complex1, &F_right, x_left, default_precision);
 
             if (!beta_retval)
                 mpf_set(beta1, beta_complex1->re);
 
-            beta_retval = compute_beta(beta_complex2, &F_right, w_right, default_precision);
+            beta_retval = compute_beta(beta_complex2, &F_right, x_right, default_precision);
 
             if (!beta_retval)
                 mpf_set(beta2, beta_complex2->re);
@@ -327,9 +327,9 @@ int is_not_continuous_float(complex_vector v, mpf_t t_left, mpf_t t_right, compl
         mpf_mul_ui(beta_sum, beta_sum, 2);
 
         complex_vector points_dist_vector;
-        initialize_vector(points_dist_vector, w_left->size);
+        initialize_vector(points_dist_vector, x_left->size);
 
-        subtract_vector(points_dist_vector, w_left, w_right);
+        subtract_vector(points_dist_vector, x_left, x_right);
         norm_vector(points_dist, points_dist_vector); /* ||x_1 - x_2|| */
 
         if (mpf_cmp(beta_sum, points_dist) <= 0)
@@ -361,19 +361,19 @@ int is_not_continuous_float(complex_vector v, mpf_t t_left, mpf_t t_right, compl
 /**********************************************
  * test for the continuity of a given segment *
  **********************************************/
-int test_continuity_float(complex_vector v, mpf_t t_left, mpf_t t_right, complex_vector w_left, complex_vector w_right, polynomial_system F_left, polynomial_system F_right, mpf_t alpha_left, mpf_t alpha_right, mpf_t gamma_left, mpf_t gamma_right) {
-    if (is_continuous_float(v, t_left, t_right, w_left, w_right, F_left, F_right, alpha_left, alpha_right, gamma_left, gamma_right))
+int test_continuity_float(complex_vector v, mpf_t t_left, mpf_t t_right, complex_vector x_left, complex_vector x_right, polynomial_system F_left, polynomial_system F_right, mpf_t alpha_left, mpf_t alpha_right, mpf_t gamma_left, mpf_t gamma_right) {
+    if (is_continuous_float(v, t_left, t_right, x_left, x_right, F_left, F_right, alpha_left, alpha_right, gamma_left, gamma_right))
         return 1;
-    else if (is_not_continuous_float(v, t_left, t_right, w_left, w_right, F_left, F_right, alpha_left, alpha_right, gamma_left, gamma_right))
+    else if (is_not_continuous_float(v, t_left, t_right, x_left, x_right, F_left, F_right, alpha_left, alpha_right, gamma_left, gamma_right))
         return -1;
 
     return 0;
 }
 
 /**************************************************************************************
- * subdivide a segment (t_1, w_1) <=> (t_2, w_2) for ((t_1 + t_2)/2, (w_1 + w_2) / 2) *
+ * subdivide a segment (t_1, x_2) <=> (t_2, x_2) for ((t_1 + t_2)/2, (x_1 + x_2) / 2) *
  **************************************************************************************/
-void subdivide_segment_float(polynomial_system *base, complex_vector v, mpf_t t_left, mpf_t t_right, complex_vector w_left, complex_vector w_right, mpf_t *t_mid, complex_vector *w_mid, int num_var) {
+void subdivide_segment_float(polynomial_system *base, complex_vector v, mpf_t t_left, mpf_t t_right, complex_vector x_left, complex_vector x_right, mpf_t *t_mid, complex_vector *x_mid, int num_var) {
     if (verbosity > BH_VERBOSE)
         printf("subdividing... ");
 
@@ -414,15 +414,15 @@ void subdivide_segment_float(polynomial_system *base, complex_vector v, mpf_t t_
     mpf_add(*t_mid, t_left, t_right);
     mpf_div_ui(*t_mid, *t_mid, 2);
 
-    /* w_mid */
+    /* x_mid */
     for (i = 0; i < num_var; i++) {
-        add((*w_mid)->coord[i], w_left->coord[i], w_right->coord[i]);
-        multiply((*w_mid)->coord[i], (*w_mid)->coord[i], one_half_complex);
+        add((*x_mid)->coord[i], x_left->coord[i], x_right->coord[i]);
+        multiply((*x_mid)->coord[i], (*x_mid)->coord[i], one_half_complex);
     }
 
-    /* apply Newton to w_mid */
+    /* apply Newton to x_mid */
     apply_tv_float(base, &F_mid, *t_mid, v);
-    retval = newton_iteration(new_point, beta_complex, LU, &rowswaps, &F_mid, *w_mid, pivot_tol, pivot_drop_tol, default_precision);
+    retval = newton_iteration(new_point, beta_complex, LU, &rowswaps, &F_mid, *x_mid, pivot_tol, pivot_drop_tol, default_precision);
     if (retval == ERROR_LU_DECOMP) {
         char msg[BH_MAX_STRING];
         snprintf(msg, (size_t) BH_MAX_STRING, "singularity suspected at t = %%.%dRe near point ", sigdig);
@@ -432,7 +432,7 @@ void subdivide_segment_float(polynomial_system *base, complex_vector v, mpf_t t_
         exit(BH_EXIT_OTHER);
     }
 
-    copy_vector(*w_mid, new_point);
+    copy_vector(*x_mid, new_point);
 
     if (verbosity > BH_VERBOSE) {
         char msg[BH_MAX_STRING];
@@ -615,11 +615,11 @@ int compute_abg_float(complex_vector points, polynomial_system *F, mpf_t *alpha,
     return retval;
 }
 
-/***********************************************************************************
- * test that each w is in the quadratic convergence basin and check for continuity *
- ***********************************************************************************/
-void test_pairwise_float(polynomial_system *system, complex_vector *v, mpf_t t_left, mpf_t t_right, complex_vector w_left, complex_vector w_right, int num_var, int iter, mpf_t **t_final, complex_vector **w_final, complex_vector **sing, int *tested, int *succeeded, int *failed, int *num_sing, int check_left) {
-    int w_left_solution, w_right_solution, seg_continuous;
+/***************************************************************
+ * test that each x is an approx soln and check for continuity *
+ ***************************************************************/
+void test_pairwise_float(polynomial_system *system, complex_vector *v, mpf_t t_left, mpf_t t_right, complex_vector x_left, complex_vector x_right, int num_var, int iter, mpf_t **t_final, complex_vector **x_final, complex_vector **sing, int *tested, int *succeeded, int *failed, int *num_sing, int check_left) {
+    int x_left_solution, x_right_solution, seg_continuous;
     polynomial_system F_left, F_right;
     mpf_t alpha_left, beta_left, gamma_left, alpha_right, beta_right, gamma_right, beta_min;
     mpf_init(alpha_left);
@@ -633,8 +633,8 @@ void test_pairwise_float(polynomial_system *system, complex_vector *v, mpf_t t_l
     apply_tv_float(system, &F_left, t_left, *v);
     apply_tv_float(system, &F_right, t_right, *v);
 
-    w_left_solution = compute_abg_float(w_left, &F_left, &alpha_left, &beta_left, &gamma_left);
-    w_right_solution = compute_abg_float(w_right, &F_right, &alpha_right, &beta_right, &gamma_right);
+    x_left_solution = compute_abg_float(x_left, &F_left, &alpha_left, &beta_left, &gamma_left);
+    x_right_solution = compute_abg_float(x_right, &F_right, &alpha_right, &beta_right, &gamma_right);
 
     /* test if we've been through this too many times */
     if (iter > subd_tolerance) {
@@ -645,7 +645,7 @@ void test_pairwise_float(polynomial_system *system, complex_vector *v, mpf_t t_l
             snprintf(msg, (size_t) BH_MAX_STRING, "unsure whether segment [%%.%dRe, %%.%dRe] is continuous\n", sigdig, sigdig);
             mpfr_printf(msg, t_left, t_right);
         }
-        fprint_uncertain_float(t_left, t_right, w_left, w_right, alpha_left, alpha_right, beta_left, beta_right, gamma_left, gamma_right);
+        fprint_uncertain_float(t_left, t_right, x_left, x_right, alpha_left, alpha_right, beta_left, beta_right, gamma_left, gamma_right);
 
         /* alert user to singularities */
         if (check_left) {
@@ -653,7 +653,7 @@ void test_pairwise_float(polynomial_system *system, complex_vector *v, mpf_t t_l
                 char msg[BH_MAX_STRING];
                 snprintf(msg, (size_t) BH_MAX_STRING, "singularity found for t = %%.%dRe at point ", sigdig);
                 mpfr_fprintf(stderr, msg, t_left);
-                print_points_float(stderr, w_left);
+                print_points_float(stderr, x_left);
                 *num_sing += 1;
             }
         }
@@ -661,7 +661,7 @@ void test_pairwise_float(polynomial_system *system, complex_vector *v, mpf_t t_l
             char msg[BH_MAX_STRING];
             snprintf(msg, (size_t) BH_MAX_STRING, "singularity found for t = %%.%dRe at point ", sigdig);
             mpfr_fprintf(stderr, msg, t_right);
-            print_points_float(stderr, w_right);
+            print_points_float(stderr, x_right);
             *num_sing += 1;
         }
 
@@ -672,7 +672,7 @@ void test_pairwise_float(polynomial_system *system, complex_vector *v, mpf_t t_l
 
     /* perform Newton iterations on non-compliant points */
     int newton_counter = 1;
-    while (!w_left_solution || !w_right_solution) {
+    while (!x_left_solution || !x_right_solution) {
         if (newton_counter == newton_tolerance) {
             char err_string[] = "Points not in convergence basin; aborting";
             print_error(err_string, stderr);
@@ -685,17 +685,17 @@ void test_pairwise_float(polynomial_system *system, complex_vector *v, mpf_t t_l
         complex_vector new_point;
         complex_matrix LU;
 
-        /* perform Newton iterations if w_left is not a solution */
-        if (!w_left_solution) {
+        /* perform Newton iterations if x_left is not a solution */
+        if (!x_left_solution) {
             if (verbosity > BH_VERBOSE) {
                 if (newton_counter % 10 == 1 && newton_counter % 100 != 11)
-                    fprintf(stderr, "performing %dst Newton iteration on w_left", newton_counter);
+                    fprintf(stderr, "performing %dst Newton iteration on x_left", newton_counter);
                 else if (newton_counter % 10 == 2 && newton_counter % 100 != 12)
-                    fprintf(stderr, "performing %dnd Newton iteration on w_left", newton_counter);
+                    fprintf(stderr, "performing %dnd Newton iteration on x_left", newton_counter);
                 else if (newton_counter % 10 == 3 && newton_counter % 100 != 13)
-                    fprintf(stderr, "performing %drd Newton iteration on w_left", newton_counter);
+                    fprintf(stderr, "performing %drd Newton iteration on x_left", newton_counter);
                 else
-                    fprintf(stderr, "performing %dth Newton iteration on w_left", newton_counter);
+                    fprintf(stderr, "performing %dth Newton iteration on x_left", newton_counter);
                 
                 char msg[BH_MAX_STRING];
                 snprintf(msg, (size_t) BH_MAX_STRING, " (interval: [%%.%dRe, %%.%dRe])\n", sigdig, sigdig);
@@ -713,19 +713,19 @@ void test_pairwise_float(polynomial_system *system, complex_vector *v, mpf_t t_l
             setPrec_number(beta_complex, default_precision);
             determine_pivot_tolerances(pivot_tol, pivot_drop_tol, default_precision);
 
-            retval = newton_iteration(new_point, beta_complex, LU, &rowswaps, &F_left, w_left, pivot_tol, pivot_drop_tol, default_precision);
+            retval = newton_iteration(new_point, beta_complex, LU, &rowswaps, &F_left, x_left, pivot_tol, pivot_drop_tol, default_precision);
             if (retval == ERROR_LU_DECOMP) {
                 char msg[BH_MAX_STRING];
                 snprintf(msg, (size_t) BH_MAX_STRING, "singularity suspected at t = %%.%dRe near point ", sigdig);
                 mpfr_fprintf(stderr, msg, t_left);
-                print_points_float(stderr, w_left);
+                print_points_float(stderr, x_left);
                 fprintf(stderr, ERROR_MESSAGE);
                 exit(BH_EXIT_OTHER);
             }
 
-            copy_vector(w_left, new_point);
+            copy_vector(x_left, new_point);
 
-            w_left_solution = compute_abg_float(w_left, &F_left, &alpha_left, &beta_left, &gamma_left);
+            x_left_solution = compute_abg_float(x_left, &F_left, &alpha_left, &beta_left, &gamma_left);
 
             mpf_clear(pivot_tol);
             mpf_clear(pivot_drop_tol);
@@ -738,17 +738,17 @@ void test_pairwise_float(polynomial_system *system, complex_vector *v, mpf_t t_l
             rowswaps = NULL;
         }
 
-        /* perform Newton iterations if w_right is not a solution */
-        if (!w_right_solution) {
+        /* perform Newton iterations if x_right is not a solution */
+        if (!x_right_solution) {
             if (verbosity > BH_VERBOSE) {
                 if (newton_counter % 10 == 1 && newton_counter % 100 != 11)
-                    fprintf(stderr, "performing %dst Newton iteration on w_right", newton_counter);
+                    fprintf(stderr, "performing %dst Newton iteration on x_right", newton_counter);
                 else if (newton_counter % 10 == 2 && newton_counter % 100 != 12)
-                    fprintf(stderr, "performing %dnd Newton iteration on w_right", newton_counter);
+                    fprintf(stderr, "performing %dnd Newton iteration on x_right", newton_counter);
                 else if (newton_counter % 10 == 3 && newton_counter % 100 != 13)
-                    fprintf(stderr, "performing %drd Newton iteration on w_right", newton_counter);
+                    fprintf(stderr, "performing %drd Newton iteration on x_right", newton_counter);
                 else
-                    fprintf(stderr, "performing %dth Newton iteration on w_right", newton_counter);
+                    fprintf(stderr, "performing %dth Newton iteration on x_right", newton_counter);
 
                 char msg[BH_MAX_STRING];
                 snprintf(msg, (size_t) BH_MAX_STRING, " (interval: [%%.%dRe, %%.%dRe])\n", sigdig, sigdig);
@@ -766,19 +766,19 @@ void test_pairwise_float(polynomial_system *system, complex_vector *v, mpf_t t_l
             setPrec_number(beta_complex, default_precision);
             determine_pivot_tolerances(pivot_tol, pivot_drop_tol, default_precision);
 
-            retval = newton_iteration(new_point, beta_complex, LU, &rowswaps, &F_right, w_right, pivot_tol, pivot_drop_tol, default_precision);
+            retval = newton_iteration(new_point, beta_complex, LU, &rowswaps, &F_right, x_right, pivot_tol, pivot_drop_tol, default_precision);
             if (retval == ERROR_LU_DECOMP) {
                 char msg[BH_MAX_STRING];
                 snprintf(msg, (size_t) BH_MAX_STRING, "singularity suspected at t = %%.%dRe near point ", sigdig);
                 mpfr_fprintf(stderr, msg, t_right);
-                print_points_float(stderr, w_right);
+                print_points_float(stderr, x_right);
                 fprintf(stderr, ERROR_MESSAGE);
                 exit(BH_EXIT_OTHER);
             }
 
-            copy_vector(w_right, new_point);
+            copy_vector(x_right, new_point);
 
-            w_right_solution = compute_abg_float(w_right, &F_right, &alpha_right, &beta_right, &gamma_right);
+            x_right_solution = compute_abg_float(x_right, &F_right, &alpha_right, &beta_right, &gamma_right);
 
             mpf_clear(pivot_tol);
             mpf_clear(pivot_drop_tol);
@@ -800,7 +800,7 @@ void test_pairwise_float(polynomial_system *system, complex_vector *v, mpf_t t_l
         mpfr_printf(msg, t_left, t_right);
     }
 
-    seg_continuous = test_continuity_float(*v, t_left, t_right, w_left, w_right, F_left, F_right, alpha_left, alpha_right, gamma_left, gamma_right);
+    seg_continuous = test_continuity_float(*v, t_left, t_right, x_left, x_right, F_left, F_right, alpha_left, alpha_right, gamma_left, gamma_right);
 
     if (seg_continuous == 0) {
         if (verbosity > BH_CHATTY) {
@@ -811,8 +811,8 @@ void test_pairwise_float(polynomial_system *system, complex_vector *v, mpf_t t_l
 
         mpf_t t_mid;
         mpf_init(t_mid);
-        complex_vector w_mid;
-        initialize_vector(w_mid, num_var);
+        complex_vector x_mid;
+        initialize_vector(x_mid, num_var);
 
         if (mpfr_cmp(t_left, t_right) == 0) {
             snprintf(error_string, (size_t) termwidth, "Segment is a point; cannot continue\n");
@@ -820,14 +820,14 @@ void test_pairwise_float(polynomial_system *system, complex_vector *v, mpf_t t_l
             exit(BH_EXIT_MEMORY);
         }
 
-        subdivide_segment_float(system, *v, t_left, t_right, w_left, w_right, &t_mid, &w_mid, num_var);
+        subdivide_segment_float(system, *v, t_left, t_right, x_left, x_right, &t_mid, &x_mid, num_var);
 
         /* recurse! */
-        test_pairwise_float(system, v, t_left, t_mid, w_left, w_mid, num_var, iter + 1, t_final, w_final, sing, tested, succeeded, failed, num_sing, 0);
-        test_pairwise_float(system, v, t_mid, t_right, w_mid, w_right, num_var, iter + 1, t_final, w_final, sing, tested, succeeded, failed, num_sing, 0);
+        test_pairwise_float(system, v, t_left, t_mid, x_left, x_mid, num_var, iter + 1, t_final, x_final, sing, tested, succeeded, failed, num_sing, 0);
+        test_pairwise_float(system, v, t_mid, t_right, x_mid, x_right, num_var, iter + 1, t_final, x_final, sing, tested, succeeded, failed, num_sing, 0);
 
         mpf_clear(t_mid);
-        clear_vector(w_mid);
+        clear_vector(x_mid);
     } else if (seg_continuous == 1) {
         if (verbosity > BH_LACONIC) {
             char msg[BH_MAX_STRING];
@@ -835,7 +835,7 @@ void test_pairwise_float(polynomial_system *system, complex_vector *v, mpf_t t_l
             mpfr_printf(msg, t_left, t_right);
         }
 
-        fprint_continuous_float(t_left, t_right, w_left, w_right, alpha_left, alpha_right, beta_left, beta_right, gamma_left, gamma_right);
+        fprint_continuous_float(t_left, t_right, x_left, x_right, alpha_left, alpha_right, beta_left, beta_right, gamma_left, gamma_right);
 
         *tested += 1;
         *succeeded += 1;
@@ -846,17 +846,17 @@ void test_pairwise_float(polynomial_system *system, complex_vector *v, mpf_t t_l
                 char msg[BH_MAX_STRING];
                 snprintf(msg, (size_t) BH_MAX_STRING, "singularity found for t = %%.%dRe at point ", sigdig);
                 mpfr_fprintf(stderr, msg, t_left);
-                print_points_float(stderr, w_left);
+                print_points_float(stderr, x_left);
             }
         }
         if (mpfr_inf_p(gamma_right)) {
             char msg[BH_MAX_STRING];
             snprintf(msg, (size_t) BH_MAX_STRING, "singularity found for t = %%.%dRe at point ", sigdig);
             mpfr_fprintf(stderr, msg, t_right);
-            print_points_float(stderr, w_right);
+            print_points_float(stderr, x_right);
         }
 
-        /* copy t and w values into t_final and w_final respectively */
+        /* copy t and x values into t_final and x_final respectively */
         errno = 0;
 
         mpf_t *t_final_tmp = realloc(*t_final, (size_t) (*succeeded + 1) * sizeof(mpf_t));
@@ -872,15 +872,15 @@ void test_pairwise_float(polynomial_system *system, complex_vector *v, mpf_t t_l
 
         errno = 0;
 
-        complex_vector *w_final_tmp = realloc(*w_final, (size_t) (*succeeded + 1) * sizeof(complex_vector));
-        if (w_final_tmp == NULL) {
+        complex_vector *x_final_tmp = realloc(*x_final, (size_t) (*succeeded + 1) * sizeof(complex_vector));
+        if (x_final_tmp == NULL) {
             snprintf(error_string, (size_t) termwidth, "Couldn't realloc: %s\n", strerror(errno));
             print_error(error_string, stderr);
             exit(BH_EXIT_MEMORY);
         } else {
-            *w_final = w_final_tmp;
-            initialize_vector((*w_final)[*succeeded], w_right->size);
-            copy_vector((*w_final)[*succeeded], w_right);
+            *x_final = x_final_tmp;
+            initialize_vector((*x_final)[*succeeded], x_right->size);
+            copy_vector((*x_final)[*succeeded], x_right);
         }
     } else {
         if (verbosity > BH_LACONIC) {
@@ -889,7 +889,7 @@ void test_pairwise_float(polynomial_system *system, complex_vector *v, mpf_t t_l
             mpfr_printf(msg, t_left, t_right);
         }
 
-        fprint_discontinuous_float(t_left, t_right, w_left, w_right, alpha_left, alpha_right, beta_left, beta_right, gamma_left, gamma_right);
+        fprint_discontinuous_float(t_left, t_right, x_left, x_right, alpha_left, alpha_right, beta_left, beta_right, gamma_left, gamma_right);
 
         /* alert user to singularities */
         if (check_left) {
@@ -897,14 +897,14 @@ void test_pairwise_float(polynomial_system *system, complex_vector *v, mpf_t t_l
                 char msg[BH_MAX_STRING];
                 snprintf(msg, (size_t) BH_MAX_STRING, "singularity found for t = %%.%dRe at point ", sigdig);
                 mpfr_fprintf(stderr, msg, t_left);
-                print_points_float(stderr, w_left);
+                print_points_float(stderr, x_left);
             }
         }
         if (mpfr_inf_p(gamma_right)) {
             char msg[BH_MAX_STRING];
             snprintf(msg, (size_t) BH_MAX_STRING, "singularity found for t = %%.%dRe at point ", sigdig);
             mpfr_fprintf(stderr, msg, t_right);
-            print_points_float(stderr, w_right);
+            print_points_float(stderr, x_right);
         }
 
         *tested += 1;
@@ -927,18 +927,18 @@ void test_pairwise_float(polynomial_system *system, complex_vector *v, mpf_t t_l
 /*******************
  * certify H(x, t) *
  *******************/
-void test_system_float(polynomial_system *system, void *v, void *t, void *w, int num_points, void **t_final, void **w_final, void **sing, int *tested, int *succeeded, int *failed, int *num_sing) {
+void test_system_float(polynomial_system *system, void *v, void *t, void *x, int num_points, void **t_final, void **x_final, void **sing, int *tested, int *succeeded, int *failed, int *num_sing) {
     int i, num_var = system->numVariables;
 
     complex_vector *v_float = (complex_vector *) v;
     mpf_t *t_float = (mpf_t *) t;
-    complex_vector *w_float = (complex_vector *) w;
+    complex_vector *x_float = (complex_vector *) x;
 
     mpf_t **t_final_float = (mpf_t **) t_final;
-    complex_vector **w_final_float = (complex_vector **) w_final;
+    complex_vector **x_final_float = (complex_vector **) x_final;
     complex_vector **sing_float = (complex_vector **) sing;
 
-    /* set up t_final and w_final */
+    /* set up t_final and x_final */
     *t_final_float = malloc(sizeof(mpf_t));
     if (*t_final_float == NULL) {
         snprintf(error_string, (size_t) termwidth, "Couldn't alloc: %s\n", strerror(errno));
@@ -950,20 +950,20 @@ void test_system_float(polynomial_system *system, void *v, void *t, void *w, int
     mpf_init((*t_final_float)[0]);
     mpf_set((*t_final_float)[0], t_float[0]);
 
-    *w_final_float = malloc(sizeof(complex_vector));
-    if (*w_final_float == NULL) {
+    *x_final_float = malloc(sizeof(complex_vector));
+    if (*x_final_float == NULL) {
         snprintf(error_string, (size_t) termwidth, "Couldn't alloc: %s\n", strerror(errno));
         print_error(error_string, stderr);
 
         exit(BH_EXIT_MEMORY);
     }
 
-    initialize_vector((*w_final_float)[0], w_float[0]->size);
-    copy_vector((*w_final_float)[0], w_float[0]);
+    initialize_vector((*x_final_float)[0], x_float[0]->size);
+    copy_vector((*x_final_float)[0], x_float[0]);
 
     /* for each t_i, t_{i+1} */
     /* this is the part that needs to get parallelized */
     for (i = 0; i < num_points - 1; i++) {
-        test_pairwise_float(system, v_float, t_float[i], t_float[i+1], w_float[i], w_float[i+1], num_var, 1, t_final_float, w_final_float, sing_float, tested, succeeded, failed, num_sing, (i == 0));
+        test_pairwise_float(system, v_float, t_float[i], t_float[i+1], x_float[i], x_float[i+1], num_var, 1, t_final_float, x_final_float, sing_float, tested, succeeded, failed, num_sing, (i == 0));
     }
 }
