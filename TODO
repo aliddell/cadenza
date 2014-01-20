@@ -12,6 +12,4 @@
 
 * edit the parsing functions to throw away lines beginning with # (comments)
 
-* add precision to mpfr_printf and friends
-
 * add singularities to array for summary file
