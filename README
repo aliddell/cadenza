@@ -2,7 +2,7 @@ BUILD REQUIREMENTS
 You need the GMP and MPFR headers to build this program. You will need to have
 the gmp-devel and mpfr-devel (or equivalent) packages installed. Use apt-get
 or yum or whatever accordingly. Cadenza has been tested with GMP v5.1.2 & MPFR v3.1.2.
-Future versions will require mpich2.
+Future versions will require MPI.
 
 BUILDING
 Just type `make'.
@@ -56,8 +56,8 @@ See system.example1 or system.example2 for a complete picture.
 You must specify the points in a file formatted as follows:
 
 The number of points must be specified on a line all its own. Each point is an ordered
-pair (t, x), where x is a vector in C^N. Thus, x represents a potential solution to
-f(x) + t*v = 0 for its corresponding value of t.
+pair (t, x), where t is in [0,1] and x is a vector in C^N. Thus, x represents a potential
+solution to f(x) + t*v = 0 for its corresponding value of t.
 
 Each t comes before each x. t is understood to be real-valued, so do not specify 0 for
 the imaginary part. Each x vector comes after its corresponding t, and is complex-valued,
