@@ -1,0 +1,26 @@
+cadenza: Software for certified numerical path tracking
+Jonathan Hauenstein, Ian Haywood, and Alan Liddell
+Copyright 2014
+
+"AS IS" clause 
+cadenza is released free of charge on an "AS IS" basis with no warranties, implied or otherwise, that it is suitable for any purpose. Its intended usage is for educational and for research purposes, so that the user may gain a greater understanding of numerical path tracking and Newton homotopies. Any other use is strictly the user's responsibility. 
+
+Copyright 
+The authors retain copyright protection of the source code. It is released to allow the users the ability to compile cadenza as well as gain a greater understanding of how to implement algorithms.
+
+Redistribution 
+cadenza must be kept in unaltered form and must retain the same name and acknowledge the authors. If you wish to distribute a program that makes use of cadenza, either direct the users to the cadenza download page or display a message to the user, which must include the names of the authors, each time that cadenza is used.
+
+Citation 
+In publications based on results obtained using cadenza or its successors, the use of cadenza should be acknowledged. 
+
+      @bibitem{cadenza} J.D. Hauenstein, I. Haywood, and A.C. Liddell, Jr. 
+      \newblock cadenza: Software for certified numerical path tracking. 
+      \newblock Available at www.math.ncsu.edu/~jdhauens/cadenza. 
+
+      @Misc{cadenza, 
+      author = {Hauenstein, Jonathan D. and Haywood, Ian and Liddell, Jr., Alan C.}, 
+      title = {cadenza: Software for certified numerical path tracking}, 
+      howpublished = {Available at http://www4.ncsu.edu/~jdhauens/cadenza} 
+      } }
+
