@@ -369,15 +369,22 @@ void subdivide_segment_rational(polynomial_system *base, rational_complex_vector
     if (verbosity > BH_VERBOSE)
         printf("subdividing... ");
 
-    int i, retval = 0, *rowswaps = NULL;
+    int i, x_left_solution, x_mid_solution, x_right_solution, retval = 0, *rowswaps = NULL;
 
     mpq_t one_half_rational;
+    mpq_t alpha_sqr;
     mpq_t beta_sqr;
+    mpq_t gamma_sqr;
+    mpq_t alpha0_sqr;
 
     mpq_init(one_half_rational);
+    mpq_init(alpha_sqr);
     mpq_init(beta_sqr);
+    mpq_init(gamma_sqr);
+    mpq_init(alpha0_sqr);
 
     mpq_set_ui(one_half_rational, 1, 2);
+    mpq_set_ui(alpha0_sqr, 12321, 495616); /* 12321/495616 < ((13 - 3 * sqrt(17))/4)^2 */
 
     rational_complex_number one_half_complex;
     initialize_rational_number(one_half_complex);
@@ -393,11 +400,75 @@ void subdivide_segment_rational(polynomial_system *base, rational_complex_vector
     rational_complex_matrix LU;
     initialize_rational_matrix(LU, 0, 0);
 
+    polynomial_system F_left;
     polynomial_system F_mid;
+    polynomial_system F_right;
+
+    /* t_left and t_right are fixed, this will not change */
+    apply_tv_rational(base, &F_left, *t_mid, v);
+    apply_tv_rational(base, &F_right, *t_mid, v);
 
     rational_complex_vector new_point;
 
     initialize_rational_vector(new_point, num_var);
+
+    /* perform a Newton iteration on x_left */
+    retval = newton_iteration_rational(new_point, beta_sqr_complex, LU, &rowswaps, &F_left, x_left);
+    if (retval == ERROR_LU_DECOMP) {
+        fprintf(stderr, "singularity suspected near point ");
+        print_points_rational(stderr, new_point);
+        fprintf(stderr, ERROR_MESSAGE);
+        exit(BH_EXIT_OTHER);
+    }
+    copy_rational_vector(x_left, new_point);
+
+    x_left_solution = compute_abg_sqr_rational(x_left, &F_left, &alpha_sqr, &beta_sqr, &gamma_sqr);
+
+    i = 1;
+    /* perform Newton iterations on x_left until within tolerance */
+    while (i < newton_tolerance && mpq_cmp(alpha_sqr, alpha0_sqr) >= 0) {
+        retval = newton_iteration_rational(new_point, beta_sqr_complex, LU, &rowswaps, &F_left, x_left);
+        if (retval == ERROR_LU_DECOMP) {
+            fprintf(stderr, "singularity suspected near point ");
+            print_points_rational(stderr, new_point);
+            fprintf(stderr, ERROR_MESSAGE);
+            exit(BH_EXIT_OTHER);
+        }
+        copy_rational_vector(x_left, new_point);
+
+        x_left_solution = compute_abg_sqr_rational(x_left, &F_left, &alpha_sqr, &beta_sqr, &gamma_sqr);
+
+        i++;
+    }
+
+    /* perform a Newton iteration on x_right */
+    retval = newton_iteration_rational(new_point, beta_sqr_complex, LU, &rowswaps, &F_right, x_right);
+    if (retval == ERROR_LU_DECOMP) {
+        fprintf(stderr, "singularity suspected near point ");
+        print_points_rational(stderr, new_point);
+        fprintf(stderr, ERROR_MESSAGE);
+        exit(BH_EXIT_OTHER);
+    }
+    copy_rational_vector(x_right, new_point);
+
+    x_right_solution = compute_abg_sqr_rational(x_right, &F_right, &alpha_sqr, &beta_sqr, &gamma_sqr);
+
+    i = 1;
+    /* perform Newton iterations on x_right until within tolerance */
+    while (i < newton_tolerance && mpq_cmp(alpha_sqr, alpha0_sqr) >= 0) {
+        retval = newton_iteration_rational(new_point, beta_sqr_complex, LU, &rowswaps, &F_right, x_right);
+        if (retval == ERROR_LU_DECOMP) {
+            fprintf(stderr, "singularity suspected near point ");
+            print_points_rational(stderr, new_point);
+            fprintf(stderr, ERROR_MESSAGE);
+            exit(BH_EXIT_OTHER);
+        }
+        copy_rational_vector(x_right, new_point);
+
+        x_right_solution = compute_abg_sqr_rational(x_right, &F_right, &alpha_sqr, &beta_sqr, &gamma_sqr);
+
+        i++;
+    }
 
     /* t_mid */
     mpq_add(*t_mid, t_left, t_right);
@@ -421,11 +492,33 @@ void subdivide_segment_rational(polynomial_system *base, rational_complex_vector
 
     copy_rational_vector(*x_mid, new_point);
 
+    x_mid_solution = compute_abg_sqr_rational(*x_mid, &F_right, &alpha_sqr, &beta_sqr, &gamma_sqr);
+
+    i = 1;
+    /* perform Newton iterations on x_mid until within tolerance */
+    while (i < newton_tolerance && mpq_cmp(alpha_sqr, alpha0_sqr) >= 0) {
+        retval = newton_iteration_rational(new_point, beta_sqr_complex, LU, &rowswaps, &F_right, *x_mid);
+        if (retval == ERROR_LU_DECOMP) {
+            fprintf(stderr, "singularity suspected near point ");
+            print_points_rational(stderr, new_point);
+            fprintf(stderr, ERROR_MESSAGE);
+            exit(BH_EXIT_OTHER);
+        }
+        copy_rational_vector(*x_mid, new_point);
+
+        x_mid_solution = compute_abg_sqr_rational(*x_mid, &F_right, &alpha_sqr, &beta_sqr, &gamma_sqr);
+
+        i++;
+    }
+
     if (verbosity > BH_VERBOSE)
         gmp_printf("new intervals are [%Qd, %Qd] and [%Qd, %Qd]\n", t_left, *t_mid, *t_mid, t_right);
 
     mpq_clear(one_half_rational);
+    mpq_clear(alpha_sqr);
     mpq_clear(beta_sqr);
+    mpq_clear(gamma_sqr);
+    mpq_clear(alpha0_sqr);
     clear_rational_number(one_half_complex);
     clear_rational_number(beta_sqr_complex);
     clear_rational_matrix(LU);

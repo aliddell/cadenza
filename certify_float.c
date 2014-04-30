@@ -377,10 +377,24 @@ void subdivide_segment_float(polynomial_system *base, complex_vector v, mpf_t t_
     if (verbosity > BH_VERBOSE)
         printf("subdividing... ");
 
-    int i, retval = 0, *rowswaps = NULL;
+    int i, x_left_solution, x_mid_solution, x_right_solution, retval = 0, *rowswaps = NULL;
 
+    mpf_t alpha;
     mpf_t beta;
+    mpf_t gamma;
+    mpf_t alpha0;
+
+    mpf_init(alpha);
     mpf_init(beta);
+    mpf_init(gamma);
+    mpf_init(alpha0);
+
+    /* alpha0 = (13 - 3 * sqrt(17)) / 4 */
+    mpf_set_ui(alpha0, 17);
+    mpf_sqrt(alpha0, alpha0);
+    mpf_mul_ui(alpha0, alpha0, 3);
+    mpf_ui_sub(alpha0, 13, alpha0);
+    mpf_div_ui(alpha0, alpha0, 4);
 
     complex_number one_half_complex;
     initialize_number(one_half_complex);
@@ -397,7 +411,13 @@ void subdivide_segment_float(polynomial_system *base, complex_vector v, mpf_t t_
     complex_matrix LU;
     initialize_matrix(LU, 0, 0);
 
+    polynomial_system F_left;
     polynomial_system F_mid;
+    polynomial_system F_right;
+
+    /* t_left and t_right are fixed, this will not change */
+    apply_tv_float(base, &F_left, t_left, v);
+    apply_tv_float(base, &F_right, t_right, v);
 
     complex_vector new_point;
 
@@ -410,11 +430,77 @@ void subdivide_segment_float(polynomial_system *base, complex_vector v, mpf_t t_
     setPrec_number(beta_complex, default_precision);
     determine_pivot_tolerances(pivot_tol, pivot_drop_tol, default_precision);
 
-    /* t_mid */
+    /* perform a Newton iteration on x_left */
+    retval = newton_iteration(new_point, beta_complex, LU, &rowswaps, &F_left, x_left, pivot_tol, pivot_drop_tol, default_precision);
+    if (retval == ERROR_LU_DECOMP) {
+        char msg[BH_MAX_STRING];
+        snprintf(msg, (size_t) BH_MAX_STRING, "singularity suspected at t = %%.%dRe near point ", sigdig);
+        mpfr_fprintf(stderr, msg, t_left);
+        print_points_float(stderr, new_point);
+        fprintf(stderr, ERROR_MESSAGE);
+        exit(BH_EXIT_OTHER);
+    }
+    copy_vector(x_left, new_point);
+
+    x_left_solution = compute_abg_float(x_left, &F_left, &alpha, &beta, &gamma);
+
+    i = 1;
+    /* perform Newton iterations on x_left until within tolerance */
+    while (i < newton_tolerance && mpf_cmp(alpha, alpha0) >= 0) {
+        retval = newton_iteration(new_point, beta_complex, LU, &rowswaps, &F_left, x_left, pivot_tol, pivot_drop_tol, default_precision);
+        if (retval == ERROR_LU_DECOMP) {
+            char msg[BH_MAX_STRING];
+            snprintf(msg, (size_t) BH_MAX_STRING, "singularity suspected at t = %%.%dRe near point ", sigdig);
+            mpfr_fprintf(stderr, msg, t_left);
+            print_points_float(stderr, new_point);
+            fprintf(stderr, ERROR_MESSAGE);
+            exit(BH_EXIT_OTHER);
+        }
+        copy_vector(x_left, new_point);
+
+        x_left_solution = compute_abg_float(x_left, &F_left, &alpha, &beta, &gamma);
+
+        i++;
+    }
+
+    /* perform a Newton iteration on x_right */
+    retval = newton_iteration(new_point, beta_complex, LU, &rowswaps, &F_right, x_right, pivot_tol, pivot_drop_tol, default_precision);
+    if (retval == ERROR_LU_DECOMP) {
+        char msg[BH_MAX_STRING];
+        snprintf(msg, (size_t) BH_MAX_STRING, "singularity suspected at t = %%.%dRe near point ", sigdig);
+        mpfr_fprintf(stderr, msg, t_right);
+        print_points_float(stderr, new_point);
+        fprintf(stderr, ERROR_MESSAGE);
+        exit(BH_EXIT_OTHER);
+    }
+    copy_vector(x_right, new_point);
+
+    x_right_solution = compute_abg_float(x_right, &F_right, &alpha, &beta, &gamma);
+
+    i = 1;
+    /* perform Newton iterations on x_right until within tolerance */
+    while (i < newton_tolerance && mpf_cmp(alpha, alpha0) >= 0) {
+        retval = newton_iteration(new_point, beta_complex, LU, &rowswaps, &F_right, x_right, pivot_tol, pivot_drop_tol, default_precision);
+        if (retval == ERROR_LU_DECOMP) {
+            char msg[BH_MAX_STRING];
+            snprintf(msg, (size_t) BH_MAX_STRING, "singularity suspected at t = %%.%dRe near point ", sigdig);
+            mpfr_fprintf(stderr, msg, t_right);
+            print_points_float(stderr, new_point);
+            fprintf(stderr, ERROR_MESSAGE);
+            exit(BH_EXIT_OTHER);
+        }
+        copy_vector(x_right, new_point);
+
+        x_right_solution = compute_abg_float(x_right, &F_right, &alpha, &beta, &gamma);
+
+        i++;
+    }
+
+    /* compute t_mid */
     mpf_add(*t_mid, t_left, t_right);
     mpf_div_ui(*t_mid, *t_mid, 2);
 
-    /* x_mid */
+    /* compute x_mid */
     for (i = 0; i < num_var; i++) {
         add((*x_mid)->coord[i], x_left->coord[i], x_right->coord[i]);
         multiply((*x_mid)->coord[i], (*x_mid)->coord[i], one_half_complex);
@@ -422,6 +508,7 @@ void subdivide_segment_float(polynomial_system *base, complex_vector v, mpf_t t_
 
     /* apply Newton to x_mid */
     apply_tv_float(base, &F_mid, *t_mid, v);
+
     retval = newton_iteration(new_point, beta_complex, LU, &rowswaps, &F_mid, *x_mid, pivot_tol, pivot_drop_tol, default_precision);
     if (retval == ERROR_LU_DECOMP) {
         char msg[BH_MAX_STRING];
@@ -431,8 +518,28 @@ void subdivide_segment_float(polynomial_system *base, complex_vector v, mpf_t t_
         fprintf(stderr, ERROR_MESSAGE);
         exit(BH_EXIT_OTHER);
     }
-
     copy_vector(*x_mid, new_point);
+
+
+    x_mid_solution = compute_abg_float(*x_mid, &F_mid, &alpha, &beta, &gamma);
+
+    i = 1;
+    while (i < newton_tolerance && mpf_cmp(alpha, alpha0) >= 0) {
+        retval = newton_iteration(new_point, beta_complex, LU, &rowswaps, &F_mid, *x_mid, pivot_tol, pivot_drop_tol, default_precision);
+        if (retval == ERROR_LU_DECOMP) {
+            char msg[BH_MAX_STRING];
+            snprintf(msg, (size_t) BH_MAX_STRING, "singularity suspected at t = %%.%dRe near point ", sigdig);
+            mpfr_fprintf(stderr, msg, *t_mid);
+            print_points_float(stderr, new_point);
+            fprintf(stderr, ERROR_MESSAGE);
+            exit(BH_EXIT_OTHER);
+        }
+        copy_vector(*x_mid, new_point);
+
+        x_mid_solution = compute_abg_float(*x_mid, &F_mid, &alpha, &beta, &gamma);
+
+        i++;
+    }
 
     if (verbosity > BH_VERBOSE) {
         char msg[BH_MAX_STRING];
@@ -440,13 +547,18 @@ void subdivide_segment_float(polynomial_system *base, complex_vector v, mpf_t t_
         mpfr_printf(msg, t_left, *t_mid, *t_mid, t_right);
     }
 
+    mpf_clear(alpha);
     mpf_clear(beta);
+    mpf_clear(gamma);
+    mpf_clear(alpha0);
     mpf_clear(pivot_tol);
     mpf_clear(pivot_drop_tol);
     clear_number(one_half_complex);
     clear_number(beta_complex);
     clear_matrix(LU);
+    clear_polynomial_system(&F_left);
     clear_polynomial_system(&F_mid);
+    clear_polynomial_system(&F_right);
     clear_vector(new_point);
 
     free(rowswaps);
