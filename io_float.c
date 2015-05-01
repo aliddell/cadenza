@@ -239,12 +239,12 @@ int read_points_file_float(void **t, void **x, int num_var) {
         exit(BH_EXIT_BADPARSE);
     }
 
-    /* check that we have enought points to test */
+    /* check that we have enough points to test */
     if (num_points < 2) {
         char err_string[] = "You must define 2 or more points to test";
 
         print_error(err_string, stderr);
-        MPI_Abort(BH_EXIT_BADDEF, MPI_COMM_WORLD);
+        MPI_Abort(MPI_COMM_WORLD, BH_EXIT_BADDEF);
     }
 
     t_float = malloc(num_points * sizeof(mpf_t));
@@ -282,7 +282,7 @@ int read_points_file_float(void **t, void **x, int num_var) {
             mpfr_snprintf(error_string, (size_t) termwidth, msg, t_float[i]);
 
             print_error(error_string, stderr);
-            MPI_Abort(BH_EXIT_BADDEF, MPI_COMM_WORLD);
+            MPI_Abort(MPI_COMM_WORLD, BH_EXIT_BADDEF);
         }
 
         /* get real and imag points */

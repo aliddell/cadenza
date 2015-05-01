@@ -12,7 +12,6 @@
 int main(int argc, char *argv[]) {
     int i, num_var = 0, num_points = 0, num_sing = 0, tested = 0, succeeded = 0, failed = 0;
     int rank, size;
-    exit(0);
 
     MPI_Init(&argc, &argv);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -63,8 +62,9 @@ int main(int argc, char *argv[]) {
     }
 
     /* do this before checking filenames */
-    if (help_flag && rank == 0) {
-        usage();
+    if (help_flag) {
+        if (rank == 0)
+            usage();
         MPI_Finalize();
         exit(BH_EXIT_SUCCESS);
     }
@@ -75,12 +75,12 @@ int main(int argc, char *argv[]) {
             print_error("You need to define a system file", stderr);
             usage();
             //exit(BH_EXIT_BADFILE);
-            MPI_Abort(BH_EXIT_BADFILE, MPI_COMM_WORLD);
+            MPI_Abort(MPI_COMM_WORLD, BH_EXIT_BADFILE);
         } else if (strcmp(pointsfile, "") == 0) {
             print_error("You need to define a points file", stderr);
             usage();
             //exit(BH_EXIT_BADFILE);
-            MPI_Abort(BH_EXIT_BADFILE, MPI_COMM_WORLD);
+            MPI_Abort(MPI_COMM_WORLD, BH_EXIT_BADFILE);
         }
     }
 
@@ -101,10 +101,18 @@ int main(int argc, char *argv[]) {
 
     if (rank == 0) {
         read_system_file(&F, v);
-        MPI_Abort(MPI_COMM_WORLD, 0);
         num_points = read_points_file(&t, &x, num_var);
         initialize_output_files(&F, v, t, x, num_points);
+        send_polynomial_system(&F, 1);
     }
+        
+    if (rank == 1) {
+        recv_polynomial_system(&F, 0);
+        printf("rank 1 has received\n");
+        print_system(stdout, &F);
+    }
+    MPI_Finalize();
+    exit(BH_EXIT_SUCCESS);
 
     num_var = F.numVariables;
 
