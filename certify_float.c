@@ -757,7 +757,7 @@ void test_pairwise_float(polynomial_system *system, complex_vector *v, mpf_t t_l
             snprintf(msg, (size_t) BH_MAX_STRING, "unsure whether segment [%%.%dRe, %%.%dRe] is continuous\n", sigdig, sigdig);
             mpfr_printf(msg, t_left, t_right);
         }
-        fprint_uncertain_float(t_left, t_right, x_left, x_right, alpha_left, alpha_right, beta_left, beta_right, gamma_left, gamma_right);
+        //fprint_uncertain_float(t_left, t_right, x_left, x_right, alpha_left, alpha_right, beta_left, beta_right, gamma_left, gamma_right);
 
         /* alert user to singularities */
         if (check_left) {
@@ -947,7 +947,7 @@ void test_pairwise_float(polynomial_system *system, complex_vector *v, mpf_t t_l
             mpfr_printf(msg, t_left, t_right);
         }
 
-        fprint_continuous_float(t_left, t_right, x_left, x_right, alpha_left, alpha_right, beta_left, beta_right, gamma_left, gamma_right);
+        //fprint_continuous_float(t_left, t_right, x_left, x_right, alpha_left, alpha_right, beta_left, beta_right, gamma_left, gamma_right);
 
         *tested += 1;
         *succeeded += 1;
@@ -1001,7 +1001,7 @@ void test_pairwise_float(polynomial_system *system, complex_vector *v, mpf_t t_l
             mpfr_printf(msg, t_left, t_right);
         }
 
-        fprint_discontinuous_float(t_left, t_right, x_left, x_right, alpha_left, alpha_right, beta_left, beta_right, gamma_left, gamma_right);
+        //fprint_discontinuous_float(t_left, t_right, x_left, x_right, alpha_left, alpha_right, beta_left, beta_right, gamma_left, gamma_right);
 
         /* alert user to singularities */
         if (check_left) {
@@ -1041,6 +1041,14 @@ void test_pairwise_float(polynomial_system *system, complex_vector *v, mpf_t t_l
  *******************/
 void test_system_float(polynomial_system *system, void *v, void *t, void *x, int num_points, void **t_final, void **x_final, void **sing, int *tested, int *succeeded, int *failed, int *num_sing) {
     int i, num_var = system->numVariables;
+    int rank, size, num_tasks = num_points - 1;
+
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    MPI_Comm_size(MPI_COMM_WORLD, &size);
+
+    int minp = num_tasks/size;
+    int cutoff = num_tasks % size, start, end;
+    int *ftested, *fsucceeded, *ffailed;
 
     complex_vector *v_float = (complex_vector *) v;
     mpf_t *t_float = (mpf_t *) t;
@@ -1075,7 +1083,24 @@ void test_system_float(polynomial_system *system, void *v, void *t, void *x, int
 
     /* for each t_i, t_{i+1} */
     /* this is the part that needs to get parallelized */
-    for (i = 0; i < num_points - 1; i++) {
+    if (rank < cutoff) {
+        start = rank*(minp+1);
+        end = start + minp+1;
+    } else {
+        start = cutoff*(minp+1) + (rank-cutoff)*minp;
+        end = start + minp;
+    }
+    for (i = start; i < end - 1; i++) {
         test_pairwise_float(system, v_float, t_float[i], t_float[i+1], x_float[i], x_float[i+1], num_var, 1, t_final_float, x_final_float, sing_float, tested, succeeded, failed, num_sing, (i == 0));
+    }
+
+    MPI_Reduce(tested, ftested, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
+    MPI_Reduce(succeeded, fsucceeded, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
+    MPI_Reduce(failed, ffailed, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
+
+    if (rank == 0) {
+        tested = ftested;
+        succeeded = fsucceeded;
+        failed = ffailed;
     }
 }

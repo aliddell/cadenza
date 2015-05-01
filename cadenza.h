@@ -11,6 +11,11 @@
 #ifndef _BLUE_HARVEST_H
 #define _BLUE_HARVEST_H
 
+/*******
+ * MPI *
+ *******/
+#include "mpi.h"
+
 #include <errno.h>
 #include <getopt.h>
 #include <sys/ioctl.h>
@@ -106,6 +111,20 @@ polynomial parse_polynomial(FILE *sysfh, int num_var);
 void print_system(FILE *outfile, polynomial_system *system);
 void initialize_output_files(polynomial_system *system, void *v, void *t, void *x, int num_points); /* creates empty output files in the working directory */
 void summarize(int tested, int succeeded, int failed, int singularities); /* print a summary to stdout */
+
+/****************************************
+ * function declarations for parallel.c *
+ ****************************************/
+int send_complex_number(complex_number c, int to); /* send a complex_number to process `to' */
+int recv_complex_number(complex_number c, int from); /* receive a complex_number from process `from' */
+int send_complex_vector(complex_vector v, int to);
+int recv_complex_vector(complex_number v, int from);
+int send_rational_complex_number(rational_complex_number c, int to);
+int recv_rational_complex_number(rational_complex_number c, int from);
+int send_polynomial(polynomial *p, int to);
+int recv_polynomial(polynomial *p, int from);
+int send_polynomial_system(polynomial_system *F, int to);
+int recv_polynomial_system(polynomial_system *F, int from);
 
 /*******************************************
  * function declarations for io_rational.c *

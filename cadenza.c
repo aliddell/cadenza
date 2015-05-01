@@ -10,7 +10,12 @@
 #include "cadenza.h"
 
 int main(int argc, char *argv[]) {
-    int num_var = 0, num_points = 0, num_sing = 0, tested = 0, succeeded = 0, failed = 0;
+    int i, num_var = 0, num_points = 0, num_sing = 0, tested = 0, succeeded = 0, failed = 0;
+    int rank, size;
+
+    MPI_Init(&argc, &argv);
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    MPI_Comm_size(MPI_COMM_WORLD, &size);
 
     /* set termwidth for maximum string length */
     termwidth = set_termwidth();
@@ -51,28 +56,35 @@ int main(int argc, char *argv[]) {
     getargs(argc, argv);
 
     /* tell em who we are */
-    fputs("\n", stderr);
-    prog_info(stderr);
+    if (rank == 0) { 
+        fputs("\n", stderr);
+        prog_info(stderr);
+    }
 
     /* do this before checking filenames */
-    if (help_flag) {
+    if (help_flag && rank == 0) {
         usage();
+        MPI_Finalize();
         exit(BH_EXIT_SUCCESS);
     }
 
     /* ensure filenames are properly defined */
-    if (strcmp(sysfile, "") == 0) {
-        print_error("You need to define a system file", stderr);
-        usage();
-        exit(BH_EXIT_BADFILE);
-    } else if (strcmp(pointsfile, "") == 0) {
-        print_error("You need to define a points file", stderr);
-        usage();
-        exit(BH_EXIT_BADFILE);
+    if (rank == 0) {
+        if (strcmp(sysfile, "") == 0) {
+            print_error("You need to define a system file", stderr);
+            usage();
+            //exit(BH_EXIT_BADFILE);
+            MPI_Abort(BH_EXIT_BADFILE, MPI_COMM_WORLD);
+        } else if (strcmp(pointsfile, "") == 0) {
+            print_error("You need to define a points file", stderr);
+            usage();
+            //exit(BH_EXIT_BADFILE);
+            MPI_Abort(BH_EXIT_BADFILE, MPI_COMM_WORLD);
+        }
     }
 
     /* display the options the user has selected */
-    if (verbosity > BH_LACONIC) {
+    if (rank == 0 && verbosity > BH_LACONIC) {
         fputs("\n", stderr);
         display_config(stderr);
     }
@@ -86,24 +98,37 @@ int main(int argc, char *argv[]) {
         v = (void *) &v_rational;
     }
 
-    read_system_file(&F, v);
+    if (rank == 0)
+        printf("reading files...");
+    for (i=0; i<size; i++) {
+        if (rank == i) {
+            read_system_file(&F, v);
+            num_points = read_points_file(&t, &x, num_var);
+            initialize_output_files(&F, v, t, x, num_points);
+        }
+
+        MPI_Barrier(MPI_COMM_WORLD);
+    }
+    if (rank == 0)
+        printf("done\n");
+
+    MPI_Abort(-1, MPI_COMM_WORLD);
+
     num_var = F.numVariables;
 
-    num_points = read_points_file(&t, &x, num_var);
-
     /* print out the system, vector and points */
-    if (verbosity > BH_CHATTY) {
+    if (rank == 0 && verbosity > BH_CHATTY) {
         fprint_input(stdout, &F, v, t, x, num_points);
     }
 
-    initialize_output_files(&F, v, t, x, num_points);
     test_system(&F, v, t, x, num_points, &t_final, &x_final, &sing, &tested, &succeeded, &failed, &num_sing);
 
     /* print an output file only if all intervals certified continuous */
-    if (tested == succeeded)
+    if (rank == 0 && tested == succeeded)
         fprint_solutions(t_final, x_final, succeeded + 1);
     
-    summarize(tested, succeeded, failed, num_sing);
+    if (rank == 0)
+        summarize(tested, succeeded, failed, num_sing);
 
     /* clean up */
     clear_polynomial_system(&F);
@@ -114,6 +139,8 @@ int main(int argc, char *argv[]) {
     free_x(x_final, succeeded + 1);
     free_x(sing, num_sing);
     free(error_string);
+
+    MPI_Finalize();
 
     exit(BH_EXIT_SUCCESS);
 }

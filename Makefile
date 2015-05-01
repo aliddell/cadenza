@@ -1,5 +1,5 @@
 CC=/usr/bin/gcc
-MPI=/usr/bin/mpicc
+MPI=`which mpicc`
 LIB= -lm -lgmp -lmpfr
 OPT= -g -O3 -funroll-loops -fexpensive-optimizations -Wall 
 ARGS=$(OPT) 
@@ -8,10 +8,10 @@ OBJFILES=alphaCertified.o certify_float.o certify_rational.o classify.o classify
 all : $(OBJFILES) $(POBJFILES) cadenza ;
 
 cadenza : cadenza.c $(OBJFILES) ;
-	$(CC) $(ARGS) -o cadenza cadenza.c $(OBJFILES) $(LIB)
+	$(MPI) $(ARGS) -o cadenza cadenza.c $(OBJFILES) $(LIB)
 
 .c.o : 
-	$(CC) $(ARGS) -c $*.c 
+	$(MPI) $(ARGS) -c $*.c 
 
 clean : 
 	rm -f cadenza $(OBJFILES)
