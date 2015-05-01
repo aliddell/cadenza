@@ -12,6 +12,7 @@
 int main(int argc, char *argv[]) {
     int i, num_var = 0, num_points = 0, num_sing = 0, tested = 0, succeeded = 0, failed = 0;
     int rank, size;
+    exit(0);
 
     MPI_Init(&argc, &argv);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -98,21 +99,12 @@ int main(int argc, char *argv[]) {
         v = (void *) &v_rational;
     }
 
-    if (rank == 0)
-        printf("reading files...");
-    for (i=0; i<size; i++) {
-        if (rank == i) {
-            read_system_file(&F, v);
-            num_points = read_points_file(&t, &x, num_var);
-            initialize_output_files(&F, v, t, x, num_points);
-        }
-
-        MPI_Barrier(MPI_COMM_WORLD);
+    if (rank == 0) {
+        read_system_file(&F, v);
+        MPI_Abort(MPI_COMM_WORLD, 0);
+        num_points = read_points_file(&t, &x, num_var);
+        initialize_output_files(&F, v, t, x, num_points);
     }
-    if (rank == 0)
-        printf("done\n");
-
-    MPI_Abort(-1, MPI_COMM_WORLD);
 
     num_var = F.numVariables;
 

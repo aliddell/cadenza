@@ -118,7 +118,7 @@ void summarize(int tested, int succeeded, int failed, int singularities); /* pri
 int send_complex_number(complex_number c, int to); /* send a complex_number to process `to' */
 int recv_complex_number(complex_number c, int from); /* receive a complex_number from process `from' */
 int send_complex_vector(complex_vector v, int to);
-int recv_complex_vector(complex_number v, int from);
+int recv_complex_vector(complex_vector v, int from);
 int send_rational_complex_number(rational_complex_number c, int to);
 int recv_rational_complex_number(rational_complex_number c, int from);
 int send_polynomial(polynomial *p, int to);

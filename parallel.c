@@ -4,8 +4,6 @@ int send_complex_number(complex_number c, int to) {
     int sizes[2], SENDSIZE=0, SENDRE=1, SENDIM=2;
     char rebuf[BH_MAX_STRING];
     char imbuf[BH_MAX_STRING];
-
-    mpf_t re, im;
     
     sizes[0] = mpfr_sprintf(rebuf, "%Re", c->re);
     sizes[1] = mpfr_sprintf(imbuf, "%Re", c->im);
@@ -23,19 +21,12 @@ int recv_complex_number(complex_number c, int from) {
     char imbuf[BH_MAX_STRING];
     MPI_Status status;
 
-    mpf_t re, im;
-    mpf_init(re);
-    mpf_init(im);
-
     MPI_Recv(sizes, 2, MPI_INT, from, SENDSIZE, MPI_COMM_WORLD, &status);
     MPI_Recv(rebuf, sizes[0], MPI_CHAR, from, SENDRE, MPI_COMM_WORLD, &status);
     MPI_Recv(imbuf, sizes[1], MPI_CHAR, from, SENDIM, MPI_COMM_WORLD, &status);
 
-    mpf_set_str(re, rebuf, 0);
-    mpf_set_str(im, imbuf, 0);
-
-    mpf_set(c->re, re);
-    mpf_set(c->im, im);
+    mpf_set_str(c->re, rebuf, 0);
+    mpf_set_str(c->im, imbuf, 0);
 
     return 0;
 }
@@ -77,8 +68,6 @@ int send_rational_complex_number(rational_complex_number c, int to) {
     char rebuf[BH_MAX_STRING];
     char imbuf[BH_MAX_STRING];
 
-    mpq_t re, im;
-    
     sizes[0] = mpfr_sprintf(rebuf, "%Qd", c->re);
     sizes[1] = mpfr_sprintf(imbuf, "%Qd", c->im);
 
@@ -117,7 +106,7 @@ int recv_rational_complex_number(rational_complex_number c, int from) {
 }
 
 int send_polynomial(polynomial *p, int to) {
-    int i, j, c=0, vals[5], SENDVALS=0, SENDNORM2=1, SENDINDEX=2, SENDCOEFF=3, SENDEXP=4, tv=p->numTerms*p->numVariables;
+    int i, j, c=0, vals[5], SENDVALS=0, SENDNORM2=1, SENDINDEX=2, SENDEXP=4, tv=p->numTerms*p->numVariables;
     int *exponents = malloc(tv*sizeof(int));
     char buf[BH_MAX_STRING];
 
@@ -145,7 +134,7 @@ int send_polynomial(polynomial *p, int to) {
 }
 
 int recv_polynomial(polynomial *p, int from) {
-    int i, j, c=0, index, vals[5], SENDVALS=0, SENDNORM2=1, SENDINDEX=2, SENDCOEFF=3, SENDEXP=4, tv;
+    int i, j, c=0, index, vals[5], SENDVALS=0, SENDNORM2=1, SENDINDEX=2, SENDEXP=4, tv;
     int *exponents = NULL;
     char buf[BH_MAX_STRING];
     MPI_Status status;
@@ -185,7 +174,7 @@ int recv_polynomial(polynomial *p, int from) {
 }
 
 int send_polynomial_system(polynomial_system *F, int to) {
-    int i, vals[6], SENDVALS=0, SENDNORM2=1, SENDINDEX=2, SENDPOL=3;
+    int i, vals[6], SENDVALS=0, SENDNORM2=1, SENDINDEX=2;
     char buf[BH_MAX_STRING];
 
     vals[0] = F->numVariables;
@@ -209,7 +198,7 @@ int send_polynomial_system(polynomial_system *F, int to) {
 }
 
 int recv_polynomial_system(polynomial_system *F, int from) {
-    int i, index, vals[6], SENDVALS=0, SENDNORM2=1, SENDINDEX=2, SENDPOL=3;
+    int i, index, vals[6], SENDVALS=0, SENDNORM2=1, SENDINDEX=2;
     char buf[BH_MAX_STRING];
     MPI_Status status;
 
