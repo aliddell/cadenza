@@ -1096,37 +1096,48 @@ void test_pairwise_float(polynomial_system *system,
  * certify H(x, t) *
  *******************/
 void test_system_float(polynomial_system *system, void *v, void *t, void *x, int num_points, void **t_final, void **x_final, void **sing, int *tested, int *succeeded, int *failed, int *num_sing) {
-    int i, iter = 1;
-    int num_var = system->numVariables, num_tasks = num_points - 1;
-    int rank, size,   subdivide_any = 1;
-    int oldf = 0, olds = 0, *test_status = NULL, *test_status_r = NULL, lastup = -3, counter=0, ocounter = counter, tcounter;
-    int minp, *do_test = (int*)malloc(num_tasks*sizeof(int));
-    int cutoff, start, end;
-    int ftested, fsucceeded, ffailed;
+    int i, iter = 1, counter=0, ocounter=0, tcounter=0, lastup=-3; /* counters, tokens, and iterators */
+    int num_var = system->numVariables; /* won't change */
+    int subdivide_any = 1, oldf = 0, olds = 0, *test_status = NULL, *test_status_r = NULL; /* statuses */
+    int ftested, fsucceeded, ffailed; /* final values */
     
     /* values for MPI_Allgatherv */
+    int rank, size;
     int *counts = (int *)malloc(size*sizeof(int));
     int *displs = (int *)malloc(size*sizeof(int));
     
+    /* set up for first iteration */
+    int num_tasks = num_points - 1;
+    int minp, cutoff, start, end; /* per-process task counts and barriers */
+    int *do_test = (int*)malloc(num_tasks*sizeof(int));
     for (i=0; i<num_tasks; i++)
         do_test[i] = i;
     
+    /* midpoints for subdividing */
     mpf_t t_mid;
     mpf_init(t_mid);
+    complex_number c_tmp;
+    initialize_number(c_tmp);
     complex_vector x_mid;
     initialize_vector(x_mid, num_var);
+    for (i=0; i<num_var; i++) {
+        mpf_set_ui(c_tmp->re, 0);
+        mpf_set_ui(c_tmp->im, 0);
+        set_number(x_mid->coord[i], c_tmp);
+    }
+    //print_points_float(stdout, x_mid);
     
+    clear_number(c_tmp);
+    
+    /* endpoints *only* of intervals that need certifying on the next iteration */
     mpf_t *t_float_new = NULL, *mpf_tmp = NULL;
     complex_vector *x_float_new = NULL, *cv_tmp = NULL;
     
+    /* of F + t*v fame */
     complex_vector *v_float = (complex_vector *) v;
-
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-    MPI_Comm_size(MPI_COMM_WORLD, &size);
-    
     mpf_t *t_float = (mpf_t *) t;
     complex_vector *x_float = (complex_vector *) x;
-
+   
     mpf_t **t_final_float = (mpf_t **) t_final;
     complex_vector **x_final_float = (complex_vector **) x_final;
     complex_vector **sing_float = (complex_vector **) sing;
@@ -1153,10 +1164,25 @@ void test_system_float(polynomial_system *system, void *v, void *t, void *x, int
 
     initialize_vector((*x_final_float)[0], x_float[0]->size);
     copy_vector((*x_final_float)[0], x_float[0]);
+    
+    /* get rank of process and total process count */
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    MPI_Comm_size(MPI_COMM_WORLD, &size);
+    
+//     if (rank == 2) {
+//         printf("on rank %d\n", rank);
+//         for (i=0; i<num_tasks; i++)
+//             //mpfr_printf("(%Rf->%Rf)\n", t_float[i], t_float[i+1]);
+//             mpfr_printf("do_test[%d] = %d; (%Rf, %Rf)\n", i, do_test[i], t_float[do_test[i]], t_float[do_test[i]+1]);
+//         printf("\n");
+//     }
+//     MPI_Barrier(MPI_COMM_WORLD);
 
+    /* the big loop */
     while (subdivide_any && iter < subd_tolerance) {
         ocounter = counter; counter = 0; lastup = -3; tcounter=0;
         
+        /* assign start and end values by rank */
         minp = num_tasks/size;
         cutoff = num_tasks % size;
         
@@ -1168,9 +1194,7 @@ void test_system_float(polynomial_system *system, void *v, void *t, void *x, int
             end = start + minp;
         }
         
-        printf("iter %d: (%d, %d)\n", iter, start, end);
-        fflush(stdout);
-        
+        /* set counts and displacements by rank */
         for (i=0; i<cutoff; i++) {
             counts[i] = minp+1;
             if (i==0)
@@ -1184,27 +1208,30 @@ void test_system_float(polynomial_system *system, void *v, void *t, void *x, int
             displs[i] = displs[i-1] + counts[i-1];
         }
         
+        printf("rank %d, iter %d: minp=%d, cutoff=%d, start=%d, end=%d, count=%d, displacement=%d\n", rank, iter, minp, cutoff, start, end, counts[rank], displs[rank]);
+        fflush(stdout);
+        
         test_status = (int *)realloc(test_status, (end-start)*sizeof(int));
         test_status_r = (int *)realloc(test_status_r, num_tasks*sizeof(int));
         
         /* for each t_i, t_{i+1} */
         /* this is the part that needs to get parallelized */
         for (i = start; i < end; i++) {
-            //mpfr_printf("rank %d is testing (%Rf, %Rf)\n", rank, t_float[i], t_float[i+1]); 
-            test_pairwise_float(system, v_float, t_float[do_test[i]], t_float[do_test[i+1]], x_float[do_test[i]], x_float[do_test[i+1]], num_var, 1, t_final_float, x_final_float, sing_float, tested, succeeded, failed, num_sing, (i == 0));
+            mpfr_printf("rank %d is testing (%d, %d)\n", rank, do_test[i], do_test[i]+1);
+            test_pairwise_float(system, v_float, t_float[do_test[i]], t_float[do_test[i]+1], x_float[do_test[i]], x_float[do_test[i]+1], num_var, 1, t_final_float, x_final_float, sing_float, tested, succeeded, failed, num_sing, (i == 0));
             
             if (*succeeded > olds) {
                 test_status[i-start] = 1;
-                mpfr_printf("interval (%Rf, %Rf) on rank %d is a-okay\n", t_float[do_test[i]], t_float[do_test[i+1]], rank);
+                mpfr_printf("interval (%Rf, %Rf) on rank %d is a-okay\n", t_float[do_test[i]], t_float[do_test[i]+1], rank);
             }
             else if (*failed > oldf) {
-                mpfr_printf("interval (%Rf, %Rf) on rank %d is discontinuous\n", t_float[do_test[i]], t_float[do_test[i+1]], rank);
+                mpfr_printf("interval (%Rf, %Rf) on rank %d is discontinuous\n", t_float[do_test[i]], t_float[do_test[i]+1], rank);
                 test_status[i-start] = -1;
-                print_points_float(stdout, x_float[i]);
+                print_points_float(stdout, x_float[do_test[i]]);
                 printf("\n\n");
-                print_points_float(stdout, x_float[i+1]);
+                print_points_float(stdout, x_float[do_test[i]+1]);
             } else {
-                mpfr_printf("interval (%Rf, %Rf) on rank %d needs subdividing\n", t_float[do_test[i]], t_float[do_test[i+1]], rank);
+                mpfr_printf("interval (%Rf, %Rf) on rank %d needs subdividing\n", t_float[do_test[i]], t_float[do_test[i]+1], rank);
                 test_status[i-start] = 0;
             }
             
@@ -1224,14 +1251,16 @@ void test_system_float(polynomial_system *system, void *v, void *t, void *x, int
         if (size > 1)
             MPI_Allgatherv(test_status, counts[rank], MPI_INT, test_status_r, counts, displs, MPI_INT, MPI_COMM_WORLD);
         else
-            memcpy(test_status_r, test_status, num_tasks);
+            memcpy(test_status_r, test_status, num_tasks*sizeof(int));
         
         subdivide_any = 0;
         for (i=0; i<num_tasks; i++) {
             if (test_status_r[i] == 0) {
                 subdivide_any += 1;
             }
-        }/*
+        }
+        
+        /*
         
         if (subdivide_any) {
             for (i=0; i<num_tasks; i++) {
@@ -1247,14 +1276,16 @@ void test_system_float(polynomial_system *system, void *v, void *t, void *x, int
         
         //subdivide_any = 0;
         
-        printf("rank %d sub_any %d; num_task %d\n", rank, subdivide_any, num_tasks);
-//         if (rank == 1) {
-//             for (i=0; i<num_tasks; i++)
-//                 printf("%d\t", test_status_r[i]);
-//             printf("\n");
-//         }
+        printf("rank %d: subdivide_any %d; num_tasks %d; num_points %d\n", rank, subdivide_any, num_tasks, num_points);
+        for (i=0; i<num_tasks; i++) {
+            printf("%d\t", test_status_r[i]);
+        }
+        printf("\n");
+
         MPI_Barrier(MPI_COMM_WORLD);
         if (subdivide_any) {
+            
+            /* here was the problem right here; t_float_new/x_float_new were still pointing to t_float/x_float respectively */
             mpf_tmp = realloc(t_float_new, 3*subdivide_any*sizeof(mpf_t));
             cv_tmp = realloc(x_float_new, 3*subdivide_any*sizeof(complex_vector));
             
@@ -1272,13 +1303,17 @@ void test_system_float(polynomial_system *system, void *v, void *t, void *x, int
             do_test = realloc(do_test, 2*subdivide_any*sizeof(int));
             
             for (i=0; i<num_tasks; i++) {
-                printf("rank %d inside loop: %d \n", rank, i);
                 if (test_status_r[i] == 0) {
-                    mpfr_printf("subdividing segment %d (%Rf,%Rf) on rank %d\n", i, t_float[i], t_float[i+1], rank);
+                    printf("rank %d inside loop %d; if statement\n", rank, i);
+                    //mpfr_printf("subdividing segment %d (%Rf,%Rf) on rank %d\n", i, t_float[i], t_float[i+1], rank);
                     fflush(stdout);
-                    subdivide_segment_float(system, *v_float, t_float[i], t_float[i+1], x_float[i], x_float[i+1], &t_mid, &x_mid, num_var);
-                    printf("done with %d on rank %d\n", i, rank);
+//                     if (iter == 1)
+                        subdivide_segment_float(system, *v_float, t_float[i], t_float[i+1], x_float[i], x_float[i+1], &t_mid, &x_mid, num_var);
+                    //mpfr_printf("picked up %Rf\n", t_mid);
                     fflush(stdout);
+                    
+                    //printf("done with %d on rank %d\n", do_test[i], rank);
+                    
                     if (lastup == i-1) {
                         mpf_init(t_float_new[counter]);
                         mpf_set(t_float_new[counter], t_mid);
@@ -1307,8 +1342,9 @@ void test_system_float(polynomial_system *system, void *v, void *t, void *x, int
                         copy_vector(x_float_new[counter+2], x_float[i+1]);
                         counter += 3;
                     }
-                    do_test[2*tcounter] = i+tcounter;
-                    do_test[2*tcounter+1] = i+tcounter+1;
+                    /* this is probably not right, but the old scheme does not work on the third iteration */
+                    do_test[2*tcounter] = 2*tcounter;
+                    do_test[2*tcounter+1] = 2*tcounter+1;
                     tcounter++;
                     lastup = i;
                 }
@@ -1316,29 +1352,51 @@ void test_system_float(polynomial_system *system, void *v, void *t, void *x, int
         }
         
         
-        num_tasks = 2*subdivide_any;
-        printf("counter: %d; num_tasks: %d\n", counter, num_tasks);
-//         if (rank == 0)
-//             for (i=0; i<counter; i++)
-//                 mpfr_printf("t_float_new[%d] = %Rf\n", i, t_float_new[i]);
+        
+        for (i=0; i<num_points; i++) {
+            clear_vector(x_float[i]);
+            mpf_clear(t_float[i]);
+        }
+        free(x_float);
+        free(t_float);
         
         t_float = t_float_new;    
         x_float = x_float_new;
+        /* here's the fix */
+        t_float_new = NULL;
+        x_float_new = NULL;
         
+        num_tasks  = 2*subdivide_any;
+        num_points = counter;
+        
+        printf("counter: %d; num_tasks: %d\n", counter, num_tasks);
+        
+        for (i=0; i<num_tasks; i++)
+            printf("do_test[%d] = %d\n", i, do_test[i]);
+        
+//         if (iter == 3) {
+//             MPI_Finalize();
+//             exit(0);
+//         }
+            
         iter++;
+        
     }
 
     MPI_Reduce(tested, &ftested, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
     MPI_Reduce(succeeded, &fsucceeded, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
     MPI_Reduce(failed, &ffailed, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
 
-    if (rank == 2) {
+    if (rank == 0) {
         tested = &ftested;
         succeeded = &fsucceeded;
         failed = &ffailed;
         
-        //printf("tested: %d; succeeded: %d; failed: %d\n", ftested, fsucceeded, ffailed);
+        printf("tested: %d; succeeded: %d; failed: %d\n", ftested, fsucceeded, ffailed);
     }
+    
+    MPI_Finalize();
+    exit(0);
     
     mpf_clear(t_mid);
     clear_vector(x_mid);
