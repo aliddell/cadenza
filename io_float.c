@@ -212,10 +212,10 @@ int read_points_file_float(void **t, void **x, int num_var) {
     FILE *pointsfh = fopen(pointsfile, "r");
 
     if (pointsfh == NULL) {
-        snprintf(error_string, (size_t) termwidth, "Couldn't open points file `%s': %s", pointsfile, strerror(errno));
+        sprintf(error_string, "Couldn't open points file `%s': %s", pointsfile, strerror(errno));
 
         print_error(error_string, stderr);
-        exit(BH_EXIT_BADFILE);
+        MPI_Abort(MPI_COMM_WORLD, BH_EXIT_BADFILE);
     }
 
     /* get number of points */
@@ -223,20 +223,20 @@ int read_points_file_float(void **t, void **x, int num_var) {
     res = fscanf(pointsfh, "%d", &num_points);
 
     if (res == EOF) {
-        snprintf(error_string, (size_t) termwidth, "Error reading `%s': unexpected EOF", pointsfile);
+        sprintf(error_string, "Error reading `%s': unexpected EOF", pointsfile);
 
         print_error(error_string, stderr);
-        exit(BH_EXIT_BADREAD);
+        MPI_Abort(MPI_COMM_WORLD, BH_EXIT_BADREAD);
     } else if (res == 0) {
-        snprintf(error_string, (size_t) termwidth, "Error reading `%s': %s", pointsfile, strerror(errno));
+        sprintf(error_string, "Error reading `%s': %s", pointsfile, strerror(errno));
 
         print_error(error_string, stderr);
-        exit(BH_EXIT_BADREAD);
+        MPI_Abort(MPI_COMM_WORLD, BH_EXIT_BADREAD);
     } else if (errno == EILSEQ) {
-        snprintf(error_string, (size_t) termwidth, "Error reading `%s': %s", pointsfile, strerror(errno));
+        sprintf(error_string, "Error reading `%s': %s", pointsfile, strerror(errno));
 
         print_error(error_string, stderr);
-        exit(BH_EXIT_BADPARSE);
+        MPI_Abort(MPI_COMM_WORLD, BH_EXIT_BADPARSE);
     }
 
     /* check that we have enough points to test */
@@ -259,34 +259,36 @@ int read_points_file_float(void **t, void **x, int num_var) {
         res = mpf_inp_str(t_float[i], pointsfh, base);
 
         if (res == EOF) {
-            snprintf(error_string, (size_t) termwidth, "Error reading `%s': unexpected EOF", pointsfile);
+            sprintf(error_string, "Error reading `%s': unexpected EOF", pointsfile);
 
             print_error(error_string, stderr);
-            exit(BH_EXIT_BADREAD);
+            MPI_Abort(MPI_COMM_WORLD, BH_EXIT_BADREAD);
         } else if (res == 0) {
-            snprintf(error_string, (size_t) termwidth, "Error reading `%s': are you using rational input?", pointsfile);
+            sprintf(error_string, "Error reading `%s': are you using rational input?", pointsfile);
 
             print_error(error_string, stderr);
-            exit(BH_EXIT_BADREAD);
+            MPI_Abort(MPI_COMM_WORLD, BH_EXIT_BADREAD);
         } else if (errno == EILSEQ) {
-            snprintf(error_string, (size_t) termwidth, "Error reading `%s': %s", pointsfile, strerror(errno));
+            sprintf(error_string, "Error reading `%s': %s", pointsfile, strerror(errno));
 
             print_error(error_string, stderr);
-            exit(BH_EXIT_BADPARSE);
+            MPI_Abort(MPI_COMM_WORLD, BH_EXIT_BADPARSE);
         }
 
         /* check if 0 < t < 1 */
         if (mpf_cmp_ui(t_float[i], 0) < 0 || mpf_cmp_ui(t_float[i], 1) > 0) {
             char msg[BH_MAX_STRING];
-            snprintf(msg, (size_t) BH_MAX_STRING, "Value for t not between 0 and 1: %%.%dRe", sigdig);
-            mpfr_snprintf(error_string, (size_t) termwidth, msg, t_float[i]);
+            //snprintf(msg, (size_t) BH_MAX_STRING, "Value for t not between 0 and 1: %%.%dRe", sigdig);
+            sprintf(msg, "Value for t not between 0 and 1: %%.%dRe", sigdig);
+            mpfr_sprintf(error_string, msg, t_float[i]);
 
             print_error(error_string, stderr);
-            MPI_Abort(MPI_COMM_WORLD, BH_EXIT_BADDEF);
+            MPI_Abort(MPI_COMM_WORLD, 67);
         }
 
         /* get real and imag points */
         for (j = 0; j < num_var; j++) {
+            fflush(stdout);
             errno = 0;
             res = mpf_inp_str(x_float[i]->coord[j]->re, pointsfh, base);
 
@@ -393,23 +395,23 @@ void print_points_float(FILE *outfile, complex_vector points) {
     for (i = 0; i < num_var - 1; i++) {
         if (mpf_cmp_ui(points->coord[i]->im, 0) == 0) {
             char msg[BH_MAX_STRING];
-            snprintf(msg, (size_t) BH_MAX_STRING, "%%.%dRe, ", sigdig);
+            sprintf(msg, "%%.%dRe, \n", sigdig);
             mpfr_fprintf(outfile, msg, points->coord[i]->re);
         }
         else {
             char msg[BH_MAX_STRING];
-            snprintf(msg, (size_t) BH_MAX_STRING, "%%.%dRe + I * %%.%dRe, ", sigdig, sigdig);
+            sprintf(msg, "%%.%dRe + I * %%.%dRe, \n", sigdig, sigdig);
             mpfr_fprintf(outfile, msg, points->coord[i]->re, points->coord[i]->im);
         }
     }
     if (mpf_cmp_ui(points->coord[i]->im, 0) == 0) {
         char msg[BH_MAX_STRING];
-        snprintf(msg, (size_t) BH_MAX_STRING, "%%.%dRe]\n", sigdig);
+        sprintf(msg, "%%.%dRe]\n", sigdig);
         mpfr_fprintf(outfile, msg, points->coord[i]->re);
     }
     else {
         char msg[BH_MAX_STRING];
-        snprintf(msg, (size_t) BH_MAX_STRING, "%%.%dRe + I * %%.%dRe]\n", sigdig, sigdig);
+        sprintf(msg, "%%.%dRe + I * %%.%dRe]\n", sigdig, sigdig);
         mpfr_fprintf(outfile, msg, points->coord[i]->re, points->coord[i]->im);
     }
 }

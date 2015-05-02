@@ -9,6 +9,57 @@
  */
 #include "cadenza.h"
 
+int insert_int(int *list, int index, int newb, int size) {
+    int i;
+    int *tmp = realloc(list, (size+1)*sizeof(int));
+    if (tmp)
+        list = tmp;
+    else
+        return -1;
+    
+    for (i=index; i<size; i++) {
+        list[i+1] = list[i];
+    }
+    list[index] = newb;
+    
+    return size+1;
+}
+
+int insert_mpf_t(mpf_t *list, int index, mpf_t newb, int size) {
+    int i;
+    mpf_t *tmp = realloc(list, (size+1)*sizeof(mpf_t));
+    if (tmp)
+        list = tmp;
+    else
+        return -1;
+    
+    mpf_init(list[size]);
+    for (i=index; i<size-1; i++) {
+        mpf_set(list[i+1], list[i]);
+    }
+    mpf_set(list[index], newb);
+    
+    return size+1;
+}
+
+int insert_complex_vector(complex_vector *list, int index, complex_vector newb, int size, int num_var) {
+    int i;
+    complex_vector *tmp = realloc(list, (size+1)*sizeof(complex_vector));
+    if (tmp)
+        list = tmp;
+    else
+        return -1;
+    
+    initialize_vector(list[size], num_var);
+    for (i=index; i<size; i++) {
+        copy_vector(list[i+1], list[i]);
+    }
+    
+    copy_vector(list[index], newb);
+    
+    return size+1;
+}
+
 /****************************
  * get an mpq_t from mpfr_t *
  ****************************/
@@ -730,7 +781,23 @@ int compute_abg_float(complex_vector points, polynomial_system *F, mpf_t *alpha,
 /***************************************************************
  * test that each x is an approx soln and check for continuity *
  ***************************************************************/
-void test_pairwise_float(polynomial_system *system, complex_vector *v, mpf_t t_left, mpf_t t_right, complex_vector x_left, complex_vector x_right, int num_var, int iter, mpf_t **t_final, complex_vector **x_final, complex_vector **sing, int *tested, int *succeeded, int *failed, int *num_sing, int check_left) {
+void test_pairwise_float(polynomial_system *system,
+                         complex_vector *v,
+                         mpf_t t_left,
+                         mpf_t t_right,
+                         complex_vector x_left,
+                         complex_vector x_right, 
+                         int num_var,
+                         int iter, // don't need
+                         mpf_t **t_final, // don't need
+                         complex_vector **x_final, // don't need
+                         complex_vector **sing, // don't need
+                         int *tested,
+                         int *succeeded,
+                         int *failed,
+                         int *num_sing,
+                         int check_left)
+{
     int x_left_solution, x_right_solution, seg_continuous;
     polynomial_system F_left, F_right;
     mpf_t alpha_left, beta_left, gamma_left, alpha_right, beta_right, gamma_right, beta_min;
@@ -754,7 +821,7 @@ void test_pairwise_float(polynomial_system *system, complex_vector *v, mpf_t t_l
 
         if (verbosity > BH_LACONIC) {
             char msg[BH_MAX_STRING];
-            snprintf(msg, (size_t) BH_MAX_STRING, "unsure whether segment [%%.%dRe, %%.%dRe] is continuous\n", sigdig, sigdig);
+            sprintf(msg, "unsure whether segment [%%.%dRe, %%.%dRe] is continuous\n", sigdig, sigdig);
             mpfr_printf(msg, t_left, t_right);
         }
         //fprint_uncertain_float(t_left, t_right, x_left, x_right, alpha_left, alpha_right, beta_left, beta_right, gamma_left, gamma_right);
@@ -763,7 +830,7 @@ void test_pairwise_float(polynomial_system *system, complex_vector *v, mpf_t t_l
         if (check_left) {
             if (mpfr_inf_p(gamma_left)) {
                 char msg[BH_MAX_STRING];
-                snprintf(msg, (size_t) BH_MAX_STRING, "singularity found for t = %%.%dRe at point ", sigdig);
+                sprintf(msg, "singularity found for t = %%.%dRe at point ", sigdig);
                 mpfr_fprintf(stderr, msg, t_left);
                 print_points_float(stderr, x_left);
                 *num_sing += 1;
@@ -771,7 +838,7 @@ void test_pairwise_float(polynomial_system *system, complex_vector *v, mpf_t t_l
         }
         if (mpfr_inf_p(gamma_right)) {
             char msg[BH_MAX_STRING];
-            snprintf(msg, (size_t) BH_MAX_STRING, "singularity found for t = %%.%dRe at point ", sigdig);
+            sprintf(msg, "singularity found for t = %%.%dRe at point ", sigdig);
             mpfr_fprintf(stderr, msg, t_right);
             print_points_float(stderr, x_right);
             *num_sing += 1;
@@ -789,7 +856,7 @@ void test_pairwise_float(polynomial_system *system, complex_vector *v, mpf_t t_l
             char err_string[] = "Points not in convergence basin; aborting";
             print_error(err_string, stderr);
 
-            exit(BH_EXIT_OTHER);
+            MPI_Abort(MPI_COMM_WORLD, BH_EXIT_OTHER);
         }
 
         int retval, *rowswaps = NULL;
@@ -810,7 +877,7 @@ void test_pairwise_float(polynomial_system *system, complex_vector *v, mpf_t t_l
                     fprintf(stderr, "performing %dth Newton iteration on x_left", newton_counter);
                 
                 char msg[BH_MAX_STRING];
-                snprintf(msg, (size_t) BH_MAX_STRING, " (interval: [%%.%dRe, %%.%dRe])\n", sigdig, sigdig);
+                sprintf(msg, " (interval: [%%.%dRe, %%.%dRe])\n", sigdig, sigdig);
                 mpfr_fprintf(stderr, msg, t_left, t_right);
             }
 
@@ -828,11 +895,11 @@ void test_pairwise_float(polynomial_system *system, complex_vector *v, mpf_t t_l
             retval = newton_iteration(new_point, beta_complex, LU, &rowswaps, &F_left, x_left, pivot_tol, pivot_drop_tol, default_precision);
             if (retval == ERROR_LU_DECOMP) {
                 char msg[BH_MAX_STRING];
-                snprintf(msg, (size_t) BH_MAX_STRING, "singularity suspected at t = %%.%dRe near point ", sigdig);
+                sprintf(msg, "singularity suspected at t = %%.%dRe near point ", sigdig);
                 mpfr_fprintf(stderr, msg, t_left);
                 print_points_float(stderr, x_left);
                 fprintf(stderr, ERROR_MESSAGE);
-                exit(BH_EXIT_OTHER);
+                MPI_Abort(MPI_COMM_WORLD, BH_EXIT_OTHER);
             }
 
             copy_vector(x_left, new_point);
@@ -863,7 +930,7 @@ void test_pairwise_float(polynomial_system *system, complex_vector *v, mpf_t t_l
                     fprintf(stderr, "performing %dth Newton iteration on x_right", newton_counter);
 
                 char msg[BH_MAX_STRING];
-                snprintf(msg, (size_t) BH_MAX_STRING, " (interval: [%%.%dRe, %%.%dRe])\n", sigdig, sigdig);
+                sprintf(msg, " (interval: [%%.%dRe, %%.%dRe])\n", sigdig, sigdig);
                 mpfr_fprintf(stderr, msg, t_left, t_right);
             }
 
@@ -881,11 +948,11 @@ void test_pairwise_float(polynomial_system *system, complex_vector *v, mpf_t t_l
             retval = newton_iteration(new_point, beta_complex, LU, &rowswaps, &F_right, x_right, pivot_tol, pivot_drop_tol, default_precision);
             if (retval == ERROR_LU_DECOMP) {
                 char msg[BH_MAX_STRING];
-                snprintf(msg, (size_t) BH_MAX_STRING, "singularity suspected at t = %%.%dRe near point ", sigdig);
+                sprintf(msg, "singularity suspected at t = %%.%dRe near point ", sigdig);
                 mpfr_fprintf(stderr, msg, t_right);
                 print_points_float(stderr, x_right);
                 fprintf(stderr, ERROR_MESSAGE);
-                exit(BH_EXIT_OTHER);
+                MPI_Abort(MPI_COMM_WORLD, BH_EXIT_OTHER);
             }
 
             copy_vector(x_right, new_point);
@@ -908,7 +975,7 @@ void test_pairwise_float(polynomial_system *system, complex_vector *v, mpf_t t_l
 
     if (verbosity > BH_CHATTY) {
         char msg[BH_MAX_STRING];
-        snprintf(msg, (size_t) BH_MAX_STRING, "testing segment [%%.%dRe, %%.%dRe]\n", sigdig, sigdig);
+        sprintf(msg, "testing segment [%%.%dRe, %%.%dRe]\n", sigdig, sigdig);
         mpfr_printf(msg, t_left, t_right);
     }
 
@@ -917,33 +984,22 @@ void test_pairwise_float(polynomial_system *system, complex_vector *v, mpf_t t_l
     if (seg_continuous == 0) {
         if (verbosity > BH_CHATTY) {
             char msg[BH_MAX_STRING];
-            snprintf(msg, (size_t) BH_MAX_STRING, "unsure whether segment [%%.%dRe, %%.%dRe] is continuous\n", sigdig, sigdig);
+            sprintf(msg, "unsure whether segment [%%.%dRe, %%.%dRe] is continuous\n", sigdig, sigdig);
             mpfr_printf(msg, t_left, t_right);
         }
-
-        mpf_t t_mid;
-        mpf_init(t_mid);
-        complex_vector x_mid;
-        initialize_vector(x_mid, num_var);
-
+        
         if (mpfr_cmp(t_left, t_right) == 0) {
-            snprintf(error_string, (size_t) termwidth, "Segment is a point; cannot continue\n");
+            sprintf(error_string, "Segment is a point; cannot continue\n");
             print_error(error_string, stderr);
-            exit(BH_EXIT_MEMORY);
+            MPI_Abort(MPI_COMM_WORLD, BH_EXIT_MEMORY);
         }
+        
+        *tested += 1;
 
-        subdivide_segment_float(system, *v, t_left, t_right, x_left, x_right, &t_mid, &x_mid, num_var);
-
-        /* recurse! */
-        test_pairwise_float(system, v, t_left, t_mid, x_left, x_mid, num_var, iter + 1, t_final, x_final, sing, tested, succeeded, failed, num_sing, 0);
-        test_pairwise_float(system, v, t_mid, t_right, x_mid, x_right, num_var, iter + 1, t_final, x_final, sing, tested, succeeded, failed, num_sing, 0);
-
-        mpf_clear(t_mid);
-        clear_vector(x_mid);
     } else if (seg_continuous == 1) {
         if (verbosity > BH_LACONIC) {
             char msg[BH_MAX_STRING];
-            snprintf(msg, (size_t) BH_MAX_STRING, "segment [%%.%dRe, %%.%dRe] is continuous\n", sigdig, sigdig);
+            sprintf(msg, "segment [%%.%dRe, %%.%dRe] is continuous\n", sigdig, sigdig);
             mpfr_printf(msg, t_left, t_right);
         }
 
@@ -956,14 +1012,14 @@ void test_pairwise_float(polynomial_system *system, complex_vector *v, mpf_t t_l
         if (check_left) {
             if (mpfr_inf_p(gamma_left)) {
                 char msg[BH_MAX_STRING];
-                snprintf(msg, (size_t) BH_MAX_STRING, "singularity found for t = %%.%dRe at point ", sigdig);
+                sprintf(msg, "singularity found for t = %%.%dRe at point ", sigdig);
                 mpfr_fprintf(stderr, msg, t_left);
                 print_points_float(stderr, x_left);
             }
         }
         if (mpfr_inf_p(gamma_right)) {
             char msg[BH_MAX_STRING];
-            snprintf(msg, (size_t) BH_MAX_STRING, "singularity found for t = %%.%dRe at point ", sigdig);
+            sprintf(msg, "singularity found for t = %%.%dRe at point ", sigdig);
             mpfr_fprintf(stderr, msg, t_right);
             print_points_float(stderr, x_right);
         }
@@ -971,17 +1027,17 @@ void test_pairwise_float(polynomial_system *system, complex_vector *v, mpf_t t_l
         /* copy t and x values into t_final and x_final respectively */
         errno = 0;
 
-        mpf_t *t_final_tmp = realloc(*t_final, (size_t) (*succeeded + 1) * sizeof(mpf_t));
-        if (t_final_tmp == NULL) {
-            snprintf(error_string, (size_t) termwidth, "Couldn't realloc: %s\n", strerror(errno));
-            print_error(error_string, stderr);
-            exit(BH_EXIT_MEMORY);
-        } else {
-            *t_final = t_final_tmp;
-            mpf_init((*t_final)[*succeeded]);
-            mpf_set((*t_final)[*succeeded], t_right);
-        }
-
+//         mpf_t *t_final_tmp = realloc(*t_final, (size_t) (*succeeded + 1) * sizeof(mpf_t));
+//         if (t_final_tmp == NULL) {
+//             sprintf(error_string, "Couldn't realloc: %s\n", strerror(errno));
+//             print_error(error_string, stderr);
+//             MPI_Abort(MPI_COMM_WORLD, BH_EXIT_MEMORY);
+//         } else {
+//             *t_final = t_final_tmp;
+//             mpf_init((*t_final)[*succeeded]);
+//             mpf_set((*t_final)[*succeeded], t_right);
+//         }
+/*
         errno = 0;
 
         complex_vector *x_final_tmp = realloc(*x_final, (size_t) (*succeeded + 1) * sizeof(complex_vector));
@@ -993,11 +1049,11 @@ void test_pairwise_float(polynomial_system *system, complex_vector *v, mpf_t t_l
             *x_final = x_final_tmp;
             initialize_vector((*x_final)[*succeeded], x_right->size);
             copy_vector((*x_final)[*succeeded], x_right);
-        }
+        }*/
     } else {
         if (verbosity > BH_LACONIC) {
             char msg[BH_MAX_STRING];
-            snprintf(msg, (size_t) BH_MAX_STRING, "segment [%%.%dRe, %%.%dRe] is not continuous\n", sigdig, sigdig);
+            sprintf(msg, "segment [%%.%dRe, %%.%dRe] is not continuous\n", sigdig, sigdig);
             mpfr_printf(msg, t_left, t_right);
         }
 
@@ -1007,14 +1063,14 @@ void test_pairwise_float(polynomial_system *system, complex_vector *v, mpf_t t_l
         if (check_left) {
             if (mpfr_inf_p(gamma_left)) {
                 char msg[BH_MAX_STRING];
-                snprintf(msg, (size_t) BH_MAX_STRING, "singularity found for t = %%.%dRe at point ", sigdig);
+                sprintf(msg, "singularity found for t = %%.%dRe at point ", sigdig);
                 mpfr_fprintf(stderr, msg, t_left);
                 print_points_float(stderr, x_left);
             }
         }
         if (mpfr_inf_p(gamma_right)) {
             char msg[BH_MAX_STRING];
-            snprintf(msg, (size_t) BH_MAX_STRING, "singularity found for t = %%.%dRe at point ", sigdig);
+            sprintf(msg, "singularity found for t = %%.%dRe at point ", sigdig);
             mpfr_fprintf(stderr, msg, t_right);
             print_points_float(stderr, x_right);
         }
@@ -1040,17 +1096,34 @@ void test_pairwise_float(polynomial_system *system, complex_vector *v, mpf_t t_l
  * certify H(x, t) *
  *******************/
 void test_system_float(polynomial_system *system, void *v, void *t, void *x, int num_points, void **t_final, void **x_final, void **sing, int *tested, int *succeeded, int *failed, int *num_sing) {
-    int i, num_var = system->numVariables;
-    int rank, size, num_tasks = num_points - 1;
+    int i, iter = 1;
+    int num_var = system->numVariables, num_tasks = num_points - 1;
+    int rank, size,   subdivide_any = 1;
+    int oldf = 0, olds = 0, *test_status = NULL, *test_status_r = NULL, lastup = -3, counter=0, ocounter = counter, tcounter;
+    int minp, *do_test = (int*)malloc(num_tasks*sizeof(int));
+    int cutoff, start, end;
+    int ftested, fsucceeded, ffailed;
+    
+    /* values for MPI_Allgatherv */
+    int *counts = (int *)malloc(size*sizeof(int));
+    int *displs = (int *)malloc(size*sizeof(int));
+    
+    for (i=0; i<num_tasks; i++)
+        do_test[i] = i;
+    
+    mpf_t t_mid;
+    mpf_init(t_mid);
+    complex_vector x_mid;
+    initialize_vector(x_mid, num_var);
+    
+    mpf_t *t_float_new = NULL, *mpf_tmp = NULL;
+    complex_vector *x_float_new = NULL, *cv_tmp = NULL;
+    
+    complex_vector *v_float = (complex_vector *) v;
 
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &size);
-
-    int minp = num_tasks/size;
-    int cutoff = num_tasks % size, start, end;
-    int *ftested, *fsucceeded, *ffailed;
-
-    complex_vector *v_float = (complex_vector *) v;
+    
     mpf_t *t_float = (mpf_t *) t;
     complex_vector *x_float = (complex_vector *) x;
 
@@ -1061,10 +1134,10 @@ void test_system_float(polynomial_system *system, void *v, void *t, void *x, int
     /* set up t_final and x_final */
     *t_final_float = malloc(sizeof(mpf_t));
     if (*t_final_float == NULL) {
-        snprintf(error_string, (size_t) termwidth, "Couldn't alloc: %s\n", strerror(errno));
+        sprintf(error_string, "Couldn't alloc: %s\n", strerror(errno));
         print_error(error_string, stderr);
 
-        exit(BH_EXIT_MEMORY);
+        MPI_Abort(MPI_COMM_WORLD, BH_EXIT_MEMORY);
     }
 
     mpf_init((*t_final_float)[0]);
@@ -1072,35 +1145,206 @@ void test_system_float(polynomial_system *system, void *v, void *t, void *x, int
 
     *x_final_float = malloc(sizeof(complex_vector));
     if (*x_final_float == NULL) {
-        snprintf(error_string, (size_t) termwidth, "Couldn't alloc: %s\n", strerror(errno));
+        sprintf(error_string, "Couldn't alloc: %s\n", strerror(errno));
         print_error(error_string, stderr);
 
-        exit(BH_EXIT_MEMORY);
+        MPI_Abort(MPI_COMM_WORLD, BH_EXIT_MEMORY);
     }
 
     initialize_vector((*x_final_float)[0], x_float[0]->size);
     copy_vector((*x_final_float)[0], x_float[0]);
 
-    /* for each t_i, t_{i+1} */
-    /* this is the part that needs to get parallelized */
-    if (rank < cutoff) {
-        start = rank*(minp+1);
-        end = start + minp+1;
-    } else {
-        start = cutoff*(minp+1) + (rank-cutoff)*minp;
-        end = start + minp;
-    }
-    for (i = start; i < end - 1; i++) {
-        test_pairwise_float(system, v_float, t_float[i], t_float[i+1], x_float[i], x_float[i+1], num_var, 1, t_final_float, x_final_float, sing_float, tested, succeeded, failed, num_sing, (i == 0));
+    while (subdivide_any && iter < subd_tolerance) {
+        ocounter = counter; counter = 0; lastup = -3; tcounter=0;
+        
+        minp = num_tasks/size;
+        cutoff = num_tasks % size;
+        
+        if (rank < cutoff) {
+            start = rank*(minp+1);
+            end = start + minp+1;
+        } else {
+            start = cutoff*(minp+1) + (rank-cutoff)*minp;
+            end = start + minp;
+        }
+        
+        printf("iter %d: (%d, %d)\n", iter, start, end);
+        fflush(stdout);
+        
+        for (i=0; i<cutoff; i++) {
+            counts[i] = minp+1;
+            if (i==0)
+                displs[i] = 0;
+            else
+                displs[i] = displs[i-1]+counts[i-1];
+        }
+
+        for (i=cutoff; i<size; i++) {
+            counts[i] = minp;
+            displs[i] = displs[i-1] + counts[i-1];
+        }
+        
+        test_status = (int *)realloc(test_status, (end-start)*sizeof(int));
+        test_status_r = (int *)realloc(test_status_r, num_tasks*sizeof(int));
+        
+        /* for each t_i, t_{i+1} */
+        /* this is the part that needs to get parallelized */
+        for (i = start; i < end; i++) {
+            //mpfr_printf("rank %d is testing (%Rf, %Rf)\n", rank, t_float[i], t_float[i+1]); 
+            test_pairwise_float(system, v_float, t_float[do_test[i]], t_float[do_test[i+1]], x_float[do_test[i]], x_float[do_test[i+1]], num_var, 1, t_final_float, x_final_float, sing_float, tested, succeeded, failed, num_sing, (i == 0));
+            
+            if (*succeeded > olds) {
+                test_status[i-start] = 1;
+                mpfr_printf("interval (%Rf, %Rf) on rank %d is a-okay\n", t_float[do_test[i]], t_float[do_test[i+1]], rank);
+            }
+            else if (*failed > oldf) {
+                mpfr_printf("interval (%Rf, %Rf) on rank %d is discontinuous\n", t_float[do_test[i]], t_float[do_test[i+1]], rank);
+                test_status[i-start] = -1;
+                print_points_float(stdout, x_float[i]);
+                printf("\n\n");
+                print_points_float(stdout, x_float[i+1]);
+            } else {
+                mpfr_printf("interval (%Rf, %Rf) on rank %d needs subdividing\n", t_float[do_test[i]], t_float[do_test[i+1]], rank);
+                test_status[i-start] = 0;
+            }
+            
+            olds = *succeeded;
+            oldf = *failed;
+        }
+        
+//         if (rank == 0) {
+//             for (i=0; i<size; i++) {
+//                 printf("%d,%d\t", counts[i], displs[i]);
+//             }
+//             printf("\n");
+//         }
+        
+        MPI_Barrier(MPI_COMM_WORLD);
+        // transmit array of unsuccessful intervals to all processes
+        if (size > 1)
+            MPI_Allgatherv(test_status, counts[rank], MPI_INT, test_status_r, counts, displs, MPI_INT, MPI_COMM_WORLD);
+        else
+            memcpy(test_status_r, test_status, num_tasks);
+        
+        subdivide_any = 0;
+        for (i=0; i<num_tasks; i++) {
+            if (test_status_r[i] == 0) {
+                subdivide_any += 1;
+            }
+        }/*
+        
+        if (subdivide_any) {
+            for (i=0; i<num_tasks; i++) {
+                if (test_status_r[i+counter] == 0) {
+                    subdivide_segment_float(system, *v_float, t_float[i+counter], t_float[i+counter+1], x_float[i+counter], x_float[i+counter+1], &t_mid, &x_mid, num_var);
+                    insert_int(test_status_r, 0, i+counter+1, num_tasks+counter);
+                    insert_mpf_t(t_float, t_mid, i+counter+1, num_tasks+1+counter);
+                    //insert_complex_vector(x_float, x_mid, i+counter+1, num_tasks+1+counter, num_var);
+                    counter++;
+                }
+            }
+        }*/
+        
+        //subdivide_any = 0;
+        
+        printf("rank %d sub_any %d; num_task %d\n", rank, subdivide_any, num_tasks);
+//         if (rank == 1) {
+//             for (i=0; i<num_tasks; i++)
+//                 printf("%d\t", test_status_r[i]);
+//             printf("\n");
+//         }
+        MPI_Barrier(MPI_COMM_WORLD);
+        if (subdivide_any) {
+            mpf_tmp = realloc(t_float_new, 3*subdivide_any*sizeof(mpf_t));
+            cv_tmp = realloc(x_float_new, 3*subdivide_any*sizeof(complex_vector));
+            
+            if (mpf_tmp) {
+                t_float_new = mpf_tmp;
+            } else {
+                MPI_Abort(MPI_COMM_WORLD, BH_EXIT_MEMORY);
+            }
+            if (cv_tmp) {
+                x_float_new = cv_tmp;
+            } else {
+                MPI_Abort(MPI_COMM_WORLD, BH_EXIT_MEMORY);
+            }
+            
+            do_test = realloc(do_test, 2*subdivide_any*sizeof(int));
+            
+            for (i=0; i<num_tasks; i++) {
+                printf("rank %d inside loop: %d \n", rank, i);
+                if (test_status_r[i] == 0) {
+                    mpfr_printf("subdividing segment %d (%Rf,%Rf) on rank %d\n", i, t_float[i], t_float[i+1], rank);
+                    fflush(stdout);
+                    subdivide_segment_float(system, *v_float, t_float[i], t_float[i+1], x_float[i], x_float[i+1], &t_mid, &x_mid, num_var);
+                    printf("done with %d on rank %d\n", i, rank);
+                    fflush(stdout);
+                    if (lastup == i-1) {
+                        mpf_init(t_float_new[counter]);
+                        mpf_set(t_float_new[counter], t_mid);
+                        mpf_init(t_float_new[counter+1]);
+                        mpf_set(t_float_new[counter+1], t_float[i+1]);
+                        
+                        initialize_vector(x_float_new[counter], num_var);
+                        copy_vector(x_float_new[counter], x_mid);
+                        initialize_vector(x_float_new[counter+1], num_var);
+                        copy_vector(x_float_new[counter+1], x_float[i+1]);
+                        counter += 2;
+                    }
+                    else {
+                        mpf_init(t_float_new[counter]);
+                        mpf_set(t_float_new[counter], t_float[i]);
+                        mpf_init(t_float_new[counter+1]);
+                        mpf_set(t_float_new[counter+1], t_mid);
+                        mpf_init(t_float_new[counter+2]);
+                        mpf_set(t_float_new[counter+2], t_float[i+1]);
+                        
+                        initialize_vector(x_float_new[counter], num_var);
+                        copy_vector(x_float_new[counter], x_float[i]);
+                        initialize_vector(x_float_new[counter+1], num_var);
+                        copy_vector(x_float_new[counter+1], x_mid);
+                        initialize_vector(x_float_new[counter+2], num_var);
+                        copy_vector(x_float_new[counter+2], x_float[i+1]);
+                        counter += 3;
+                    }
+                    do_test[2*tcounter] = i+tcounter;
+                    do_test[2*tcounter+1] = i+tcounter+1;
+                    tcounter++;
+                    lastup = i;
+                }
+            }
+        }
+        
+        
+        num_tasks = 2*subdivide_any;
+        printf("counter: %d; num_tasks: %d\n", counter, num_tasks);
+//         if (rank == 0)
+//             for (i=0; i<counter; i++)
+//                 mpfr_printf("t_float_new[%d] = %Rf\n", i, t_float_new[i]);
+        
+        t_float = t_float_new;    
+        x_float = x_float_new;
+        
+        iter++;
     }
 
-    MPI_Reduce(tested, ftested, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
-    MPI_Reduce(succeeded, fsucceeded, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
-    MPI_Reduce(failed, ffailed, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
+    MPI_Reduce(tested, &ftested, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
+    MPI_Reduce(succeeded, &fsucceeded, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
+    MPI_Reduce(failed, &ffailed, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
 
-    if (rank == 0) {
-        tested = ftested;
-        succeeded = fsucceeded;
-        failed = ffailed;
+    if (rank == 2) {
+        tested = &ftested;
+        succeeded = &fsucceeded;
+        failed = &ffailed;
+        
+        //printf("tested: %d; succeeded: %d; failed: %d\n", ftested, fsucceeded, ffailed);
     }
+    
+    mpf_clear(t_mid);
+    clear_vector(x_mid);
+    free(test_status);
+    free(test_status_r);
+    free(counts);
+    free(displs);
+    free(do_test);
 }

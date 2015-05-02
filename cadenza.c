@@ -10,8 +10,10 @@
 #include "cadenza.h"
 
 int main(int argc, char *argv[]) {
-    int i, num_var = 0, num_points = 0, num_sing = 0, tested = 0, succeeded = 0, failed = 0;
-    int rank, size;
+    int i, j, num_var = 0, num_points = 0, num_sing = 0, tested = 0, succeeded = 0, failed = 0;
+    int rank, size, tmpsize, intbuf[2];
+    char tmpbuf[BH_MAX_STRING];
+    MPI_Status status;
 
     MPI_Init(&argc, &argv);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -56,10 +58,10 @@ int main(int argc, char *argv[]) {
     getargs(argc, argv);
 
     /* tell em who we are */
-    if (rank == 0) { 
-        fputs("\n", stderr);
-        prog_info(stderr);
-    }
+//     if (rank == 0) { 
+//         fputs("\n", stderr);
+//         prog_info(stderr);
+//     }
 
     /* do this before checking filenames */
     if (help_flag) {
@@ -74,12 +76,10 @@ int main(int argc, char *argv[]) {
         if (strcmp(sysfile, "") == 0) {
             print_error("You need to define a system file", stderr);
             usage();
-            //exit(BH_EXIT_BADFILE);
             MPI_Abort(MPI_COMM_WORLD, BH_EXIT_BADFILE);
         } else if (strcmp(pointsfile, "") == 0) {
             print_error("You need to define a points file", stderr);
             usage();
-            //exit(BH_EXIT_BADFILE);
             MPI_Abort(MPI_COMM_WORLD, BH_EXIT_BADFILE);
         }
     }
@@ -101,43 +101,83 @@ int main(int argc, char *argv[]) {
 
     if (rank == 0) {
         read_system_file(&F, v);
-        num_points = read_points_file(&t, &x, num_var);
-        initialize_output_files(&F, v, t, x, num_points);
-        send_polynomial_system(&F, 1);
+        num_var = F.numVariables;
+        num_points = read_points_file(&t_float, &x_float, num_var);
+        initialize_output_files(&F, v, t_float, x_float, num_points);
+        intbuf[0] = num_var;
+        intbuf[1] = num_points;
+    } 
+    
+    MPI_Bcast(intbuf, 2, MPI_INT, 0, MPI_COMM_WORLD);
+    
+    if (rank != 0) {
+        num_var = intbuf[0];
+        num_points = intbuf[1];
+        x_float = malloc(num_points * sizeof(complex_vector));
+        t_float = malloc(num_points * sizeof(mpf_t));
     }
-        
-    if (rank == 1) {
-        recv_polynomial_system(&F, 0);
-        printf("rank 1 has received\n");
-        print_system(stdout, &F);
-    }
-    MPI_Finalize();
-    exit(BH_EXIT_SUCCESS);
-
-    num_var = F.numVariables;
 
     /* print out the system, vector and points */
     if (rank == 0 && verbosity > BH_CHATTY) {
         fprint_input(stdout, &F, v, t, x, num_points);
     }
+    
+    /* pass F to all processes */
+    if (rank == 0) {
+        for (i=1; i<size; i++) {
+            send_polynomial_system(&F, i);
+            send_complex_vector(v, i);
+             for (j=0; j<num_points; j++) {
+                 send_complex_vector(x_float[j], i);
+                 tmpsize = mpfr_sprintf(tmpbuf, "%Rf", t_float[j]);
+                 MPI_Send(&tmpsize, 1, MPI_INT, i, 0, MPI_COMM_WORLD);
+                 MPI_Send(tmpbuf, tmpsize, MPI_CHAR, i, 1, MPI_COMM_WORLD);
+             }
+        }
+    } else {
+        recv_polynomial_system(&F, 0);
+        recv_complex_vector(v, 0);
+        for (j=0; j<num_points; j++) {
+             recv_complex_vector(x_float[j], 0);
+             MPI_Recv(&tmpsize, 1, MPI_INT, 0, 0, MPI_COMM_WORLD, &status);
+             MPI_Recv(tmpbuf, tmpsize, MPI_CHAR, 0, 1, MPI_COMM_WORLD, &status);
+             tmpbuf[tmpsize] = '\0';
+             mpf_init(t_float[j]);
+             mpf_set_str(t_float[j], tmpbuf, 0);
+         }
+    }
+    
+    x = (void *) x_float;
+    t = (void *) t_float;
+//     if (rank == 1)
+//         mpfr_printf("rank %d; t_float[0] = %Rf\n", rank, t_float[0]);
 
+//     if (rank == 0) {
+//         printf("rank 0\n");
+//         print_points_float(stdout, x_float[0]);
+//     }
+//     MPI_Barrier(MPI_COMM_WORLD);
+//     if (rank == 1) {
+//         printf("rank 1\n");
+//         print_points_float(stdout, x_float[0]);
+//     }
     test_system(&F, v, t, x, num_points, &t_final, &x_final, &sing, &tested, &succeeded, &failed, &num_sing);
 
     /* print an output file only if all intervals certified continuous */
-    if (rank == 0 && tested == succeeded)
-        fprint_solutions(t_final, x_final, succeeded + 1);
-    
-    if (rank == 0)
-        summarize(tested, succeeded, failed, num_sing);
+//     if (rank == 0 && tested == succeeded)
+//         fprint_solutions(t_final, x_final, succeeded + 1);
+//     
+//     if (rank == 0)
+//         summarize(tested, succeeded, failed, num_sing);
 
     /* clean up */
     clear_polynomial_system(&F);
     free_v(v);
     free_t(t, num_points);
-    free_t(t_final, succeeded + 1);
+    //free_t(t_final, succeeded + 1);
     free_x(x, num_points);
-    free_x(x_final, succeeded + 1);
-    free_x(sing, num_sing);
+    //free_x(x_final, succeeded + 1);
+    //free_x(sing, num_sing);
     free(error_string);
 
     MPI_Finalize();

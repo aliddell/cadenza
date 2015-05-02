@@ -32,6 +32,7 @@ void usage() {
  *****************************************/
 void print_error(char *msg, FILE *outfile) {
     fprintf(outfile, "\nERROR: %s\n\n", msg);
+    fflush(outfile);
 }
 
 /*****************************************************
@@ -52,14 +53,15 @@ void prog_info(FILE *outfile) {
  * print the details of the configuration *
  ******************************************/
 void display_config(FILE *outfile) {
-    char *precision_str = malloc(termwidth * sizeof(char));
+    char precision_str[termwidth];
 
-    if (arithmetic_type == BH_USE_FLOAT)
-        snprintf(precision_str, (size_t) termwidth, "%d-bit precision floating point", default_precision);
-    else
-        strcpy(precision_str, "exact rational");
-
-    fprintf(outfile, "Computing using %s arithmetic\n", precision_str);
+//     if (arithmetic_type == BH_USE_FLOAT)
+//         //snprintf(precision_str, (size_t) termwidth, "%d-bit precision floating point", default_precision);
+//         sprintf(precision_str, "%d-bit precision floating point", default_precision);
+//     else
+//         strcpy(precision_str, "exact rational");
+// 
+//     fprintf(outfile, "Computing using %s arithmetic\n", precision_str);
     fprintf(outfile, "Polynomial system file is %s\n", sysfile);
     fprintf(outfile, "Point set file is %s\n", pointsfile);
     if (strcmp(configfile, "") != 0)
@@ -67,7 +69,7 @@ void display_config(FILE *outfile) {
     fprintf(outfile, "Maximum Newton iterations: %d\n", newton_tolerance);
     fprintf(outfile, "Maximum segment subdivisions: %d\n\n", subd_tolerance);
 
-    free(precision_str);
+    //free(precision_str);
 }
 
 /*************************************************************
@@ -389,10 +391,10 @@ void initialize_output_files(polynomial_system *system, void *v, void *t, void *
 
     fh = fopen(BH_FSUMMARY, "w");
     if (fh == NULL) {
-        snprintf(error_string, (size_t) termwidth, "Couldn't open output file %s: %s", BH_FSUMMARY, strerror(errno));
+        sprintf(error_string, "Couldn't open output file %s: %s", BH_FSUMMARY, strerror(errno));
 
         print_error(error_string, stderr);
-        exit(BH_EXIT_BADFILE);
+        MPI_Abort(MPI_COMM_WORLD, BH_EXIT_BADFILE);
     }
 
     fprintf(fh, "Summary:\n\n");
@@ -407,10 +409,10 @@ void initialize_output_files(polynomial_system *system, void *v, void *t, void *
 
     fh = fopen(BH_FCONT, "w");
     if (fh == NULL) {
-        snprintf(error_string, (size_t) termwidth, "Couldn't open output file %s: %s", BH_FCONT, strerror(errno));
+        sprintf(error_string, (size_t) termwidth, "Couldn't open output file %s: %s", BH_FCONT, strerror(errno));
 
         print_error(error_string, stderr);
-        exit(BH_EXIT_BADFILE);
+        MPI_Abort(MPI_COMM_WORLD, BH_EXIT_BADFILE);
     }
 
     fprintf(fh, "The following intervals have been certified continuous:\n");
@@ -421,10 +423,10 @@ void initialize_output_files(polynomial_system *system, void *v, void *t, void *
 
     fh = fopen(BH_FDISCONT, "w");
     if (fh == NULL) {
-        snprintf(error_string, (size_t) termwidth, "Couldn't open output file %s: %s", BH_FDISCONT, strerror(errno));
+        sprintf(error_string, "Couldn't open output file %s: %s", BH_FDISCONT, strerror(errno));
 
         print_error(error_string, stderr);
-        exit(BH_EXIT_BADFILE);
+        MPI_Abort(MPI_COMM_WORLD, BH_EXIT_BADFILE);
     }
 
     fprintf(fh, "The following intervals have been certified discontinuous:\n");
@@ -435,10 +437,10 @@ void initialize_output_files(polynomial_system *system, void *v, void *t, void *
 
     fh = fopen(BH_FUNCERTIFIED, "w");
     if (fh == NULL) {
-        snprintf(error_string, (size_t) termwidth, "Couldn't open output file %s: %s", BH_FUNCERTIFIED, strerror(errno));
+        sprintf(error_string, "Couldn't open output file %s: %s", BH_FUNCERTIFIED, strerror(errno));
 
         print_error(error_string, stderr);
-        exit(BH_EXIT_BADFILE);
+        MPI_Abort(MPI_COMM_WORLD, BH_EXIT_BADFILE);
     }
 
     fprintf(fh, "The following intervals could not be certified:\n");
