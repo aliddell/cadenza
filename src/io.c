@@ -61,7 +61,7 @@ void display_config(FILE *outfile) {
 
     fprintf(outfile, "Computing using %s arithmetic\n", precision_str);
     fprintf(outfile, "Polynomial system file is %s\n", sysfile);
-    fprintf(outfile, "Point set file is %s\n", pointsfile);
+    fprintf(outfile, "Point set file is %s\n", pathfile);
     if (strcmp(configfile, "") != 0)
         fprintf(outfile, "Configuration file is %s\n", configfile);
     fprintf(outfile, "Maximum Newton iterations: %d\n", newton_tolerance);
@@ -139,7 +139,7 @@ void read_config_file() {
                 subtol = BH_SUB_TOLERANCE;
         } else if (strcmp(key, "sysfile") == 0) {
             strcpy(sysf, val);
-        } else if (strcmp(key, "pointsfile") == 0) {
+        } else if (strcmp(key, "pathfile") == 0) {
             strcpy(pointsf, val);
         } else if (strcmp(key, "sort") == 0) {
             if (strcmp(val, "ascending") == 0) {
@@ -163,8 +163,8 @@ void read_config_file() {
         subd_tolerance = subtol;
     if (strcmp(sysfile, "") == 0)
         strcpy(sysfile, sysf);
-    if (strcmp(pointsfile, "") == 0)
-        strcpy(pointsfile, pointsf);
+    if (strcmp(pathfile, "") == 0)
+        strcpy(pathfile, pointsf);
 }
 
 /***********************************
@@ -382,7 +382,7 @@ void print_system(FILE *outfile, polynomial_system *system) {
 /*********************************
  * create empty files for output *
  *********************************/
-void initialize_output_files(polynomial_system *system, void *v, void *t, void *w, int num_points) {
+void initialize_output_files(polynomial_system *system, void *v, void *paths, int num_paths) {
     FILE *fh;
 
     errno = 0;
@@ -398,7 +398,7 @@ void initialize_output_files(polynomial_system *system, void *v, void *t, void *
     fprintf(fh, "Summary:\n\n");
     prog_info(fh);
     display_config(fh);
-    fprint_input(fh, system, v, t, w, num_points);
+    fprint_input(fh, system, v, paths, num_paths);
     fputs("\n", fh);
 
     fclose(fh);

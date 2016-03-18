@@ -678,7 +678,7 @@ int compute_abg_sqr_rational(rational_complex_vector points, polynomial_system *
 /***********************************************************************************
  * test that each w is in the quadratic convergence basin and check for continuity *
  ***********************************************************************************/
-void test_pairwise_rational(polynomial_system *system, rational_complex_vector *v, mpq_t t_left, mpq_t t_right, rational_complex_vector x_left, rational_complex_vector x_right, int num_var, int iter, mpq_t **t_final, rational_complex_vector **x_final, rational_complex_vector **sing, int *tested, int *succeeded, int *failed, int *num_sing, int check_left) {
+void test_interval_rational(polynomial_system *system, rational_complex_vector *v, mpq_t t_left, mpq_t t_right, rational_complex_vector x_left, rational_complex_vector x_right, int num_var, int iter, mpq_t **t_final, rational_complex_vector **x_final, rational_complex_vector **sing, int *tested, int *succeeded, int *failed, int *num_sing, int check_left) {
     int x_left_solution, x_right_solution, seg_continuous;
     polynomial_system F_left, F_right;
     mpq_t alpha_sqr_left, beta_sqr_left, gamma_sqr_left, alpha_sqr_right, beta_sqr_right, gamma_sqr_right, beta_sqr_min;
@@ -838,8 +838,8 @@ void test_pairwise_rational(polynomial_system *system, rational_complex_vector *
         subdivide_segment_rational(system, *v, t_left, t_right, x_left, x_right, &t_mid, &x_mid, num_var);
 
         /* recurse! */
-        test_pairwise_rational(system, v, t_left, t_mid, x_left, x_mid, num_var, iter + 1, t_final, x_final, sing, tested, succeeded, failed, num_sing, 0);
-        test_pairwise_rational(system, v, t_mid, t_right, x_mid, x_right, num_var, iter + 1, t_final, x_final, sing, tested, succeeded, failed, num_sing, 0);
+        test_interval_rational(system, v, t_left, t_mid, x_left, x_mid, num_var, iter + 1, t_final, x_final, sing, tested, succeeded, failed, num_sing, 0);
+        test_interval_rational(system, v, t_mid, t_right, x_mid, x_right, num_var, iter + 1, t_final, x_final, sing, tested, succeeded, failed, num_sing, 0);
         mpq_clear(t_mid);
         clear_rational_vector(x_mid);
     } else if (seg_continuous == 1) {
@@ -938,43 +938,54 @@ void test_pairwise_rational(polynomial_system *system, rational_complex_vector *
 /*******************
  * certify H(x, t) *
  *******************/
-void test_system_rational(polynomial_system *system, void *v, void *t, void *x, int num_points, void **t_final, void **x_final, void **sing, int *tested, int *succeeded, int *failed, int *num_sing) {
-    int i, num_var = system->numVariables;
+void test_paths_rational(polynomial_system *system, void *v, void *paths_initial, int num_paths, void **paths_final) {
+    int i, j, num_points, num_var = system->numVariables;
 
     rational_complex_vector *v_rational = (rational_complex_vector *) v;
-    mpq_t *t_rational = (mpq_t *) t;
-    rational_complex_vector *x_rational = (rational_complex_vector *) x;
+    rational_path *paths_initial_rational = (rational_path *) paths_initial;
+    rational_path current_path;
+    mpq_t *t_rational = NULL;
+    rational_complex_vector *x_rational = NULL;
 
-    mpq_t **t_final_rational = (mpq_t **) t_final;
-    rational_complex_vector **x_final_rational = (rational_complex_vector **) x_final;
-    rational_complex_vector **sing_rational = (rational_complex_vector **) sing;
+    rational_path **paths_final_rational = (rational_path **) paths_initial;
+    mpq_t **t_final_rational;
+    rational_complex_vector **x_final_rational;
 
-    /* set up t_final and x_final */
-    *t_final_rational = malloc(sizeof(mpq_t));
-    if (*t_final_rational == NULL) {
-        snprintf(error_string, (size_t) termwidth, "Couldn't alloc: %s\n", strerror(errno));
-        print_error(error_string, stderr);
+    /*************************
+     * certify a single path *
+     *************************/
+    for (i = 0; i< num_paths; i++) {
+        current_path = paths_initial_rational[i]
+        num_points = current_path.num_points;
+        t_rational = current_path.time_points;
+        x_rational = current_path.space_points;
 
-        exit(BH_EXIT_MEMORY);
-    }
+        /* set up t_final and x_final */
+        *t_final_rational = malloc(sizeof(mpq_t));
+        if (*t_final_rational == NULL) {
+            snprintf(error_string, (size_t) termwidth, "Couldn't alloc: %s\n", strerror(errno));
+            print_error(error_string, stderr);
 
-    mpq_init((*t_final_rational)[0]);
-    mpq_set((*t_final_rational)[0], t_rational[0]);
+            exit(BH_EXIT_MEMORY);
+        }
+
+        mpq_init((*t_final_rational)[0]);
+        mpq_set((*t_final_rational)[0], t_rational[0]);
 
         *x_final_rational = malloc(sizeof(rational_complex_vector));
-    if (*x_final_rational == NULL) {
-        snprintf(error_string, (size_t) termwidth, "Couldn't alloc: %s\n", strerror(errno));
-        print_error(error_string, stderr);
+        if (*x_final_rational == NULL) {
+            snprintf(error_string, (size_t) termwidth, "Couldn't alloc: %s\n", strerror(errno));
+            print_error(error_string, stderr);
 
-        exit(BH_EXIT_MEMORY);
-    }
+            exit(BH_EXIT_MEMORY);
+        }
 
-    initialize_rational_vector((*x_final_rational)[0], x_rational[0]->size);
-    copy_rational_vector((*x_final_rational)[0], x_rational[0]);
+        initialize_rational_vector((*x_final_rational)[0], x_rational[0]->size);
+        copy_rational_vector((*x_final_rational)[0], x_rational[0]);
 
-    /* for each t_i, t_{i+1} */
-    /* this is the part that needs to get parallelized */
-    for (i = 0; i < num_points - 1; i++) {
-        test_pairwise_rational(system, v_rational, t_rational[i], t_rational[i+1], x_rational[i], x_rational[i+1], num_var, 1, t_final_rational, x_final_rational, sing_rational, tested, succeeded, failed, num_sing, (i == 0));
+        /* for each t_i, t_{i+1} */
+        for (i = 0; i < num_points - 1; i++) {
+            test_interval_rational(system, v_rational, t_rational[i], t_rational[i+1], x_rational[i], x_rational[i+1], num_var, 1, t_final_rational, x_final_rational, sing_rational, tested, succeeded, failed, num_sing, (i == 0));
+        }
     }
 }

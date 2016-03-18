@@ -182,114 +182,148 @@ void read_system_file_rational(polynomial_system *system, void *v) {
 /********************
  * read points file *
  ********************/
-int read_points_file_rational(void **t, void **x, int num_var) {
-    int i, j, num_points, res;
+int read_path_file_rational(void **paths, int num_var) {
+    int i, j, k, num_paths, num_points, res;
+
+    rational_path *paths_rational;
     mpq_t *t_rational;
     rational_complex_vector *x_rational;
 
     /* sanity-check the points file */
     errno = 0;
-    FILE *pointsfh = fopen(pointsfile, "r");
+    FILE *pointsfh = fopen(pathfile, "r");
+
     if (pointsfh == NULL) {
-        snprintf(error_string, (size_t) termwidth, "Couldn't open points file `%s': %s", pointsfile, strerror(errno));
+        snprintf(error_string, (size_t) termwidth, "Couldn't open points file `%s': %s", pathfile, strerror(errno));
 
         print_error(error_string, stderr);
         exit(BH_EXIT_BADFILE);
     }
 
-    /* get number of points */
+    /* get number of paths */
     errno = 0;
-
-    res = fscanf(pointsfh, "%d", &num_points);
+    res = fscanf(pointsfh, "%d", &num_paths);
 
     if (res == EOF) {
-        snprintf(error_string, (size_t) termwidth, "Error reading `%s': unexpected EOF", pointsfile);
+        snprintf(error_string, (size_t) termwidth, "Error reading `%s': unexpected EOF", pathfile);
 
         print_error(error_string, stderr);
         exit(BH_EXIT_BADREAD);
     } else if (res == 0) {
-        snprintf(error_string, (size_t) termwidth, "Error reading `%s': %s", pointsfile, strerror(errno));
+        snprintf(error_string, (size_t) termwidth, "Error reading `%s': %s", pathfile, strerror(errno));
 
         print_error(error_string, stderr);
         exit(BH_EXIT_BADREAD);
     } else if (errno == EILSEQ) {
-        snprintf(error_string, (size_t) termwidth, "Error reading `%s': %s", pointsfile, strerror(errno));
+        snprintf(error_string, (size_t) termwidth, "Error reading `%s': %s", pathfile, strerror(errno));
 
         print_error(error_string, stderr);
         exit(BH_EXIT_BADPARSE);
     }
 
-    /* check that we have enought points to test */
-    if (num_points < 2) {
-        char err_string[] = "You must define 2 or more points to test";
+    paths_rational = (rational_path *) malloc(num_paths*sizeof(rational_path));
 
-        print_error(err_string, stderr);
-        exit(BH_EXIT_BADDEF);
-    }
-
-    t_rational = malloc(num_points * sizeof(mpq_t));
-    x_rational = malloc(num_points * sizeof(rational_complex_vector));
-
-    for (i = 0; i < num_points; i++) {
-        /* read in each t */
-        mpq_init(t_rational[i]);
-        initialize_rational_vector(x_rational[i], num_var);
-
+    for (i = 0; i < num_paths; i++) {
+        /* get number of points */
         errno = 0;
-        res = gmp_fscanf(pointsfh, "%Qd", t_rational[i]);
+
+        res = fscanf(pointsfh, "%d", &num_points);
 
         if (res == EOF) {
-            snprintf(error_string, (size_t) termwidth, "Error reading `%s': unexpected EOF", pointsfile);
+            snprintf(error_string, (size_t) termwidth, "Error reading `%s': unexpected EOF", pathfile);
 
             print_error(error_string, stderr);
             exit(BH_EXIT_BADREAD);
         } else if (res == 0) {
-            snprintf(error_string, (size_t) termwidth, "Error reading `%s': are you using floating point input?", pointsfile);
+            snprintf(error_string, (size_t) termwidth, "Error reading `%s': %s", pathfile, strerror(errno));
 
             print_error(error_string, stderr);
             exit(BH_EXIT_BADREAD);
         } else if (errno == EILSEQ) {
-            snprintf(error_string, (size_t) termwidth, "Error reading `%s': %s", pointsfile, strerror(errno));
+            snprintf(error_string, (size_t) termwidth, "Error reading `%s': %s", pathfile, strerror(errno));
 
             print_error(error_string, stderr);
             exit(BH_EXIT_BADPARSE);
         }
 
-        mpq_canonicalize(t_rational[i]);
+        /* check that we have enought points to test */
+        if (num_points < 2) {
+            char err_string[] = "A path must contain 2 or more points to test";
 
-        /* check if 0 <= t <= 1 */
-        if (mpq_cmp_ui(t_rational[i], 0, 1) < 0 || mpq_cmp_ui(t_rational[i], 1, 1) > 0) {
-            gmp_snprintf(error_string, (size_t) termwidth, "Value for t not between 0 and 1: %Qd", t_rational[i]);
-
-            print_error(error_string, stderr);
+            print_error(err_string, stderr);
             exit(BH_EXIT_BADDEF);
         }
 
-        for (j = 0; j < num_var; j++) {
+        t_rational = malloc(num_points * sizeof(mpq_t));
+        x_rational = malloc(num_points * sizeof(rational_complex_vector));
+
+        for (j = 0; j < num_points; j++) {
+            /* read in each t */
+            mpq_init(t_rational[j]);
+            initialize_rational_vector(x_rational[j], num_var);
+
             errno = 0;
-            /* get real and imag points */
-            res = gmp_fscanf(pointsfh, "%Qd %Qd", x_rational[i]->coord[j]->re, x_rational[i]->coord[j]->im);
+            res = gmp_fscanf(pointsfh, "%Qd", t_rational[j]);
 
             if (res == EOF) {
-                snprintf(error_string, (size_t) termwidth, "Error reading `%s': unexpected EOF", pointsfile);
+                snprintf(error_string, (size_t) termwidth, "Error reading `%s': unexpected EOF", pathfile);
 
                 print_error(error_string, stderr);
                 exit(BH_EXIT_BADREAD);
             } else if (res == 0) {
-                snprintf(error_string, (size_t) termwidth, "Error reading `%s': are you using floating point input?", pointsfile);
+                snprintf(error_string, (size_t) termwidth, "Error reading `%s': are you using floating point input?", pathfile);
 
                 print_error(error_string, stderr);
                 exit(BH_EXIT_BADREAD);
             } else if (errno == EILSEQ) {
-                snprintf(error_string, (size_t) termwidth, "Error reading `%s': %s", pointsfile, strerror(errno));
+                snprintf(error_string, (size_t) termwidth, "Error reading `%s': %s", pathfile, strerror(errno));
 
                 print_error(error_string, stderr);
                 exit(BH_EXIT_BADPARSE);
             }
 
-            mpq_canonicalize(x_rational[i]->coord[j]->re);
-            mpq_canonicalize(x_rational[i]->coord[j]->im);
+            mpq_canonicalize(t_rational[j]);
+
+            /* check if 0 <= t <= 1 */
+            if (mpq_cmp_ui(t_rational[j], 0, 1) < 0 || mpq_cmp_ui(t_rational[j], 1, 1) > 0) {
+                gmp_snprintf(error_string, (size_t) termwidth, "Value for t not between 0 and 1: %Qd", t_rational[j]);
+
+                print_error(error_string, stderr);
+                exit(BH_EXIT_BADDEF);
+            }
+
+            for (k = 0; k < num_var; k++) {
+                errno = 0;
+                /* get real and imag points */
+                res = gmp_fscanf(pointsfh, "%Qd %Qd", x_rational[j]->coord[k]->re, x_rational[j]->coord[k]->im);
+
+                if (res == EOF) {
+                    snprintf(error_string, (size_t) termwidth, "Error reading `%s': unexpected EOF", pathfile);
+
+                    print_error(error_string, stderr);
+                    exit(BH_EXIT_BADREAD);
+                } else if (res == 0) {
+                    snprintf(error_string, (size_t) termwidth, "Error reading `%s': are you using floating point input?", pathfile);
+
+                    print_error(error_string, stderr);
+                    exit(BH_EXIT_BADREAD);
+                } else if (errno == EILSEQ) {
+                    snprintf(error_string, (size_t) termwidth, "Error reading `%s': %s", pathfile, strerror(errno));
+
+                    print_error(error_string, stderr);
+                    exit(BH_EXIT_BADPARSE);
+                }
+
+                mpq_canonicalize(x_rational[j]->coord[k]->re);
+                mpq_canonicalize(x_rational[j]->coord[k]->im);
+            }
+
+            sort_points_rational(t_rational, x_rational, num_points);
         }
+
+        (paths_rational[i]).num_points = num_points;
+        (paths_rational[i]).time_points = t_rational;
+        (paths_rational[i]).space_points = x_rational;
     }
 
     /* clean up the file */
@@ -297,27 +331,23 @@ int read_points_file_rational(void **t, void **x, int num_var) {
 
     res = fclose(pointsfh);
     if (res == EOF) {
-        snprintf(error_string, (size_t) termwidth, "Couldn't close `%s': %s", pointsfile, strerror(errno));
+        snprintf(error_string, (size_t) termwidth, "Couldn't close `%s': %s", pathfile, strerror(errno));
         exit(BH_EXIT_BADREAD);
     }
 
-    sort_points_rational(t_rational, x_rational, num_points);
+    *paths = (void *) paths_rational;
 
-    *x = (void *) x_rational;
-    *t = (void *) t_rational;
-
-    return num_points;
+    return num_paths;
 }
 
 /**************************************************************
  * print the file input back to stdout for debugging purposes *
  **************************************************************/
-void fprint_input_rational(FILE *outfile, polynomial_system *system, void *v, void *t, void *x, int num_points) {
-    int i, num_var = system->numVariables;
+void fprint_input_rational(FILE *outfile, polynomial_system *system, void *v, void *paths, int num_paths) {
+    int i, j, num_var = system->numVariables;
 
     rational_complex_vector *v_rational = (rational_complex_vector *) v;
-    mpq_t *t_rational = (mpq_t *) t;
-    rational_complex_vector *x_rational = (rational_complex_vector *) x;
+    rational_path *paths_rational = (rational_path *) paths;
 
     fputs("F:\n", outfile);
     print_system(outfile, system);
@@ -334,9 +364,14 @@ void fprint_input_rational(FILE *outfile, polynomial_system *system, void *v, vo
     fputs("\n", outfile);
 
     fputs("(t, x)\n", outfile);
-    for (i = 0; i < num_points; i++) {
-        gmp_fprintf(outfile, "%Qd, ", t_rational[i]);
-        print_points_rational(outfile, x_rational[i]);
+    for (i = 0; i < num_paths; i++) {
+        rational_path p = paths_rational[i];
+        for (j = 0; j < p.num_points; j++) {
+
+            gmp_fprintf(outfile, "%Qd, ", p.time_points[j]);
+            print_points_rational(outfile, p.space_points[j]);
+        }
+        fprintf(outfile, "\n");
     }
 }
 

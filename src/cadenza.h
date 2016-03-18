@@ -69,19 +69,41 @@
 #define BH_EXIT_MEMORY 5 /* out of memory */
 #define BH_EXIT_OTHER 7 /* something else */
 
+/*******************************
+ * data structures for cadenza *
+ *******************************/
+
+typedef struct _path {
+    int num_points;
+    void *time_points;
+    void *space_points;
+} path;
+
+typedef struct _rational_path {
+    int num_points;
+    mpq_t *time_points;
+    rational_complex_vector *space_points;
+} rational_path;
+
+typedef struct _float_path {
+    int num_points;
+    mpf_t *time_points;
+    complex_vector *space_points;
+} float_path;
+
 /**************************************
  * global variables for cadenza.c *
  **************************************/
 int verbosity, help_flag, ver_flag, default_precision, arithmetic_type, newton_tolerance, subd_tolerance, termwidth, sort_order, sigdig;
-char pointsfile[BH_MAX_FILENAME], sysfile[BH_MAX_FILENAME], configfile[BH_MAX_FILENAME], *error_string;
+char pathfile[BH_MAX_FILENAME], sysfile[BH_MAX_FILENAME], configfile[BH_MAX_FILENAME], *error_string;
 
 /*********************
  * function pointers *
  *********************/
 void (*read_system_file)(polynomial_system *system, void *v); /* reads in a polynomial system file, sets data */
-int (*read_points_file)(void **t, void **x, int num_var); /* reads in a points file, sets data, returns number of points */
-void (*fprint_input)(FILE *outfile, polynomial_system *system, void *v, void *t, void *x, int num_points); /* prints input files to stdout for debugging */
-void (*test_system)(polynomial_system *system, void *v, void *t, void *x, int num_points, void **t_final, void **x_final, void **sing, int *tested, int *succeeded, int *failed, int *num_sing); /* certify H(x, t) */
+int (*read_path_file)(void **paths, int num_var); /* reads in a points file, sets data, returns status */
+void (*fprint_input)(FILE *outfile, polynomial_system *system, void *v, void *paths, int num_paths); /* prints input files to stdout for debugging */
+void (*test_paths)(polynomial_system *system, void *v, void *paths_initial, int num_points, void **paths_final);
 void (*fprint_solutions)(void *t, void *x, int num_points); /* print solutions to H(x, t) in a program-readable format */
 
 /*******************************************
@@ -93,6 +115,7 @@ void set_function_pointers(); /* set function pointers depending on arithmetic *
 void free_v(void *v); /* free [rational_]complex_vector v */
 void free_t(void *t, int num_points); /* free mp[qf]_t *t */
 void free_x(void *x, int num_points); /* free [rational_]complex_vector *x */
+void free_paths(void *paths, int num_paths); /* free path *paths */
 
 /**********************************
  * function declarations for io.c *
@@ -104,7 +127,7 @@ void read_config_file(); /* reads in a configuration file */
 void display_config(); /* displays the configuration (arithmetic type, precision, &c) on stderr */
 polynomial parse_polynomial(FILE *sysfh, int num_var);
 void print_system(FILE *outfile, polynomial_system *system);
-void initialize_output_files(polynomial_system *system, void *v, void *t, void *x, int num_points); /* creates empty output files in the working directory */
+void initialize_output_files(polynomial_system *system, void *v, void *paths, int num_paths); /* creates empty output files in the working directory */
 void summarize(int tested, int succeeded, int failed, int singularities); /* print a summary to stdout */
 
 /*******************************************
@@ -113,8 +136,8 @@ void summarize(int tested, int succeeded, int failed, int singularities); /* pri
 int compare_mpq(const void *a, const void *b);
 void sort_points_rational(mpq_t *t, rational_complex_vector *x, int num_points);
 void read_system_file_rational(polynomial_system *system, void *v);
-int read_points_file_rational(void **t, void **x, int num_var);
-void fprint_input_rational(FILE *outfile, polynomial_system *system, void *v, void *t, void *x, int num_points);
+int read_path_file_rational(void **paths, int num_var);
+void fprint_input_rational(FILE *outfile, polynomial_system *system, void *v, void *paths, int num_paths);
 void print_points_rational(FILE *outfile, rational_complex_vector points);
 void fprint_continuous_rational(mpq_t t_left, mpq_t t_right, rational_complex_vector x_left, rational_complex_vector x_right, mpq_t alpha_sqr_left, mpq_t alpha_sqr_right, mpq_t beta_sqr_left, mpq_t beta_sqr_right, mpq_t gamma_sqr_left, mpq_t gamma_sqr_right);
 void fprint_discontinuous_rational(mpq_t t_left, mpq_t t_right, rational_complex_vector x_left, rational_complex_vector x_right, mpq_t alpha_sqr_left, mpq_t alpha_sqr_right, mpq_t beta_sqr_left, mpq_t beta_sqr_right, mpq_t gamma_sqr_left, mpq_t gamma_sqr_right);
@@ -127,8 +150,8 @@ void fprint_solutions_rational(void *t, void *x, int num_points);
 int compare_mpf(const void *a, const void *b);
 void sort_points_float(mpf_t *t, complex_vector *x, int num_points);
 void read_system_file_float(polynomial_system *system, void *v); /* see read_system_file(char *, void *) */
-int read_points_file_float(void **t, void **x, int num_var); /* see read_points_file(char *, void **, int) */
-void fprint_input_float(FILE *outfile, polynomial_system *system, void *v, void *t, void *x, int num_points);
+int read_path_file_float(void **paths, int num_var); /* see read_path_file(char *, void **, int) */
+void fprint_input_float(FILE *outfile, polynomial_system *system, void *v, void *paths, int num_paths);
 void print_points_float(FILE *outfile, complex_vector points);
 void fprint_continuous_float(mpf_t t_left, mpf_t t_right, complex_vector x_left, complex_vector x_right, mpf_t alpha_left, mpf_t alpha_right, mpf_t beta_left, mpf_t beta_right, mpf_t gamma_left, mpf_t gamma_right);
 void fprint_discontinuous_float(mpf_t t_left, mpf_t t_right, complex_vector x_left, complex_vector x_right, mpf_t alpha_left, mpf_t alpha_right, mpf_t beta_left, mpf_t beta_right, mpf_t gamma_left, mpf_t gamma_right);
@@ -146,8 +169,8 @@ int test_continuity_rational(rational_complex_vector v, mpq_t t_left, mpq_t t_ri
 void subdivide_segment_rational(polynomial_system *base, rational_complex_vector v, mpq_t t_left, mpq_t t_right, rational_complex_vector x_left, rational_complex_vector x_right, mpq_t *t_mid, rational_complex_vector *x_mid, int num_var);
 void apply_tv_rational(polynomial_system *base, polynomial_system *F, mpq_t t, rational_complex_vector v);
 int compute_abg_sqr_rational(rational_complex_vector points, polynomial_system *F, mpq_t *alpha, mpq_t *beta, mpq_t *gamma);
-void test_pairwise_rational(polynomial_system *system, rational_complex_vector *v, mpq_t t_left, mpq_t t_right, rational_complex_vector x_left, rational_complex_vector x_right, int num_var, int iter, mpq_t **t_final, rational_complex_vector **x_final, rational_complex_vector **sing, int *tested, int *succeeded, int *failed, int *num_sing, int check_left);
-void test_system_rational(polynomial_system *system, void *v, void *t, void *x, int num_points, void **t_final, void **x_final, void **sing, int *tested, int *succeeded, int *failed, int *num_sing); /* see test_system(polynomial_system*, ...) */
+void test_interval_rational(polynomial_system *system, rational_complex_vector *v, mpq_t t_left, mpq_t t_right, rational_complex_vector x_left, rational_complex_vector x_right, int num_var, int iter, mpq_t **t_final, rational_complex_vector **x_final, rational_complex_vector **sing, int *tested, int *succeeded, int *failed, int *num_sing, int check_left);
+void test_paths_rational(polynomial_system *system, void *v, void *paths_initial, int num_paths, void **paths_final);
 
 /*********************************************
  * function declarations for certify_float.c *
@@ -159,8 +182,8 @@ int test_continuity_float(complex_vector v, mpf_t t_left, mpf_t t_right, complex
 void subdivide_segment_float(polynomial_system *base, complex_vector v, mpf_t t_left, mpf_t t_right, complex_vector x_left, complex_vector x_right, mpf_t *t_mid, complex_vector *x_mid, int num_var);
 void apply_tv_float(polynomial_system *base, polynomial_system *F, mpf_t t, complex_vector v);
 int compute_abg_float(complex_vector points, polynomial_system *F, mpf_t *alpha, mpf_t *beta, mpf_t *gamma);
-void test_pairwise_float(polynomial_system *system, complex_vector *v, mpf_t t_left, mpf_t t_right, complex_vector x_left, complex_vector x_right, int num_var, int iter, mpf_t **t_final, complex_vector **x_final, complex_vector **sing, int *tested, int *succeeded, int *failed, int *num_sing, int check_left);
-void test_system_float(polynomial_system *system, void *v, void *t, void *x, int num_points, void **t_final, void **x_final, void **sing, int *tested, int *succeeded, int *failed, int *num_sing); /* see test_system(polynomial_system*, ...) */
+void test_interval_float(polynomial_system *system, complex_vector *v, mpf_t t_left, mpf_t t_right, complex_vector x_left, complex_vector x_right, int num_var, int iter, mpf_t **t_final, complex_vector **x_final, complex_vector **sing, int *tested, int *succeeded, int *failed, int *num_sing, int check_left);
+void test_paths_float(polynomial_system *system, void *v, void *paths_initial, int num_paths, void **paths_final);
 
 #define mpq_set_min(_setme, _prima, _secunda) { if (mpq_cmp(_prima, _secunda) <= 0) { mpq_set(_setme, _prima); } \
     else { mpq_set(_setme, _secunda); }}

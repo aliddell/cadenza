@@ -10,7 +10,7 @@
 #include "cadenza.h"
 
 int main(int argc, char *argv[]) {
-    int num_var = 0, num_points = 0, num_sing = 0, tested = 0, succeeded = 0, failed = 0;
+    int num_var = 0, num_points = 0;
 
     /* set termwidth for maximum string length */
     termwidth = set_termwidth();
@@ -25,24 +25,9 @@ int main(int argc, char *argv[]) {
     complex_vector v_float;
     void *v = NULL;
 
-    /* initial vector t */
-    mpq_t *t_rational = NULL;
-    mpf_t *t_float = NULL;
-    void *t = NULL;
-
-    /* final vector t */
-    void *t_final = NULL;
-
-    /* initial vector x */
-    rational_complex_vector *x_rational = NULL;
-    complex_vector *x_float = NULL;
-    void *x = NULL;
-
-    /* final vector x */
-    void *x_final = NULL;
-
-    /* singularities array */
-    void *sing = NULL;
+    /* paths */
+    path *initial_paths;
+    path *final_paths;
 
     /* init random seed */
     srand(time(NULL));
@@ -65,7 +50,7 @@ int main(int argc, char *argv[]) {
         print_error("You need to define a system file", stderr);
         usage();
         exit(BH_EXIT_BADFILE);
-    } else if (strcmp(pointsfile, "") == 0) {
+    } else if (strcmp(pathfile, "") == 0) {
         print_error("You need to define a points file", stderr);
         usage();
         exit(BH_EXIT_BADFILE);
@@ -89,15 +74,15 @@ int main(int argc, char *argv[]) {
     read_system_file(&F, v);
     num_var = F.numVariables;
 
-    num_points = read_points_file(&t, &x, num_var);
+    num_paths = read_path_file(&initial_paths, num_var);
 
     /* print out the system, vector and points */
     if (verbosity > BH_CHATTY) {
-        fprint_input(stdout, &F, v, t, x, num_points);
+        fprint_input(stdout, &F, v, paths, num_paths);
     }
 
-    initialize_output_files(&F, v, t, x, num_points);
-    test_system(&F, v, t, x, num_points, &t_final, &x_final, &sing, &tested, &succeeded, &failed, &num_sing);
+    initialize_output_files(&F, v, paths, num_paths);
+    test_paths(&F, v, paths_initial, num_points, &paths_final);
 
     /* print an output file only if all intervals certified continuous */
     if (tested == succeeded)
@@ -108,11 +93,8 @@ int main(int argc, char *argv[]) {
     /* clean up */
     clear_polynomial_system(&F);
     free_v(v);
-    free_t(t, num_points);
-    free_t(t_final, succeeded + 1);
-    free_x(x, num_points);
-    free_x(x_final, succeeded + 1);
-    free_x(sing, num_sing);
+    free_paths(paths_initial, num_paths);
+    free_paths(paths_final, num_paths);
     free(error_string);
 
     exit(BH_EXIT_SUCCESS);
@@ -131,7 +113,7 @@ void getargs(int argc, char *argv[]) {
     subd_tolerance = BH_UNSET;
     sort_order = BH_DESCENDING;
     strcpy(sysfile, "");
-    strcpy(pointsfile, "");
+    strcpy(pathfile, "");
     strcpy(configfile, "");
 
     int c = 0;
@@ -196,7 +178,7 @@ void getargs(int argc, char *argv[]) {
                 break;
 
             case 'p':
-                strcpy(pointsfile, optarg);
+                strcpy(pathfile, optarg);
                 break;
 
             case 'q':
@@ -266,18 +248,18 @@ void set_function_pointers() {
     /* floating point functions and data types */
     if (arithmetic_type == BH_USE_FLOAT) {
         read_system_file = &read_system_file_float;
-        read_points_file = &read_points_file_float;
+        read_path_file = &read_path_file_float;
         fprint_input = &fprint_input_float;
-        test_system = &test_system_float;
+        test_paths = &test_paths_float;
         fprint_solutions = &fprint_solutions_float;
     }
 
     /* rational functions */
     else {
         read_system_file = &read_system_file_rational;
-        read_points_file = &read_points_file_rational;
+        read_path_file = &read_path_file_rational;
         fprint_input = &fprint_input_rational;
-        test_system = &test_system_rational;
+        test_paths = &test_paths_rational;
         fprint_solutions = &fprint_solutions_rational;
     }
 }
@@ -352,3 +334,19 @@ void free_x(void *x, int num_points) {
         x = NULL;
     }
 }
+
+/******************** 
+ * free path *paths *
+ ********************/
+void free_paths(void *paths, int num_paths) {
+    int i;
+
+    for (i = 0; i < num_paths; i++) {
+        free_t((void *) (paths[i]).time_points, (paths[i]).num_points);
+        free_x((void *) (paths[i]).space_points, (paths[i]).num_points);
+    }
+
+    free(paths);
+    paths = NULL;
+}
+

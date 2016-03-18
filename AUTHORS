@@ -1,3 +1,22 @@
-Jonathan D. Hauenstein <jdhauens@ncsu.edu>
-Ian T. Haywood <ithaywoo@ncsu.edu>
-Alan C. Liddell, Jr. <acliddel@ncsu.edu>
+Primary authors:
+    Jonathan D. Hauenstein <hauenstein@nd.edu>
+    Ian T. Haywood <ithaywoo@ncsu.edu>
+    Alan C. Liddell, Jr. <liddell.10@nd.edu>
+
+The following individuals have assisted with parallelization:
+    Cale Harnish <Cale.C.Harnish.2@nd.edu>
+    Ryan Pyle <Ryan.M.Pyle.9@nd.edu>
+    Margaret Regan <mregan9@nd.edu>
+
+Source files containing the following declaration
+    /* 
+       alphaCertified
+       Jonathan Hauenstein & Frank Sottile
+       May 7, 2010
+       Copyright 2010
+
+       alphaCertified.c: Main file for alphaCertified
+    */
+are from alphaCertified
+(http://www.math.tamu.edu/~sottile/research/stories/alphaCertified/),
+a project of Jonathan Hauenstein and Frank Sotille

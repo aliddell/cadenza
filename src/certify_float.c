@@ -730,7 +730,7 @@ int compute_abg_float(complex_vector points, polynomial_system *F, mpf_t *alpha,
 /***************************************************************
  * test that each x is an approx soln and check for continuity *
  ***************************************************************/
-void test_pairwise_float(polynomial_system *system, complex_vector *v, mpf_t t_left, mpf_t t_right, complex_vector x_left, complex_vector x_right, int num_var, int iter, mpf_t **t_final, complex_vector **x_final, complex_vector **sing, int *tested, int *succeeded, int *failed, int *num_sing, int check_left) {
+void test_interval_float(polynomial_system *system, complex_vector *v, mpf_t t_left, mpf_t t_right, complex_vector x_left, complex_vector x_right, int num_var, int iter, mpf_t **t_final, complex_vector **x_final, complex_vector **sing, int *tested, int *succeeded, int *failed, int *num_sing, int check_left) {
     int x_left_solution, x_right_solution, seg_continuous;
     polynomial_system F_left, F_right;
     mpf_t alpha_left, beta_left, gamma_left, alpha_right, beta_right, gamma_right, beta_min;
@@ -935,8 +935,8 @@ void test_pairwise_float(polynomial_system *system, complex_vector *v, mpf_t t_l
         subdivide_segment_float(system, *v, t_left, t_right, x_left, x_right, &t_mid, &x_mid, num_var);
 
         /* recurse! */
-        test_pairwise_float(system, v, t_left, t_mid, x_left, x_mid, num_var, iter + 1, t_final, x_final, sing, tested, succeeded, failed, num_sing, 0);
-        test_pairwise_float(system, v, t_mid, t_right, x_mid, x_right, num_var, iter + 1, t_final, x_final, sing, tested, succeeded, failed, num_sing, 0);
+        test_interval_float(system, v, t_left, t_mid, x_left, x_mid, num_var, iter + 1, t_final, x_final, sing, tested, succeeded, failed, num_sing, 0);
+        test_interval_float(system, v, t_mid, t_right, x_mid, x_right, num_var, iter + 1, t_final, x_final, sing, tested, succeeded, failed, num_sing, 0);
 
         mpf_clear(t_mid);
         clear_vector(x_mid);
@@ -1039,16 +1039,15 @@ void test_pairwise_float(polynomial_system *system, complex_vector *v, mpf_t t_l
 /*******************
  * certify H(x, t) *
  *******************/
-void test_system_float(polynomial_system *system, void *v, void *t, void *x, int num_points, void **t_final, void **x_final, void **sing, int *tested, int *succeeded, int *failed, int *num_sing) {
+void test_paths_float(polynomial_system *system, void *v, void *paths_initial, int num_paths, void **paths_final) {
     int i, num_var = system->numVariables;
 
     complex_vector *v_float = (complex_vector *) v;
     mpf_t *t_float = (mpf_t *) t;
     complex_vector *x_float = (complex_vector *) x;
 
-    mpf_t **t_final_float = (mpf_t **) t_final;
-    complex_vector **x_final_float = (complex_vector **) x_final;
-    complex_vector **sing_float = (complex_vector **) sing;
+    mpf_t **t_final_float;
+    complex_vector **x_final_float;
 
     /* set up t_final and x_final */
     *t_final_float = malloc(sizeof(mpf_t));
@@ -1076,6 +1075,6 @@ void test_system_float(polynomial_system *system, void *v, void *t, void *x, int
     /* for each t_i, t_{i+1} */
     /* this is the part that needs to get parallelized */
     for (i = 0; i < num_points - 1; i++) {
-        test_pairwise_float(system, v_float, t_float[i], t_float[i+1], x_float[i], x_float[i+1], num_var, 1, t_final_float, x_final_float, sing_float, tested, succeeded, failed, num_sing, (i == 0));
+        test_interval_float(system, v_float, t_float[i], t_float[i+1], x_float[i], x_float[i+1], num_var, 1, t_final_float, x_final_float, sing_float, tested, succeeded, failed, num_sing, (i == 0));
     }
 }
