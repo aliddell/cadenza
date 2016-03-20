@@ -10,7 +10,7 @@
 #include "cadenza.h"
 
 int main(int argc, char *argv[]) {
-    int num_var = 0, num_points = 0;
+    int num_var = 0, num_paths = 0;
 
     /* set termwidth for maximum string length */
     termwidth = set_termwidth();
@@ -74,27 +74,29 @@ int main(int argc, char *argv[]) {
     read_system_file(&F, v);
     num_var = F.numVariables;
 
-    num_paths = read_path_file(&initial_paths, num_var);
+    num_paths = read_path_file((void **) &initial_paths, num_var);
 
     /* print out the system, vector and points */
     if (verbosity > BH_CHATTY) {
-        fprint_input(stdout, &F, v, paths, num_paths);
+        fprint_input(stdout, &F, v, (void **) initial_paths, num_paths);
     }
 
-    initialize_output_files(&F, v, paths, num_paths);
-    test_paths(&F, v, paths_initial, num_points, &paths_final);
+    initialize_output_files(&F, v, (void **) initial_paths, num_paths);
+    test_paths(&F, v, (void *) initial_paths, num_paths, (void **) &final_paths);
 
     /* print an output file only if all intervals certified continuous */
+    /*
     if (tested == succeeded)
         fprint_solutions(t_final, x_final, succeeded + 1);
     
     summarize(tested, succeeded, failed, num_sing);
+    */
 
     /* clean up */
     clear_polynomial_system(&F);
     free_v(v);
-    free_paths(paths_initial, num_paths);
-    free_paths(paths_final, num_paths);
+    free_paths(initial_paths, num_paths);
+    free_paths(final_paths, num_paths);
     free(error_string);
 
     exit(BH_EXIT_SUCCESS);
@@ -339,14 +341,28 @@ void free_x(void *x, int num_points) {
  * free path *paths *
  ********************/
 void free_paths(void *paths, int num_paths) {
-    int i;
+    int i, num_points;
 
-    for (i = 0; i < num_paths; i++) {
-        free_t((void *) (paths[i]).time_points, (paths[i]).num_points);
-        free_x((void *) (paths[i]).space_points, (paths[i]).num_points);
+    if (arithmetic_type == BH_USE_FLOAT) {
+        float_path *paths_float = (float_path *) paths;
+        for (i = 0; i < num_paths; i++) {
+            float_path p = paths_float[i];
+            num_points = p.num_points;
+            free_t((void *) p.time_points, num_points);
+            free_x((void *) p.space_points, num_points);
+        }
+        free(paths_float);
+    } else {
+        rational_path *paths_rational = (rational_path *) paths;
+        for (i = 0; i < num_paths; i++) {
+            rational_path p = paths_rational[i];
+            num_points = p.num_points;
+            free_t((void *) p.time_points, num_points);
+            free_x((void *) p.space_points, num_points);
+        }
+        free(paths_rational);
     }
 
-    free(paths);
     paths = NULL;
 }
 

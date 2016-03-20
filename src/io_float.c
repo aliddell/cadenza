@@ -352,8 +352,9 @@ int read_path_file_float(void **paths, int num_var) {
                 }
             }
 
-            sort_points_float(t_float, x_float, num_points);
         }
+
+        sort_points_float(t_float, x_float, num_points);
 
         (paths_float[i]).num_points = num_points;
         (paths_float[i]).time_points = t_float;
@@ -403,7 +404,7 @@ void fprint_input_float(FILE *outfile, polynomial_system *system, void *v, void 
 
     fputs("(t, x)\n", outfile);
     for (i = 0; i < num_paths; i++) {
-        float_path p = paths[i];
+        float_path p = paths_float[i];
         for (j = 0; j < p.num_points; j++) {
             char msg[BH_MAX_STRING];
             snprintf(msg, (size_t) BH_MAX_STRING, "%%.%dRe, ", sigdig);

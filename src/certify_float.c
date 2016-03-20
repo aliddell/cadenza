@@ -438,7 +438,8 @@ void subdivide_segment_float(polynomial_system *base, complex_vector v, mpf_t t_
         mpfr_fprintf(stderr, msg, t_left);
         print_points_float(stderr, new_point);
         fprintf(stderr, ERROR_MESSAGE);
-        exit(BH_EXIT_OTHER);
+        return;
+        //exit(BH_EXIT_OTHER);
     }
     copy_vector(x_left, new_point);
 
@@ -454,7 +455,8 @@ void subdivide_segment_float(polynomial_system *base, complex_vector v, mpf_t t_
             mpfr_fprintf(stderr, msg, t_left);
             print_points_float(stderr, new_point);
             fprintf(stderr, ERROR_MESSAGE);
-            exit(BH_EXIT_OTHER);
+            return;
+            //exit(BH_EXIT_OTHER);
         }
         copy_vector(x_left, new_point);
 
@@ -471,7 +473,8 @@ void subdivide_segment_float(polynomial_system *base, complex_vector v, mpf_t t_
         mpfr_fprintf(stderr, msg, t_right);
         print_points_float(stderr, new_point);
         fprintf(stderr, ERROR_MESSAGE);
-        exit(BH_EXIT_OTHER);
+        return;
+        //exit(BH_EXIT_OTHER);
     }
     copy_vector(x_right, new_point);
 
@@ -487,7 +490,8 @@ void subdivide_segment_float(polynomial_system *base, complex_vector v, mpf_t t_
             mpfr_fprintf(stderr, msg, t_right);
             print_points_float(stderr, new_point);
             fprintf(stderr, ERROR_MESSAGE);
-            exit(BH_EXIT_OTHER);
+            return;
+            //exit(BH_EXIT_OTHER);
         }
         copy_vector(x_right, new_point);
 
@@ -516,7 +520,8 @@ void subdivide_segment_float(polynomial_system *base, complex_vector v, mpf_t t_
         mpfr_fprintf(stderr, msg, *t_mid);
         print_points_float(stderr, new_point);
         fprintf(stderr, ERROR_MESSAGE);
-        exit(BH_EXIT_OTHER);
+        return;
+        //exit(BH_EXIT_OTHER);
     }
     copy_vector(*x_mid, new_point);
 
@@ -532,7 +537,8 @@ void subdivide_segment_float(polynomial_system *base, complex_vector v, mpf_t t_
             mpfr_fprintf(stderr, msg, *t_mid);
             print_points_float(stderr, new_point);
             fprintf(stderr, ERROR_MESSAGE);
-            exit(BH_EXIT_OTHER);
+            return;
+            //exit(BH_EXIT_OTHER);
         }
         copy_vector(*x_mid, new_point);
 
@@ -730,7 +736,7 @@ int compute_abg_float(complex_vector points, polynomial_system *F, mpf_t *alpha,
 /***************************************************************
  * test that each x is an approx soln and check for continuity *
  ***************************************************************/
-void test_interval_float(polynomial_system *system, complex_vector *v, mpf_t t_left, mpf_t t_right, complex_vector x_left, complex_vector x_right, int num_var, int iter, mpf_t **t_final, complex_vector **x_final, complex_vector **sing, int *tested, int *succeeded, int *failed, int *num_sing, int check_left) {
+void test_interval_float(polynomial_system *system, complex_vector *v, mpf_t t_left, mpf_t t_right, complex_vector x_left, complex_vector x_right, int num_var, int iter, mpf_t **t_final, complex_vector **x_final, int *tested, int *succeeded, int *failed, int check_left) {
     int x_left_solution, x_right_solution, seg_continuous;
     polynomial_system F_left, F_right;
     mpf_t alpha_left, beta_left, gamma_left, alpha_right, beta_right, gamma_right, beta_min;
@@ -766,7 +772,6 @@ void test_interval_float(polynomial_system *system, complex_vector *v, mpf_t t_l
                 snprintf(msg, (size_t) BH_MAX_STRING, "singularity found for t = %%.%dRe at point ", sigdig);
                 mpfr_fprintf(stderr, msg, t_left);
                 print_points_float(stderr, x_left);
-                *num_sing += 1;
             }
         }
         if (mpfr_inf_p(gamma_right)) {
@@ -774,7 +779,6 @@ void test_interval_float(polynomial_system *system, complex_vector *v, mpf_t t_l
             snprintf(msg, (size_t) BH_MAX_STRING, "singularity found for t = %%.%dRe at point ", sigdig);
             mpfr_fprintf(stderr, msg, t_right);
             print_points_float(stderr, x_right);
-            *num_sing += 1;
         }
 
         return;
@@ -832,7 +836,8 @@ void test_interval_float(polynomial_system *system, complex_vector *v, mpf_t t_l
                 mpfr_fprintf(stderr, msg, t_left);
                 print_points_float(stderr, x_left);
                 fprintf(stderr, ERROR_MESSAGE);
-                exit(BH_EXIT_OTHER);
+                return;
+                //exit(BH_EXIT_OTHER);
             }
 
             copy_vector(x_left, new_point);
@@ -885,7 +890,8 @@ void test_interval_float(polynomial_system *system, complex_vector *v, mpf_t t_l
                 mpfr_fprintf(stderr, msg, t_right);
                 print_points_float(stderr, x_right);
                 fprintf(stderr, ERROR_MESSAGE);
-                exit(BH_EXIT_OTHER);
+                return;
+                //exit(BH_EXIT_OTHER);
             }
 
             copy_vector(x_right, new_point);
@@ -935,8 +941,8 @@ void test_interval_float(polynomial_system *system, complex_vector *v, mpf_t t_l
         subdivide_segment_float(system, *v, t_left, t_right, x_left, x_right, &t_mid, &x_mid, num_var);
 
         /* recurse! */
-        test_interval_float(system, v, t_left, t_mid, x_left, x_mid, num_var, iter + 1, t_final, x_final, sing, tested, succeeded, failed, num_sing, 0);
-        test_interval_float(system, v, t_mid, t_right, x_mid, x_right, num_var, iter + 1, t_final, x_final, sing, tested, succeeded, failed, num_sing, 0);
+        test_interval_float(system, v, t_left, t_mid, x_left, x_mid, num_var, iter + 1, t_final, x_final, tested, succeeded, failed, 0);
+        test_interval_float(system, v, t_mid, t_right, x_mid, x_right, num_var, iter + 1, t_final, x_final, tested, succeeded, failed, 0);
 
         mpf_clear(t_mid);
         clear_vector(x_mid);
@@ -1040,41 +1046,65 @@ void test_interval_float(polynomial_system *system, complex_vector *v, mpf_t t_l
  * certify H(x, t) *
  *******************/
 void test_paths_float(polynomial_system *system, void *v, void *paths_initial, int num_paths, void **paths_final) {
-    int i, num_var = system->numVariables;
+    int i, j, tested, succeeded, failed, num_points, num_var = system->numVariables;
 
     complex_vector *v_float = (complex_vector *) v;
-    mpf_t *t_float = (mpf_t *) t;
-    complex_vector *x_float = (complex_vector *) x;
+    float_path *paths_initial_float = (float_path *) paths_initial;
+    float_path current_path;
+    mpf_t *t_float = NULL;
+    complex_vector *x_float = NULL;
 
-    mpf_t **t_final_float;
-    complex_vector **x_final_float;
+    float_path *paths_final_float = malloc(num_paths*sizeof(float_path));
+    mpf_t *t_final_float;
+    complex_vector *x_final_float;
 
-    /* set up t_final and x_final */
-    *t_final_float = malloc(sizeof(mpf_t));
-    if (*t_final_float == NULL) {
-        snprintf(error_string, (size_t) termwidth, "Couldn't alloc: %s\n", strerror(errno));
-        print_error(error_string, stderr);
+    /*************************
+     * certify a single path *
+     *************************/
+    for (i = 0; i < num_paths; i++) {
+        float_path current_path_final;
+        tested = 0; succeeded = 0; failed = 0;
+        printf("certifying path %d\n", i);
+        current_path = paths_initial_float[i];
+        num_points = current_path.num_points;
+        t_float = current_path.time_points;
+        x_float = current_path.space_points;
 
-        exit(BH_EXIT_MEMORY);
+        /* set up t_final and x_final */
+        t_final_float = malloc(sizeof(mpf_t));
+        if (t_final_float == NULL) {
+            snprintf(error_string, (size_t) termwidth, "Couldn't alloc: %s\n", strerror(errno));
+            print_error(error_string, stderr);
+
+            exit(BH_EXIT_MEMORY);
+        }
+
+        mpf_init(t_final_float[0]);
+        mpf_set(t_final_float[0], t_float[0]);
+
+        x_final_float = malloc(sizeof(complex_vector));
+        if (x_final_float == NULL) {
+            snprintf(error_string, (size_t) termwidth, "Couldn't alloc: %s\n", strerror(errno));
+            print_error(error_string, stderr);
+
+            exit(BH_EXIT_MEMORY);
+        }
+
+        initialize_vector(x_final_float[0], x_float[0]->size);
+        copy_vector(x_final_float[0], x_float[0]);
+
+        /* for each t_i, t_{i+1} */
+        for (j = 0; j < num_points - 1; j++) {
+            test_interval_float(system, v_float, t_float[j], t_float[j+1], x_float[j], x_float[j+1], num_var, 1, &t_final_float, &x_final_float, &tested, &succeeded, &failed, (j == 0));
+        }
+
+        current_path_final.num_points = tested;
+        current_path_final.time_points = t_final_float;
+        current_path_final.space_points = x_final_float;
+        paths_final_float[i] = current_path_final;
+
+        printf("tested: %d\tsucceeded: %d\tfailed: %d\n", tested, succeeded, failed);
     }
 
-    mpf_init((*t_final_float)[0]);
-    mpf_set((*t_final_float)[0], t_float[0]);
-
-    *x_final_float = malloc(sizeof(complex_vector));
-    if (*x_final_float == NULL) {
-        snprintf(error_string, (size_t) termwidth, "Couldn't alloc: %s\n", strerror(errno));
-        print_error(error_string, stderr);
-
-        exit(BH_EXIT_MEMORY);
-    }
-
-    initialize_vector((*x_final_float)[0], x_float[0]->size);
-    copy_vector((*x_final_float)[0], x_float[0]);
-
-    /* for each t_i, t_{i+1} */
-    /* this is the part that needs to get parallelized */
-    for (i = 0; i < num_points - 1; i++) {
-        test_interval_float(system, v_float, t_float[i], t_float[i+1], x_float[i], x_float[i+1], num_var, 1, t_final_float, x_final_float, sing_float, tested, succeeded, failed, num_sing, (i == 0));
-    }
+    *paths_final = (void *) paths_final_float;
 }

@@ -318,8 +318,9 @@ int read_path_file_rational(void **paths, int num_var) {
                 mpq_canonicalize(x_rational[j]->coord[k]->im);
             }
 
-            sort_points_rational(t_rational, x_rational, num_points);
         }
+
+        sort_points_rational(t_rational, x_rational, num_points);
 
         (paths_rational[i]).num_points = num_points;
         (paths_rational[i]).time_points = t_rational;

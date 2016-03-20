@@ -169,7 +169,7 @@ int test_continuity_rational(rational_complex_vector v, mpq_t t_left, mpq_t t_ri
 void subdivide_segment_rational(polynomial_system *base, rational_complex_vector v, mpq_t t_left, mpq_t t_right, rational_complex_vector x_left, rational_complex_vector x_right, mpq_t *t_mid, rational_complex_vector *x_mid, int num_var);
 void apply_tv_rational(polynomial_system *base, polynomial_system *F, mpq_t t, rational_complex_vector v);
 int compute_abg_sqr_rational(rational_complex_vector points, polynomial_system *F, mpq_t *alpha, mpq_t *beta, mpq_t *gamma);
-void test_interval_rational(polynomial_system *system, rational_complex_vector *v, mpq_t t_left, mpq_t t_right, rational_complex_vector x_left, rational_complex_vector x_right, int num_var, int iter, mpq_t **t_final, rational_complex_vector **x_final, rational_complex_vector **sing, int *tested, int *succeeded, int *failed, int *num_sing, int check_left);
+void test_interval_rational(polynomial_system *system, rational_complex_vector *v, mpq_t t_left, mpq_t t_right, rational_complex_vector x_left, rational_complex_vector x_right, int num_var, int iter, mpq_t **t_final, rational_complex_vector **x_final, int *tested, int *succeeded, int *failed, int check_left);
 void test_paths_rational(polynomial_system *system, void *v, void *paths_initial, int num_paths, void **paths_final);
 
 /*********************************************
@@ -182,7 +182,7 @@ int test_continuity_float(complex_vector v, mpf_t t_left, mpf_t t_right, complex
 void subdivide_segment_float(polynomial_system *base, complex_vector v, mpf_t t_left, mpf_t t_right, complex_vector x_left, complex_vector x_right, mpf_t *t_mid, complex_vector *x_mid, int num_var);
 void apply_tv_float(polynomial_system *base, polynomial_system *F, mpf_t t, complex_vector v);
 int compute_abg_float(complex_vector points, polynomial_system *F, mpf_t *alpha, mpf_t *beta, mpf_t *gamma);
-void test_interval_float(polynomial_system *system, complex_vector *v, mpf_t t_left, mpf_t t_right, complex_vector x_left, complex_vector x_right, int num_var, int iter, mpf_t **t_final, complex_vector **x_final, complex_vector **sing, int *tested, int *succeeded, int *failed, int *num_sing, int check_left);
+void test_interval_float(polynomial_system *system, complex_vector *v, mpf_t t_left, mpf_t t_right, complex_vector x_left, complex_vector x_right, int num_var, int iter, mpf_t **t_final, complex_vector **x_final, int *tested, int *succeeded, int *failed, int check_left);
 void test_paths_float(polynomial_system *system, void *v, void *paths_initial, int num_paths, void **paths_final);
 
 #define mpq_set_min(_setme, _prima, _secunda) { if (mpq_cmp(_prima, _secunda) <= 0) { mpq_set(_setme, _prima); } \
